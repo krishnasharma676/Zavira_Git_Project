@@ -24,6 +24,10 @@ export const authenticate = asyncHandler(
       throw new ApiError(401, "Invalid Access Token");
     }
 
+    if (user.status === "BLOCKED") {
+      throw new ApiError(403, "Your account has been blocked.");
+    }
+
     (req as any).user = user;
     next();
   }

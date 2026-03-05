@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import api from '../api/axios';
+import toast from 'react-hot-toast';
 
 import ContactInfo from '../components/contact/ContactInfo';
 import ContactForm from '../components/contact/ContactForm';
@@ -7,11 +9,28 @@ import ContactSuccess from '../components/contact/ContactSuccess';
 
 const ContactPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 5000);
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      subject: formData.get('subject'),
+      message: formData.get('message'),
+    };
+
+    setLoading(true);
+    try {
+      await api.post('/contact/submit', data);
+      setIsSubmitted(true);
+      toast.success('Message sent successfully!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send message');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,7 +53,7 @@ const ContactPage = () => {
           <div className="lg:col-span-7">
             <AnimatePresence mode="wait">
               {!isSubmitted ? (
-                <ContactForm key="form" onSubmit={handleSubmit} />
+                <ContactForm key="form" onSubmit={handleSubmit} loading={loading} />
               ) : (
                 <ContactSuccess key="success" onReset={() => setIsSubmitted(false)} />
               )}

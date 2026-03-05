@@ -6,13 +6,13 @@ import StickyFooter from './components/StickyFooter';
 import CartDrawer from './components/CartDrawer';
 import ScrollToTop from './components/ScrollToTop';
 import { Toaster } from 'react-hot-toast';
+import CheckoutModal from './components/checkout/CheckoutModal';
 
 // Customer Pages
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage'));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
@@ -22,6 +22,7 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
 const PolicyPage = lazy(() => import('./pages/PolicyPage'));
 const ReturnsExchangePage = lazy(() => import('./pages/ReturnsExchangePage'));
 const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Admin Pages
 const ProtectedRoute = lazy(() => import('./admin/components/ProtectedRoute'));
@@ -36,7 +37,8 @@ const OrderManagement = lazy(() => import('./admin/pages/OrderManagement'));
 const UserManagement = lazy(() => import('./admin/pages/UserManagement'));
 const ReviewManagement = lazy(() => import('./admin/pages/ReviewManagement'));
 const BrandManagement = lazy(() => import('./admin/pages/BrandManagement'));
-const ContentManagement = lazy(() => import('./admin/pages/ContentManagement'));
+const TestimonialManagement = lazy(() => import('./admin/pages/TestimonialManagement'));
+const MessageManagement = lazy(() => import('./admin/pages/MessageManagement'));
 
 const PageLoader = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center">
@@ -60,9 +62,9 @@ const AppContent = () => {
             {/* Customer Routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<ShopPage />} />
+            <Route path="/hot-deals" element={<ShopPage />} />
             <Route path="/product/:slug" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/about" element={<AboutPage />} />
@@ -88,18 +90,23 @@ const AppContent = () => {
                 <Route path="banners" element={<BannerManagement />} />
                 <Route path="announcements" element={<AnnouncementManagement />} />
                 <Route path="orders" element={<OrderManagement />} />
-                <Route path="pages" element={<ContentManagement />} />
                 <Route path="users" element={<UserManagement />} />
                 <Route path="reviews" element={<ReviewManagement />} />
+                <Route path="testimonials" element={<TestimonialManagement />} />
+                <Route path="messages" element={<MessageManagement />} />
                 <Route index element={<AdminDashboard />} />
               </Route>
             </Route>
+
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>
       {!hideLayout && <Footer />}
       {!hideLayout && <StickyFooter />}
       {!hideLayout && <CartDrawer />}
+      {!hideLayout && <CheckoutModal />}
       <Toaster position="bottom-right" toastOptions={{ style: { marginBottom: '80px' } }} />
     </div>
   );

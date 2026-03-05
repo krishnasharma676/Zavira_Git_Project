@@ -41,12 +41,15 @@ model User {
 
 model Otp {
   id        String   @id @default(uuid())
-  phone     String
+  phone     String?
+  email     String?
   code      String
+  type      String   @default("PHONE")
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([phone])
+  @@index([email])
 }
 
 model Session {
@@ -148,6 +151,8 @@ model Product {
   brandId         String?
   featured        Boolean        @default(false)
   trending        Boolean        @default(false)
+  hotDeals        Boolean        @default(false)
+  attributes      Json?
   avgRating       Float          @default(0)
   totalReviews    Int            @default(0)
   metaTitle       String?
@@ -315,6 +320,21 @@ model Review {
   @@index([userId])
 }
 
+model Testimonial {
+  id        String   @id @default(uuid())
+  publicId  String   @unique @default(uuid())
+  name      String
+  role      String?  @default("Verified Buyer")
+  rating    Int      @default(5)
+  content   String
+  imageUrl  String?
+  imagePublicId String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
+}
+
 model Banner {
   id            String   @id @default(uuid())
   publicId      String   @unique @default(uuid())
@@ -380,6 +400,27 @@ model AnalyticsEvent {
 
   @@index([type])
   @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    MessageStatus @default(PENDING)
+  reply     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+enum MessageStatus {
+  PENDING
+  READ
+  REPLIED
 }
 
 enum UserRole {

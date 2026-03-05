@@ -30,9 +30,25 @@ const ProductManagement = () => {
     categoryId: '',
     stock: '',
     sku: '',
-    featured: false,
-    trending: false
+    hotDeals: false,
   });
+
+  const [attributes, setAttributes] = useState<{key: string, value: string}[]>([]);
+
+  const handleAddField = () => {
+    setAttributes([...attributes, { key: '', value: '' }]);
+  };
+
+  const handleAttributeChange = (index: number, field: 'key' | 'value', value: string) => {
+    const updated = [...attributes];
+    updated[index][field] = value;
+    setAttributes(updated);
+  };
+
+  const handleRemoveField = (index: number) => {
+    setAttributes(attributes.filter((_, i) => i !== index));
+  };
+
   const fetchProducts = async () => {
     try {
       const { data } = await api.get('/products', { params: { limit: 100 } });
@@ -66,10 +82,14 @@ const ProductManagement = () => {
       categoryId: product.categoryId || '',
       stock: (product.inventory?.stock || 0).toString(),
       sku: (product.inventory?.sku || '').toString(),
-      featured: product.featured || false,
-      trending: product.trending || false
+      hotDeals: product.hotDeals || false
     });
-    // Load existing DB images separately; reset new file picks
+    // Parse attributes object back to array
+    const attrArr = product.attributes 
+      ? Object.keys(product.attributes).map(k => ({ key: k, value: product.attributes[k] })) 
+      : [];
+    setAttributes(attrArr);
+    
     setExistingImages(product.images?.map((img: any) => ({ id: img.id, imageUrl: img.imageUrl })) || []);
     setImages([]);
     setPreviewUrls([]);
@@ -86,9 +106,9 @@ const ProductManagement = () => {
       categoryId: '',
       stock: '',
       sku: '',
-      featured: false,
-      trending: false
+      hotDeals: false
     });
+    setAttributes([]);
     setExistingImages([]);
     setImages([]);
     setPreviewUrls([]);
@@ -124,6 +144,14 @@ const ProductManagement = () => {
     Object.keys(formData).forEach(key => {
       data.append(key, (formData as any)[key]);
     });
+
+    // Convert attributes array to object and append
+    const attrObj: any = {};
+    attributes.forEach(attr => {
+      if (attr.key && attr.value) attrObj[attr.key] = attr.value;
+    });
+    data.append('attributes', JSON.stringify(attrObj));
+
     images.forEach(image => {
       data.append('images', image);
     });
@@ -143,9 +171,6 @@ const ProductManagement = () => {
       setIsSubmitting(false);
     }
   };
-
-
-
 
   const columns = [
     {
@@ -200,6 +225,17 @@ const ProductManagement = () => {
       options: {
         customBodyRender: (val: any) => (
           <span className={(val?.stock || 0) < 10 ? 'text-[#7A578D]' : 'text-gray-500'}>{val?.stock || 0} U</span>
+        )
+      }
+    },
+    { 
+      name: "hotDeals", 
+      label: "Hot Deal",
+      options: {
+        customBodyRender: (val: boolean) => (
+          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${val ? 'bg-[#ed4c14] text-white' : 'bg-gray-100 text-gray-400'}`}>
+            {val ? 'YES' : 'NO'}
+          </span>
         )
       }
     },
@@ -281,13 +317,9 @@ const ProductManagement = () => {
            </div>
 
            <div className="flex gap-4">
-              <label className="flex items-center space-x-2 cursor-pointer bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex-1">
-                <input type="checkbox" checked={formData.featured} onChange={(e) => setFormData({...formData, featured: e.target.checked})} className="accent-[#7A578D]" />
-                <span className="text-[9px] font-black uppercase text-gray-500">Featured</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex-1">
-                <input type="checkbox" checked={formData.trending} onChange={(e) => setFormData({...formData, trending: e.target.checked})} className="accent-[#7A578D]" />
-                <span className="text-[9px] font-black uppercase text-gray-500">Trending</span>
+              <label htmlFor="hotDeals" className="flex items-center space-x-2 cursor-pointer bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex-1">
+                <input id="hotDeals" type="checkbox" checked={formData.hotDeals} onChange={(e) => setFormData({...formData, hotDeals: e.target.checked})} className="accent-[#7A578D]" />
+                <span className="text-[9px] font-black uppercase text-gray-500">Add to Hot Deals</span>
               </label>
            </div>
 
@@ -333,6 +365,41 @@ const ProductManagement = () => {
                       </div>
                    </div>
                 ))}
+              </div>
+           </div>
+
+           {/* Dynamic Attributes Section */}
+           <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-gray-50 pb-2">
+                 <label className="text-[9px] font-black uppercase tracking-widest text-[#7A578D]">Product Specifications</label>
+                 <button type="button" onClick={handleAddField} className="bg-[#7A578D]/5 text-[#7A578D] px-2 py-1 rounded text-[7px] font-black uppercase tracking-widest hover:bg-[#7A578D] hover:text-white transition-all flex items-center gap-1">
+                   <Plus size={8} /> Add Spec
+                 </button>
+              </div>
+              
+              <div className="space-y-2">
+                {attributes.map((attr, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input 
+                      placeholder="Property (e.g. Material)" 
+                      value={attr.key} 
+                      onChange={(e) => handleAttributeChange(idx, 'key', e.target.value)}
+                      className="flex-1 bg-gray-50 border border-gray-100 rounded-lg py-2 px-3 outline-none focus:border-[#7A578D] text-[10px] font-bold uppercase"
+                    />
+                    <input 
+                      placeholder="Value (e.g. 925 Silver)" 
+                      value={attr.value} 
+                      onChange={(e) => handleAttributeChange(idx, 'value', e.target.value)}
+                      className="flex-1 bg-gray-50 border border-gray-100 rounded-lg py-2 px-3 outline-none focus:border-[#7A578D] text-[10px] font-bold"
+                    />
+                    <button type="button" onClick={() => handleRemoveField(idx)} className="text-gray-300 hover:text-red-500 transition-colors px-1">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {attributes.length === 0 && (
+                  <p className="text-[8px] text-gray-400 italic text-center py-2">No custom specifications added yet.</p>
+                )}
               </div>
            </div>
 

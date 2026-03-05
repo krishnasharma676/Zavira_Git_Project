@@ -8,17 +8,16 @@ import CategoryGrid from '../components/home/CategoryGrid';
 import ProductSection from '../components/home/ProductSection';
 import PromoBanner from '../components/home/PromoBanner';
 import Testimonials from '../components/home/Testimonials';
-import FaqSection from '../components/home/FaqSection';
 
 const HomePage = () => {
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const reviewScrollRef = useRef<HTMLDivElement>(null);
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [promoBanners, setPromoBanners] = useState<any[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [categoryProducts, setCategoryProducts] = useState<any>({});
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const { addItem } = useCart();
@@ -27,24 +26,24 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [featRes, trendRes, catRes, bannerRes] = await Promise.all([
-          api.get('/products', { params: { featured: true, limit: 8 } }),
-          api.get('/products', { params: { trending: true, limit: 8 } }),
+        const [featRes, catRes, bannerRes, reviewRes] = await Promise.all([
+          api.get('/products', { params: { limit: 4, sortBy: 'createdAt', sortOrder: 'desc' } }),
           api.get('/categories'),
-          api.get('/banners')
+          api.get('/banners'),
+          api.get('/testimonials').catch(() => ({ data: { data: [] } }))
         ]);
         
         const cats = catRes.data.data;
         setFeaturedProducts(featRes.data.data.products);
-        setTrendingProducts(trendRes.data.data.products);
         setCategories(cats);
+        setReviews(reviewRes.data.data);
 
         // Fetch products for each category (latest 4)
         const catProds: any = {};
-        await Promise.all(cats.slice(0, 5).map(async (cat: any) => {
+        await Promise.all(cats.map(async (cat: any) => {
           try {
             const { data } = await api.get('/products', { 
-              params: { category: cat.slug, limit: 4 } 
+              params: { category: cat.id, limit: 4 } 
             });
             if (data.data.products.length > 0) {
               catProds[cat.id] = data.data.products;
@@ -56,7 +55,8 @@ const HomePage = () => {
         setCategoryProducts(catProds);
 
         const heroBanners = bannerRes.data.data.filter((b: any) => b.type === 'HERO');
-        setHeroSlides(heroBanners.length > 0 ? heroBanners : getDefaultSlides());
+        setHeroSlides(heroBanners);
+        setPromoBanners(bannerRes.data.data.filter((b: any) => b.type === 'PROMO'));
       } catch {
       } finally {
         setLoading(false);
@@ -81,32 +81,10 @@ const HomePage = () => {
     }
   };
 
-  const getDefaultSlides = () => [
-    {
-      imageUrl: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=2000',
-      subtitle: "Spring Collection '26",
-      title: 'Everyday Elegance',
-      description: 'Minimalist designs that make a definitive statement.',
-      link: '/shop'
-    },
-    {
-      imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=2000',
-      subtitle: 'Bridal Series',
-      title: 'The Royal Edition',
-      description: 'Intricately crafted masterpiece to make you shine on your day.',
-      link: '/shop'
-    },
-    {
-      imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=2000',
-      subtitle: 'Precious Stones',
-      title: 'Radiant Gems',
-      description: 'Sourced gracefully to bring the natural beauty to your vault.',
-      link: '/shop'
-    }
-  ];
+  // Static fallback removed as per user request
 
   return (
-    <div className="bg-[#F9F9F9] dark:bg-[#121212] transition-colors duration-300 min-h-screen">
+    <div className="bg-transparent dark:bg-[#121212] transition-colors duration-300 min-h-screen">
       <HeroCarousel 
         slides={heroSlides} 
         currentSlide={currentSlide} 
@@ -118,17 +96,7 @@ const HomePage = () => {
       <ProductSection 
         title="WHAT'S NEW IN STORE" 
         products={featuredProducts} 
-        viewAllLink="/shop?featured=true" 
-        loading={loading}
-        toggleItem={toggleItem}
-        isInWishlist={isInWishlist}
-        addItem={addItem}
-      />
-
-      <ProductSection 
-        title="TRENDING NOW" 
-        products={trendingProducts} 
-        viewAllLink="/shop?trending=true" 
+        viewAllLink="/shop?sortBy=createdAt&sortOrder=desc" 
         loading={loading}
         toggleItem={toggleItem}
         isInWishlist={isInWishlist}
@@ -149,17 +117,15 @@ const HomePage = () => {
         )
       ))}
 
-      <PromoBanner />
+      <PromoBanner banners={promoBanners} />
 
-      <Testimonials 
-        scrollRef={reviewScrollRef} 
-        scrollReviews={scrollReviews} 
-      />
-
-      <FaqSection 
-        activeFaq={activeFaq} 
-        setActiveFaq={setActiveFaq} 
-      />
+      {reviews.length > 0 && (
+        <Testimonials 
+          reviews={reviews}
+          scrollRef={reviewScrollRef} 
+          scrollReviews={scrollReviews} 
+        />
+      )}
     </div>
   );
 };

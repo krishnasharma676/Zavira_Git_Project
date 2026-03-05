@@ -13,6 +13,8 @@ export const productSchema = z.object({
     sku: z.string().optional().nullable(),
     featured: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
     trending: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
+    hotDeals: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
+    attributes: z.any().optional(),
   })
 });
 

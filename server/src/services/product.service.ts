@@ -15,11 +15,27 @@ export class ProductService {
       brand, 
       minPrice, 
       maxPrice, 
+      sortBy,
+      sortOrder,
       sort,
+      hotDeals,
+      featured,
+      trending,
+      stockStatus
     } = query;
 
     const skip = (Number(page) - 1) * Number(limit);
     const where: any = { isDeleted: false };
+
+    if (hotDeals === 'true' || hotDeals === true) where.hotDeals = true;
+    if (featured === 'true' || featured === true) where.featured = true;
+    if (trending === 'true' || trending === true) where.trending = true;
+    
+    if (stockStatus === 'inStock') {
+      where.inventory = { stock: { gt: 0 } };
+    } else if (stockStatus === 'outOfStock') {
+       where.inventory = { stock: { lte: 0 } };
+    }
 
     if (search) {
       where.OR = [
@@ -28,16 +44,68 @@ export class ProductService {
       ];
     }
 
-    if (category) where.categoryId = category;
-    if (brand) where.brandId = brand;
+    if (category) {
+      where.category = {
+        OR: [
+          { id: category },
+          { slug: category }
+        ]
+      };
+    }
+    
+    if (brand) {
+      where.brand = {
+        OR: [
+          { id: brand },
+          { slug: brand }
+        ]
+      };
+    }
+
     if (minPrice || maxPrice) {
-      where.basePrice = {};
-      if (minPrice) where.basePrice.gte = Number(minPrice);
-      if (maxPrice) where.basePrice.lte = Number(maxPrice);
+      const min = minPrice ? Number(minPrice) : 0;
+      const max = maxPrice ? Number(maxPrice) : 9999999;
+      
+      where.OR = [
+        ...(where.OR || []),
+        {
+          AND: [
+             { discountedPrice: null },
+             { basePrice: { gte: min, lte: max } }
+          ]
+        },
+        {
+          AND: [
+             { discountedPrice: { not: null } },
+             { discountedPrice: { gte: min, lte: max } }
+          ]
+        }
+      ];
+    }
+
+    // Dynamic Attribute Filtering
+    if (query.attributes) {
+      try {
+        const attrFilters = typeof query.attributes === 'string' ? JSON.parse(query.attributes) : query.attributes;
+        Object.keys(attrFilters).forEach(key => {
+          where.attributes = {
+            path: [key],
+            equals: attrFilters[key]
+          };
+        });
+      } catch (e) {
+        console.error('Failed to parse attributes filter:', e);
+      }
     }
 
     let orderBy: any = { createdAt: 'desc' };
-    if (sort) {
+    
+    // Support sortBy/sortOrder from frontend
+    if (sortBy) {
+        orderBy = { [sortBy]: sortOrder || 'desc' };
+    } 
+    // Fallback to legacy sort format field:order
+    else if (sort) {
       const parts = sort.split(':');
       if (parts.length === 2) {
         orderBy = { [parts[0]]: parts[1] };
@@ -115,8 +183,13 @@ export class ProductService {
   }
 
   async createProduct(data: any, files: Express.Multer.File[]) {
-    const { name, basePrice, discountedPrice, categoryId, brandId, description, stock, sku } = data;
+    const { name, basePrice, discountedPrice, categoryId, brandId, description, stock, sku, hotDeals, featured, trending, attributes } = data;
     const slug = await this.generateUniqueSlug(name);
+
+    let parsedAttributes = attributes;
+    if (typeof attributes === 'string') {
+      try { parsedAttributes = JSON.parse(attributes); } catch { parsedAttributes = null; }
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -127,13 +200,17 @@ export class ProductService {
         description,
         categoryId,
         brandId: brandId || null,
+        hotDeals: hotDeals === 'true' || hotDeals === true,
+        featured: featured === 'true' || featured === true,
+        trending: trending === 'true' || trending === true,
+        attributes: parsedAttributes,
         inventory: {
           create: {
             stock: Number(stock) || 0,
             sku: sku || null
           }
         }
-      }
+      } as any
     });
 
     if (files && files.length > 0) {
@@ -145,15 +222,28 @@ export class ProductService {
 
   async updateProduct(id: string, data: any, files?: Express.Multer.File[]) {
     // sku belongs to Inventory, not Product — extract it separately
-    const { name, basePrice, discountedPrice, stock, sku, ...updateData } = data;
+    const { name, basePrice, discountedPrice, stock, sku, attributes, ...updateData } = data;
     
     if (name) {
       updateData.name = name;
       updateData.slug = await this.generateUniqueSlug(name, id);  // exclude self
     }
 
+    if (attributes !== undefined) {
+      if (typeof attributes === 'string') {
+        try { updateData.attributes = JSON.parse(attributes); } catch { updateData.attributes = null; }
+      } else {
+        updateData.attributes = attributes;
+      }
+    }
+
     if (basePrice !== undefined) updateData.basePrice = Number(basePrice);
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice ? Number(discountedPrice) : null;
+    
+    // Parse booleans from multipart form
+    if (data.hotDeals !== undefined) updateData.hotDeals = data.hotDeals === 'true' || data.hotDeals === true;
+    if (data.featured !== undefined) updateData.featured = data.featured === 'true' || data.featured === true;
+    if (data.trending !== undefined) updateData.trending = data.trending === 'true' || data.trending === true;
 
     // Build inventory update — use upsert in case the row doesn't exist yet
     const inventoryUpdate = (stock !== undefined || sku !== undefined) ? {
@@ -171,7 +261,7 @@ export class ProductService {
       data: {
         ...updateData,
         inventory: inventoryUpdate
-      }
+      } as any
     });
 
     if (files && files.length > 0) {

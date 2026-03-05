@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import ProductGallery from '../components/product/ProductGallery';
 import ProductInfo from '../components/product/ProductInfo';
 import ProductTabs from '../components/product/ProductTabs';
+import ProductSection from '../components/home/ProductSection';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -20,6 +21,7 @@ const ProductDetailPage = () => {
   const { isAuthenticated } = useAuth();
   const openAuthModal = useUIStore((s) => s.openAuthModal);
   const [product, setProduct] = useState<any>(null);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -46,6 +48,24 @@ const ProductDetailPage = () => {
     fetchProduct();
     window.scrollTo(0, 0);
   }, [slug, navigate]);
+
+  useEffect(() => {
+    if (product?.categoryId) {
+      const fetchSimilar = async () => {
+        try {
+          const { data } = await api.get('/products', { 
+            params: { category: product.categoryId, limit: 5 } 
+          });
+          // Filter out the current product itself
+          const filtered = data.data.products.filter((p: any) => p.id !== product.id);
+          setSimilarProducts(filtered.slice(0, 4));
+        } catch (error) {
+          console.error("Failed to fetch similar products", error);
+        }
+      };
+      fetchSimilar();
+    }
+  }, [product?.id, product?.categoryId]);
 
   const handleAddToCart = () => {
     const stock = product.inventory?.stock || 0;
@@ -139,6 +159,19 @@ const ProductDetailPage = () => {
               handleReviewSubmit={handleReviewSubmit} 
             />
           </div>
+        </div>
+
+        {/* Similar Products Section */}
+        <div className="mt-20 border-t border-gray-100 dark:border-gray-800 pt-16">
+          <ProductSection 
+            title="SIMILAR PRODUCTS" 
+            products={similarProducts} 
+            viewAllLink={`/shop?category=${product.category?.slug || product.categoryId}`} 
+            loading={loading}
+            toggleItem={toggleItem}
+            isInWishlist={isInWishlist}
+            addItem={addItem}
+          />
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ import {
 import type { ConfirmationResult } from 'firebase/auth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AuthMode = 'login' | 'register' | 'phone';
+type AuthMode = 'login' | 'register' | 'phone' | 'email_otp';
 type PhoneStep = 'input' | 'otp';
 
 // ─── Google SVG Icon ──────────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ const AuthModal = () => {
   const [phoneStep, setPhoneStep] = useState<PhoneStep>('input');
   const [confirmResult, setConfirmResult] = useState<ConfirmationResult | null>(null);
   const [otpTimer, setOtpTimer] = useState(0);
+  const [emailOtpFlow, setEmailOtpFlow] = useState<'login' | 'register'>('login');
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -119,12 +120,14 @@ const AuthModal = () => {
       toast.error('Passwords do not match');
       return;
     }
-    setLoadingMsg('Creating your account…');
+    setLoadingMsg('Sending verification code…');
     try {
-      const { data } = await api.post('/auth/register', registerData);
-      setAuth(data.data.user, data.data.accessToken);
-      toast.success('Account created!');
-      closeAuthModal();
+      await api.post('/auth/register', registerData);
+      setEmailOtpFlow('register');
+      setMode('email_otp');
+      setOtp(['', '', '', '', '', '']);
+      setOtpTimer(60);
+      toast.success('Verification code sent to your email');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -210,8 +213,40 @@ const AuthModal = () => {
     }
   };
 
+  // ── Email — Verify OTP ──────────────────────────────────────────────────
+  const handleVerifyEmailOtp = async () => {
+    const code = otp.join('');
+    if (code.length < 6) { toast.error('Enter all 6 digits'); return; }
+    
+    setLoadingMsg('Verifying…');
+    try {
+      let response;
+      if (emailOtpFlow === 'login') {
+        response = await api.post('/auth/verify-email-login', {
+          email: loginData.email,
+          code
+        });
+      } else {
+        const { confirmPassword: _, ...rest } = registerData;
+        response = await api.post('/auth/verify-email-register', {
+          data: rest,
+          code
+        });
+      }
+      
+      const { user, accessToken } = response.data.data;
+      setAuth(user, accessToken);
+      toast.success(emailOtpFlow === 'login' ? 'Welcome back!' : 'Account created!');
+      closeAuthModal();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Verification failed');
+    } finally {
+      setLoadingMsg('');
+    }
+  };
+
   // ── Phone — Verify OTP ────────────────────────────────────────────────────
-  const handleVerifyOtp = async () => {
+  const handleVerifyPhoneOtp = async () => {
     const code = otp.join('');
     if (code.length < 6) { toast.error('Enter all 6 digits'); return; }
     if (!confirmResult) { toast.error('Session expired. Resend OTP.'); return; }
@@ -464,6 +499,74 @@ const AuthModal = () => {
                 </motion.div>
               )}
 
+              {/* ── EMAIL OTP ───────────────────────────────────────────── */}
+              {mode === 'email_otp' && (
+                <motion.div
+                  key="email_otp"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="space-y-5"
+                >
+                  <button
+                    onClick={() => switchMode(emailOtpFlow)}
+                    className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
+                  >
+                    <ChevronRight size={10} className="rotate-180" />
+                    <span>Back to {emailOtpFlow === 'login' ? 'Login' : 'Signup'}</span>
+                  </button>
+
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Verify Email</h3>
+                    <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
+                      We've sent a 6-digit code to <span className="text-gray-900 dark:text-white font-black">{emailOtpFlow === 'login' ? loginData.email : registerData.email}</span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex space-x-2 justify-between">
+                      {otp.map((digit, i) => (
+                        <input
+                          key={i}
+                          ref={el => { otpRefs.current[i] = el; }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={e => handleOtpChange(i, e.target.value)}
+                          onKeyDown={e => handleOtpKeyDown(i, e)}
+                          className="w-10 h-12 text-center bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-black text-gray-900 dark:text-white outline-none focus:border-[#7A578D] transition-colors"
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleVerifyEmailOtp}
+                      disabled={loading || otp.join('').length < 6}
+                      className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50"
+                    >
+                      <ShieldCheck size={12} />
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em]">
+                        {loading ? 'Verifying...' : 'Verify Email'}
+                      </span>
+                    </button>
+
+                    <div className="text-center">
+                      {otpTimer > 0 ? (
+                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                          Resend code in {otpTimer}s
+                        </p>
+                      ) : (
+                        <button
+                          onClick={emailOtpFlow === 'login' ? handleLogin : handleRegister}
+                          className="text-[9px] font-black uppercase tracking-wider text-[#7A578D] hover:underline"
+                        >
+                          Resend Verification Code
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* ── PHONE OTP ───────────────────────────────────────────── */}
               {mode === 'phone' && (
                 <motion.div
@@ -480,8 +583,8 @@ const AuthModal = () => {
                   </button>
 
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Phone Login</h3>
-                    <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Phone Verification</h3>
+                    <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
                       {phoneStep === 'input' ? 'Enter your mobile number' : 'Enter the 6-digit OTP sent to your phone'}
                     </p>
                   </div>
@@ -532,7 +635,7 @@ const AuthModal = () => {
                       </div>
 
                       <button
-                        onClick={handleVerifyOtp}
+                        onClick={handleVerifyPhoneOtp}
                         disabled={loading || otp.join('').length < 6}
                         className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50"
                       >

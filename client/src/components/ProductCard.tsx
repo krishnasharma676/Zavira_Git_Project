@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { Heart, Star, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -51,18 +52,19 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="luxury-card group flex flex-col h-full bg-white dark:bg-[#121212]"
+      className="luxury-card group relative flex flex-col h-full bg-white dark:bg-[#121212] rounded-3xl"
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-gray-50 dark:bg-black">
+      <div className="relative aspect-[4/5] overflow-hidden m-2 rounded-2xl bg-gray-50 dark:bg-black">
         {/* Badges */}
-        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-          {product.featured && (
-            <span className="bg-[#7A578D] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-purple-500/20">
-              Featured
+        <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5">
+          {product.hotDeals && (
+            <span className="bg-[#ed4c14] text-white text-[8px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-lg flex items-center gap-1">
+              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+              Hot Deal
             </span>
           )}
           {product.discountedPrice && (
-            <span className="bg-black dark:bg-white text-white dark:text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">
+            <span className="bg-black dark:bg-white text-white dark:text-black text-[8px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-lg">
               {Math.round(((product.basePrice - product.discountedPrice) / product.basePrice) * 100)}% OFF
             </span>
           )}
@@ -71,80 +73,85 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
         {/* Wishlist Button */}
         <button 
           onClick={handleWishlist}
-          className={`absolute top-4 right-4 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all backdrop-blur-md border border-white/20 shadow-xl ${
+          className={`absolute top-3 right-3 z-30 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 transform ${
             inWishlist 
-            ? 'bg-[#7A578D] text-white border-[#7A578D]' 
-            : 'bg-white/80 dark:bg-black/50 text-gray-400 hover:text-[#7A578D]'
+            ? 'bg-[#7A578D] text-white shadow-lg shadow-purple-500/30' 
+            : 'bg-white/90 dark:bg-black/40 text-gray-400 hover:text-[#7A578D] hover:scale-110 backdrop-blur-md'
           }`}
         >
-          <Heart size={16} className={inWishlist ? 'fill-white' : ''} />
+          <Heart size={14} className={inWishlist ? 'fill-white' : ''} />
         </button>
 
         {/* Product Image */}
-        <Link to={`/product/${product.slug}`} className="block w-full h-full">
+        <Link to={`/product/${product.slug}`} className="block w-full h-full relative z-10">
           <img 
             src={primaryImage} 
             alt={product.name}
             className={`w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Subtle Overlay on hover */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
         </Link>
 
-        {/* Quick Add Overlay */}
+        {/* Quick Actions for Desktop */}
         {!isOutOfStock && (
-          <div className="absolute bottom-6 left-6 right-6 translate-y-12 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500 z-20">
+          <div className="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-20 hidden md:block">
             <button 
               onClick={handleAddToCart}
-              className="luxury-button w-full rounded-xl flex items-center justify-center space-x-3"
+              className="w-full bg-white dark:bg-[#7A578D] text-[#7A578D] dark:text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-[#7A578D] hover:text-white transition-all flex items-center justify-center gap-2"
             >
-              <ShoppingBag size={14} />
-              <span>ADD TO VAULT</span>
+              <ShoppingBag size={12} />
+              ADD TO BAG
             </button>
           </div>
         )}
 
         {/* Out of Stock Overlay */}
         {isOutOfStock && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <div className="border border-white/30 px-6 py-2 rounded-full">
-              <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] font-sans">Sold Out</span>
-            </div>
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <span className="bg-white/90 px-4 py-1.5 rounded-lg text-black text-[8px] font-extrabold uppercase tracking-widest shadow-xl">Sold Out</span>
           </div>
         )}
       </div>
 
-      {/* Details */}
-      <div className="p-3 flex-grow flex flex-col justify-between">
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-start gap-2">
-            <Link to={`/product/${product.slug}`} className="flex-1">
-              <h2 className="text-[12px] font-black uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1">{product.name}</h2>
-            </Link>
-            
-            <div className="flex items-center space-x-1.5 shrink-0 pt-0.5">
-              <span className="text-[13px] font-black text-[#7A578D]">{formatCurrency(product.discountedPrice || product.basePrice || 0)}</span>
-              {product.discountedPrice && (
-                <span className="text-[9px] text-gray-300 line-through">{formatCurrency(product.basePrice || 0)}</span>
-              )}
-            </div>
+      {/* Details Area */}
+      <div className="px-4 pb-4 pt-1 flex-grow flex flex-col justify-between">
+        <div>
+           <span className="text-[7px] font-black text-[#7A578D] uppercase tracking-widest opacity-60 block mb-0.5">
+             {product.category?.name || product.category || 'Collection'}
+           </span>
+           <div className="flex justify-between items-start gap-2">
+              <Link to={`/product/${product.slug}`} className="flex-1">
+                <h2 className="text-[11px] font-black uppercase tracking-tight text-gray-800 dark:text-white line-clamp-1 leading-tight group-hover:text-[#7A578D] transition-colors">{product.name}</h2>
+              </Link>
+
+              <div className="flex flex-col items-end shrink-0">
+                 <span className="text-[12px] font-black text-[#7A578D] tracking-tighter">
+                   {formatCurrency(product.discountedPrice || product.basePrice || 0)}
+                 </span>
+                 {product.discountedPrice && (
+                   <span className="text-[7px] text-gray-300 line-through font-bold">
+                     {formatCurrency(product.basePrice || 0)}
+                   </span>
+                 )}
+              </div>
+           </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center space-x-1">
+             <Star size={7} className="fill-yellow-400 text-yellow-400" />
+             <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{product.avgRating || 4.8}</span>
           </div>
-          
-          <div className="flex items-center justify-between pt-1 border-t border-gray-50 dark:border-white/5">
-             {product.avgRating > 0 && (
-                <div className="flex items-center space-x-1">
-                   <div className="flex">
-                     {[...Array(5)].map((_, i) => (
-                       <Star 
-                         key={i} 
-                         size={6} 
-                         className={i < Math.floor(product.avgRating) ? 'fill-[#7A578D] text-[#7A578D]' : 'text-gray-100 dark:text-gray-800'} 
-                       />
-                     ))}
-                   </div>
-                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{product.avgRating.toFixed(1)}</span>
-                </div>
-             )}
-          </div>
+
+          {/* Mobile Quick Add */}
+          <button 
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className="md:hidden w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 active:bg-[#7A578D] active:text-white transition-colors"
+          >
+            <ShoppingBag size={12} />
+          </button>
         </div>
       </div>
     </motion.div>

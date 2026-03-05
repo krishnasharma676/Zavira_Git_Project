@@ -35,29 +35,46 @@ export class UserRepository {
 
   // OTP Methods
   async createOTP(data: { phone: string; code: string; expiresAt: Date }) {
-    // Delete existing OTPs for this phone first
     await (prisma as any).otp.deleteMany({
-      where: { phone: data.phone }
+      where: { phone: data.phone, type: "PHONE" }
     });
     
     return await (prisma as any).otp.create({
-      data,
+      data: { ...data, type: "PHONE" },
     });
   }
 
-  async findOTP(phone: string, code: string) {
+  async createEmailOTP(data: { email: string; code: string; expiresAt: Date }) {
+    await (prisma as any).otp.deleteMany({
+      where: { email: data.email, type: "EMAIL" }
+    });
+    
+    return await (prisma as any).otp.create({
+      data: { ...data, type: "EMAIL" },
+    });
+  }
+
+  async findOTP(target: string, code: string, type: "PHONE" | "EMAIL" = "PHONE") {
     return await (prisma as any).otp.findFirst({
       where: { 
-        phone, 
+        [type === "PHONE" ? "phone" : "email"]: target, 
         code,
+        type,
         expiresAt: { gte: new Date() }
       },
     });
   }
 
-  async deleteOTP(phone: string) {
+  async deleteOTP(target: string, type: "PHONE" | "EMAIL" = "PHONE") {
     return await (prisma as any).otp.deleteMany({
-      where: { phone },
+      where: { [type === "PHONE" ? "phone" : "email"]: target, type },
+    });
+  }
+
+  async updateStatus(id: string, status: "ACTIVE" | "BLOCKED" | "DELETED") {
+    return await prisma.user.update({
+      where: { id },
+      data: { status },
     });
   }
 

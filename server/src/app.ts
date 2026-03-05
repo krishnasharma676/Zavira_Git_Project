@@ -18,6 +18,8 @@ import addressRoutes from './routes/address.routes';
 import bannerRoutes from './routes/banner.routes';
 import brandRoutes from './routes/brand.routes';
 import firebaseAuthRoutes from './routes/firebase.auth.routes';
+import testimonialRoutes from './routes/testimonial.routes';
+import contactRoutes from './routes/contact.routes';
 
 const app = express();
 
@@ -58,6 +60,8 @@ app.use('/api/v1/addresses', addressRoutes);
 app.use('/api/v1/banners', bannerRoutes);
 app.use('/api/v1/brands', brandRoutes);
 app.use('/api/v1/auth/firebase', firebaseAuthRoutes);
+app.use('/api/v1/testimonials', testimonialRoutes);
+app.use('/api/v1/contact', contactRoutes);
 
 // Error Handling
 app.use(errorHandler);

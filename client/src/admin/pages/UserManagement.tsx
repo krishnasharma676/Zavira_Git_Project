@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Mail, Shield, UserX, UserPlus, BadgeCheck, Globe, Lock, Phone, Edit2, MoreVertical } from 'lucide-react';
+import { Mail, Shield, UserX, UserPlus, BadgeCheck, Globe, Lock, MoreVertical } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -48,10 +48,25 @@ const UserManagement = () => {
     } catch (error) {
       toast.error('Failed to create user');
     }
+  };  const handleBlockUser = async (id: string) => {
+    try {
+      await api.patch(`/auth/admin/users/${id}/block`);
+      toast.success('User blocked successfully');
+      fetchUsers();
+    } catch (error) {
+      toast.error('Failed to block user');
+    }
   };
 
-
-
+  const handleUnblockUser = async (id: string) => {
+    try {
+      await api.patch(`/auth/admin/users/${id}/unblock`);
+      toast.success('User unblocked successfully');
+      fetchUsers();
+    } catch (error) {
+      toast.error('Failed to unblock user');
+    }
+  };
 
   const columns = [
     {
@@ -62,11 +77,11 @@ const UserManagement = () => {
           const user = users[tableMeta.rowIndex];
           return (
             <div className="flex items-center space-x-2">
-               <div className="w-7 h-7 bg-red-50 text-[#7A578D] rounded-full flex items-center justify-center text-[9px] font-black border border-red-100">
-                  {value?.[0] || 'U'}
+               <div className="w-7 h-7 bg-red-50 text-[#7A578D] rounded-full flex items-center justify-center text-[9px] font-black border border-red-100 uppercase">
+                  {value?.[0] || user.email?.[0] || 'U'}
                </div>
                <div className="flex flex-col min-w-0">
-                  <span className="truncate">{value || 'Anonymous'}</span>
+                  <span className="truncate font-black uppercase text-[10px] tracking-tight">{value || 'Anonymous'}</span>
                   <span className="text-[8px] text-gray-400 lowercase truncate">{user.email}</span>
                </div>
             </div>
@@ -78,7 +93,26 @@ const UserManagement = () => {
       name: "phoneNumber", 
       label: "Phone",
       options: {
-        customBodyRender: (val: string) => <span className="text-gray-500">{val || 'N/A'}</span>
+        customBodyRender: (val: string) => <span className="text-[10px] font-bold text-gray-500 italic">{val || 'N/A'}</span>
+      }
+    },
+    {
+      name: "isEmailVerified",
+      label: "Verified",
+      options: {
+        customBodyRender: (val: boolean) => (
+          <div className="flex items-center space-x-1">
+             {val ? (
+               <div className="flex items-center text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
+                 <BadgeCheck size={10} className="mr-1" /> Verified
+               </div>
+             ) : (
+               <div className="flex items-center text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">
+                 <Globe size={10} className="mr-1" /> Pending
+               </div>
+             )}
+          </div>
+        )
       }
     },
     { 
@@ -86,7 +120,7 @@ const UserManagement = () => {
       label: "Role",
       options: {
         customBodyRender: (val: string) => (
-          <span className={`px-2 py-0.5 rounded text-[8px] ${val === 'ADMIN' ? 'bg-[#7A578D]/10 text-[#7A578D]' : 'bg-gray-100 text-gray-500'}`}>{val}</span>
+          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${val === 'ADMIN' ? 'bg-[#7A578D]/10 text-[#7A578D]' : 'bg-gray-100 text-gray-500'}`}>{val}</span>
         )
       }
     },
@@ -97,7 +131,7 @@ const UserManagement = () => {
         customBodyRender: (val: string) => (
           <div className="flex items-center space-x-1">
              <div className={`w-1.5 h-1.5 rounded-full ${val === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
-             <span className={val === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}>{val || 'LOCKED'}</span>
+             <span className={`text-[9px] font-black uppercase ${val === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>{val}</span>
           </div>
         )
       }
@@ -106,13 +140,32 @@ const UserManagement = () => {
       name: "id",
       label: "Actions",
       options: {
-        customBodyRender: (id: string) => (
-          <div className="flex space-x-1">
-            <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400"><Mail size={12} /></button>
-            <button className="p-1 px-2 hover:bg-red-50 text-red-400 rounded"><UserX size={12} /></button>
-            <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400"><MoreVertical size={12} /></button>
-          </div>
-        )
+        customBodyRender: (id: string, tableMeta: any) => {
+          const user = users[tableMeta.rowIndex];
+          return (
+            <div className="flex space-x-1">
+              <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400" title="Email User"><Mail size={12} /></button>
+              {user.status === 'ACTIVE' ? (
+                <button 
+                  onClick={() => handleBlockUser(id)}
+                  className="p-1 px-2 hover:bg-red-50 text-red-500 rounded" 
+                  title="Block User"
+                >
+                  <UserX size={12} />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => handleUnblockUser(id)}
+                  className="p-1 px-2 hover:bg-green-50 text-green-500 rounded" 
+                  title="Unblock User"
+                >
+                  <Lock size={12} />
+                </button>
+              )}
+              <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400"><MoreVertical size={12} /></button>
+            </div>
+          )
+        }
       }
     }
   ];
@@ -143,7 +196,12 @@ const UserManagement = () => {
         </button>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm relative min-h-[400px]">
+        {loading && (
+          <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
         <ThemeProvider theme={getMuiTheme()}>
           <MUIDataTable title="" data={users} columns={columns} options={options} />
         </ThemeProvider>
