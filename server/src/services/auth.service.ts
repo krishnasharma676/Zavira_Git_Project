@@ -60,7 +60,8 @@ export class AuthService {
   async login(email: string, password: string, deviceInfo?: string, ip?: string) {
     if (!email || !password) throw new ApiError(400, "Email and password are required");
 
-    const user = await userRepository.findByEmail(email);
+    const normalizedEmail = email.toLowerCase();
+    const user = await userRepository.findByEmail(normalizedEmail);
     if (!user || user.status === "DELETED") throw new ApiError(404, "User not found");
 
     if (user.status === "BLOCKED") {
@@ -78,12 +79,13 @@ export class AuthService {
   async verifyEmailOtpAndLogin(email: string, code: string, deviceInfo?: string, ip?: string) {
     if (!email || !code) throw new ApiError(400, "Email and OTP are required");
 
-    const otpVerification = await otpService.verifyOtp(email, code, "EMAIL");
+    const normalizedEmail = email.toLowerCase();
+    const otpVerification = await otpService.verifyOtp(normalizedEmail, code, "EMAIL");
     if (!otpVerification.success) {
       throw new ApiError(401, otpVerification.message);
     }
 
-    const user = await userRepository.findByEmail(email);
+    const user = await userRepository.findByEmail(normalizedEmail);
     if (!user || user.isDeleted) {
       throw new ApiError(404, "User not found");
     }
@@ -103,30 +105,32 @@ export class AuthService {
 
   async register(data: any) {
     const { name, email, phone, password } = data;
+    const normalizedEmail = email.toLowerCase();
     
     // Check if user already exists
-    const existingUser = await userRepository.findByEmail(email);
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
     if (existingUser) throw new ApiError(400, "User with this email already exists");
     
     const existingPhone = await userRepository.findByPhone(phone);
     if (existingPhone) throw new ApiError(400, "User with this phone already exists");
 
     // Send OTP first
-    await otpService.sendEmailOtp(email);
+    await otpService.sendEmailOtp(normalizedEmail);
 
     return { data, message: "Verification code sent to your email" };
   }
 
   async completeRegistration(data: any, code: string, deviceInfo?: string, ip?: string) {
     const { name, email, phone, password } = data;
+    const normalizedEmail = email.toLowerCase();
 
-    const otpVerification = await otpService.verifyOtp(email, code, "EMAIL");
+    const otpVerification = await otpService.verifyOtp(normalizedEmail, code, "EMAIL");
     if (!otpVerification.success) {
       throw new ApiError(401, otpVerification.message);
     }
 
     // Check again
-    const existingUser = await userRepository.findByEmail(email);
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
     if (existingUser) throw new ApiError(400, "User already registered");
 
     // Hash the password
@@ -135,7 +139,7 @@ export class AuthService {
     // Create user
     const user = await userRepository.create({
       name,
-      email,
+      email: normalizedEmail,
       phoneNumber: phone,
       password: hashedPassword,
       isEmailVerified: true,
@@ -213,6 +217,10 @@ export class AuthService {
 
   async unblockUser(id: string) {
     return await userRepository.updateStatus(id, "ACTIVE");
+  }
+
+  async deleteUser(id: string) {
+    return await userRepository.softDeleteUser(id);
   }
 
   async getUsers() {

@@ -4,11 +4,13 @@ import ProductCard from '../ProductCard';
 interface ProductSectionProps {
   title: string;
   products: any[];
-  viewAllLink: string;
+  viewAllLink?: string;
   loading?: boolean;
   toggleItem: (item: any) => void;
   isInWishlist: (id: string) => boolean;
   addItem: (item: any) => void;
+  hideViewAll?: boolean;
+  swipeable?: boolean;
 }
 
 const ProductSection = ({ 
@@ -18,7 +20,9 @@ const ProductSection = ({
   loading, 
   toggleItem, 
   isInWishlist, 
-  addItem 
+  addItem,
+  hideViewAll,
+  swipeable
 }: ProductSectionProps) => {
   if (!loading && products.length === 0) return null;
 
@@ -35,25 +39,28 @@ const ProductSection = ({
         </h2>
         <div className="w-12 h-0.5 bg-[#7A578D] opacity-20 mt-4 rounded-full" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-        {products.slice(0, 4).map((product) => (
-          <ProductCard 
-            key={product.id}
-            product={product} 
-            toggleItem={toggleItem} 
-            isInWishlist={isInWishlist} 
-            addItem={addItem} 
-          />
+      <div className={swipeable ? "flex overflow-x-auto gap-4 mb-6 pb-6 snap-x snap-mandatory no-scrollbar" : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6"}>
+        {products.map((product) => (
+          <div key={product.id} className={swipeable ? "w-[160px] md:w-[240px] flex-shrink-0 snap-start" : ""}>
+            <ProductCard 
+              product={product} 
+              toggleItem={toggleItem} 
+              isInWishlist={isInWishlist} 
+              addItem={addItem} 
+            />
+          </div>
         ))}
         {loading && Array(4).fill(0).map((_, i) => (
-          <div key={i} className="aspect-[4/5] bg-gray-200 dark:bg-white/5 animate-pulse rounded-lg"/>
+          <div key={i} className={`aspect-[4/5] bg-gray-200 dark:bg-white/5 animate-pulse rounded-lg ${swipeable ? "w-[160px] md:w-[240px] flex-shrink-0" : ""}`}/>
         ))}
       </div>
-      <div className="flex justify-center mt-6">
-        <Link to={viewAllLink} className="luxury-button rounded-full py-2 px-6 text-[10px]">
-          VIEW ALL
-        </Link>
-      </div>
+      {!hideViewAll && viewAllLink && (
+        <div className="flex justify-center mt-6">
+          <Link to={viewAllLink} className="luxury-button rounded-full py-2 px-6 text-[10px]">
+            VIEW ALL
+          </Link>
+        </div>
+      )}
     </section>
   );
 };

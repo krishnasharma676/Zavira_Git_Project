@@ -42,15 +42,27 @@ h4 { @apply text-lg md:text-2xl; }
   @apply bg-white dark:bg-[#121212] transition-all duration-700 hover:shadow-[0_20px_40px_rgba(122,87,141,0.08)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] hover:-translate-y-2 border border-gray-100/50 dark:border-white/5 rounded-2xl overflow-hidden;
 }
 
-/* Custom Scrollbar */
+/* Custom Fine Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-white dark:bg-[#0A0A0A];
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-[#7A578D];
+  background: #7A578D20;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7A578D;
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #7A578D20 transparent;
 }
 
 /* Navigation Overlays mask for mobile footer height */

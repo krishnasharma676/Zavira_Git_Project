@@ -8,9 +8,10 @@ interface OrdersTabProps {
   orders: any[];
   loading: boolean;
   getStatusIcon: (status: string) => React.ReactNode;
+  onRequestReturn: (orderId: string, orderNumber: string) => void;
 }
 
-const OrdersTab = ({ orders, loading, getStatusIcon }: OrdersTabProps) => {
+const OrdersTab = ({ orders, loading, getStatusIcon, onRequestReturn }: OrdersTabProps) => {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
        <h2 className="text-xl font-sans font-black mb-6 uppercase tracking-tighter">My <span className="text-[#7A578D]">Orders_</span></h2>
@@ -24,7 +25,8 @@ const OrdersTab = ({ orders, loading, getStatusIcon }: OrdersTabProps) => {
                 <OrderItem 
                   key={order.id} 
                   order={order} 
-                  getStatusIcon={getStatusIcon} 
+                  getStatusIcon={getStatusIcon}
+                  onRequestReturn={onRequestReturn}
                 />
              ))}
           </div>
@@ -40,3 +42,4 @@ const OrdersTab = ({ orders, loading, getStatusIcon }: OrdersTabProps) => {
 };
 
 export default OrdersTab;
+

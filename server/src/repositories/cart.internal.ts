@@ -2,7 +2,7 @@ import { prisma } from "../config/prisma";
 
 export class CartRepository {
   async getCart(userId: string) {
-    return await prisma.cart.findUnique({
+    return await (prisma as any).cart.findUnique({
       where: { userId },
       include: {
         items: {
@@ -16,48 +16,86 @@ export class CartRepository {
     });
   }
 
-  async addItem(userId: string, productId: string, quantity: number) {
-    let cart = await prisma.cart.findUnique({ where: { userId } });
-    if (!cart) cart = await prisma.cart.create({ data: { userId } });
+  async addItem(userId: string, productId: string, quantity: number, variantId?: string | null, selectedSize?: string | null) {
+    let cart = await (prisma as any).cart.findUnique({ where: { userId } });
+    if (!cart) cart = await (prisma as any).cart.create({ data: { userId } });
 
-    return await prisma.cartItem.upsert({
-      where: { cartId_productId: { cartId: cart.id, productId } },
-      update: { quantity: { increment: quantity } },
-      create: { cartId: cart.id, productId, quantity },
+    const existingItem = await (prisma as any).cartItem.findFirst({
+      where: { cartId: cart.id, productId, variantId: variantId || null, selectedSize: selectedSize || null }
     });
-  }
 
-  async updateQuantity(userId: string, productId: string, quantity: number) {
-    const cart = await prisma.cart.findUnique({ where: { userId } });
-    if (!cart) return null;
-
-    if (quantity <= 0) {
-      return await prisma.cartItem.delete({
-        where: { cartId_productId: { cartId: cart.id, productId } }
+    if (existingItem) {
+      return await (prisma as any).cartItem.update({
+        where: { id: existingItem.id },
+        data: { quantity: { increment: quantity } },
       });
     }
 
-    return await prisma.cartItem.update({
-      where: { cartId_productId: { cartId: cart.id, productId } },
+    return await (prisma as any).cartItem.create({
+      data: { 
+        cartId: cart.id, 
+        productId, 
+        quantity, 
+        variantId: variantId || undefined, 
+        selectedSize: selectedSize || undefined 
+      },
+    });
+  }
+
+  async updateQuantity(userId: string, cartItemId: string, quantity: number) {
+    const cart = await (prisma as any).cart.findUnique({ where: { userId } });
+    if (!cart) return null;
+
+    if (quantity <= 0) {
+      return await (prisma as any).cartItem.delete({
+        where: { id: cartItemId }
+      });
+    }
+
+    return await (prisma as any).cartItem.update({
+      where: { id: cartItemId },
       data: { quantity }
     });
   }
 
-  async removeItem(userId: string, productId: string) {
-    const cart = await prisma.cart.findUnique({ where: { userId } });
+  async removeItem(userId: string, cartItemId: string) {
+    const cart = await (prisma as any).cart.findUnique({ where: { userId } });
     if (!cart) return null;
 
-    return await prisma.cartItem.delete({
-      where: { cartId_productId: { cartId: cart.id, productId } }
+    return await (prisma as any).cartItem.delete({
+      where: { id: cartItemId }
     });
   }
 
   async clearCart(userId: string) {
-    const cart = await prisma.cart.findUnique({ where: { userId } });
+    const cart = await (prisma as any).cart.findUnique({ where: { userId } });
     if (!cart) return null;
 
-    return await prisma.cartItem.deleteMany({
+    return await (prisma as any).cartItem.deleteMany({
       where: { cartId: cart.id }
+    });
+  }
+
+  async findAbandonedCarts(hours: number = 24) {
+    const thresholdDate = new Date();
+    thresholdDate.setHours(thresholdDate.getHours() - hours);
+
+    return await prisma.cart.findMany({
+      where: {
+        updatedAt: { lte: thresholdDate },
+        items: { some: {} } // Has at least one item
+      },
+      include: {
+        user: { select: { name: true, email: true, phoneNumber: true } },
+        items: {
+          include: {
+            product: {
+              select: { name: true, basePrice: true, images: { where: { isPrimary: true } } }
+            }
+          }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
     });
   }
 }

@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/prisma';
 import slugify from 'slugify';
 import { uploadOnCloudinary, deleteFromCloudinary } from '../utils/cloudinary';
 import { ApiError } from '../utils/ApiError';
-
-const prisma = new PrismaClient();
 
 export class ProductService {
   async getAllProducts(query: any) {
@@ -12,7 +10,6 @@ export class ProductService {
       limit = 10, 
       search, 
       category, 
-      brand, 
       minPrice, 
       maxPrice, 
       sortBy,
@@ -37,6 +34,12 @@ export class ProductService {
        where.inventory = { stock: { lte: 0 } };
     }
 
+    if (query.hasVariants === 'true' || query.hasVariants === true) {
+      where.variants = { some: {} };
+    } else if (query.hasVariants === 'false' || query.hasVariants === false) {
+      where.variants = { none: {} };
+    }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -53,14 +56,6 @@ export class ProductService {
       };
     }
     
-    if (brand) {
-      where.brand = {
-        OR: [
-          { id: brand },
-          { slug: brand }
-        ]
-      };
-    }
 
     if (minPrice || maxPrice) {
       const min = minPrice ? Number(minPrice) : 0;
@@ -98,6 +93,25 @@ export class ProductService {
       }
     }
 
+    if (query.color) {
+      where.variants = {
+        some: {
+          OR: [
+            { color: { contains: query.color, mode: 'insensitive' } },
+            { colorId: query.color }
+          ]
+        }
+      };
+    }
+
+    if (query.size) {
+      where.OR = [
+        ...(where.OR || []),
+        { sizes: { contains: query.size, mode: 'insensitive' } },
+        { variants: { some: { sizes: { some: { size: query.size } } } } }
+      ];
+    }
+
     let orderBy: any = { createdAt: 'desc' };
     
     // Support sortBy/sortOrder from frontend
@@ -113,22 +127,26 @@ export class ProductService {
     }
 
     const [products, total] = await Promise.all([
-      prisma.product.findMany({
+      (prisma as any).product.findMany({
         where,
         skip,
         take: Number(limit),
         orderBy,
         include: {
           category: true,
-          brand: true,
           images: true,
           inventory: true,
+          variants: {
+            include: {
+              images: true
+            }
+          },
           _count: {
             select: { reviews: true }
           }
         }
       }),
-      prisma.product.count({ where })
+      (prisma as any).product.count({ where })
     ]);
 
     return {
@@ -142,14 +160,27 @@ export class ProductService {
     };
   }
 
-  async getProductBySlug(slug: string) {
-    const product = await prisma.product.findUnique({
-      where: { slug },
+  async getProductBySlug(slugOrId: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slugOrId);
+    
+    const product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { slug: slugOrId },
+          isUuid ? { id: slugOrId } : {}
+        ],
+        isDeleted: false
+      },
       include: {
         category: true,
-        brand: true,
         images: true,
         inventory: true,
+        variants: {
+          include: {
+            images: { orderBy: { sortOrder: 'asc' } },
+            sizes: { orderBy: { size: 'asc' } }
+          }
+        },
         reviews: {
           where: { isApproved: true, isDeleted: false },
           include: {
@@ -161,7 +192,7 @@ export class ProductService {
       }
     });
 
-    if (!product || product.isDeleted) throw new ApiError(404, 'Product not found');
+    if (!product) throw new ApiError(404, 'Product not found');
     return product;
   }
 
@@ -183,7 +214,11 @@ export class ProductService {
   }
 
   async createProduct(data: any, files: Express.Multer.File[]) {
-    const { name, basePrice, discountedPrice, categoryId, brandId, description, stock, sku, hotDeals, featured, trending, attributes } = data;
+    const { 
+      name, basePrice, discountedPrice, categoryId, description, 
+      stock, sku, hotDeals, featured, trending, attributes, sizes,
+      weight, length, width, height, hsnCode, taxRate 
+    } = data;
     const slug = await this.generateUniqueSlug(name);
 
     let parsedAttributes = attributes;
@@ -199,11 +234,17 @@ export class ProductService {
         discountedPrice: discountedPrice ? Number(discountedPrice) : null,
         description,
         categoryId,
-        brandId: brandId || null,
         hotDeals: hotDeals === 'true' || hotDeals === true,
         featured: featured === 'true' || featured === true,
         trending: trending === 'true' || trending === true,
         attributes: parsedAttributes,
+        sizes: sizes || null,
+        weight: Number(weight) || 0,
+        length: Number(length) || 0,
+        width: Number(width) || 0,
+        height: Number(height) || 0,
+        hsnCode: hsnCode || null,
+        taxRate: Number(taxRate) || 0,
         inventory: {
           create: {
             stock: Number(stock) || 0,
@@ -222,7 +263,11 @@ export class ProductService {
 
   async updateProduct(id: string, data: any, files?: Express.Multer.File[]) {
     // sku belongs to Inventory, not Product — extract it separately
-    const { name, basePrice, discountedPrice, stock, sku, attributes, ...updateData } = data;
+    const { 
+      name, basePrice, discountedPrice, stock, sku, attributes, sizes,
+      weight, length, width, height, hsnCode, taxRate,
+      ...updateData 
+    } = data;
     
     if (name) {
       updateData.name = name;
@@ -239,6 +284,14 @@ export class ProductService {
 
     if (basePrice !== undefined) updateData.basePrice = Number(basePrice);
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice ? Number(discountedPrice) : null;
+    if (sizes !== undefined) updateData.sizes = sizes;
+    
+    if (weight !== undefined) updateData.weight = Number(weight);
+    if (length !== undefined) updateData.length = Number(length);
+    if (width !== undefined) updateData.width = Number(width);
+    if (height !== undefined) updateData.height = Number(height);
+    if (hsnCode !== undefined) updateData.hsnCode = hsnCode || null;
+    if (taxRate !== undefined) updateData.taxRate = Number(taxRate);
     
     // Parse booleans from multipart form
     if (data.hotDeals !== undefined) updateData.hotDeals = data.hotDeals === 'true' || data.hotDeals === true;
@@ -326,7 +379,6 @@ export class ProductService {
       where: { id },
       include: {
         category: true,
-        brand: true,
         images: true,
         inventory: true
       }

@@ -9,7 +9,6 @@ import { getMuiTheme } from '../utils/muiTableTheme';
 
 const ReviewManagement = () => {
   const [reviews, setReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const fetchReviews = async () => {
     try {
@@ -17,8 +16,6 @@ const ReviewManagement = () => {
       setReviews(data.data);
     } catch (error) {
       toast.error('Failed to load reviews');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -137,12 +134,12 @@ const ReviewManagement = () => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      <header className="border-b border-gray-100 pb-4">
+      <header className="border-b border-gray-100 pb-2">
         <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Reviews</h1>
-        <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1.5">Manage product feedback</p>
+        <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">Manage product feedback</p>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
         <ThemeProvider theme={getMuiTheme()}>
           <MUIDataTable title="" data={reviews} columns={columns} options={options} />
         </ThemeProvider>

@@ -103,6 +103,13 @@ export class UserRepository {
     });
   }
 
+  async softDeleteUser(id: string) {
+    return await prisma.user.update({
+      where: { id },
+      data: { isDeleted: true, status: "DELETED" },
+    });
+  }
+
   async findAll() {
     return await prisma.user.findMany({
       where: { isDeleted: false },

@@ -8,7 +8,6 @@ import {
   Truck, 
   RefreshCw, 
   CreditCard,
-  Mail,
   ArrowRight,
   Phone,
   MapPin

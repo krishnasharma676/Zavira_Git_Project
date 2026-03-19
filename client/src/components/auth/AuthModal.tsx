@@ -388,7 +388,7 @@ const AuthModal = () => {
             </div>
 
             <p className="relative z-10 text-[8px] font-black uppercase tracking-[0.3em] text-[#7A578D]/40 italic">
-              Standard Protocol...
+              Signing in...
             </p>
           </div>
 

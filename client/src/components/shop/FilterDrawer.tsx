@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import api from '../../api/axios';
 
 interface FilterDrawerProps {
   isOpen: boolean;
@@ -10,6 +12,10 @@ interface FilterDrawerProps {
   products: any[];
   stockStatus: string;
   setStockStatus: (val: string) => void;
+  selectedColor: string;
+  setSelectedColor: (val: string) => void;
+  selectedSize: string;
+  setSelectedSize: (val: string) => void;
   selectedAttrs: any;
   setSelectedAttrs: (val: any) => void;
   applyFilters: () => void;
@@ -24,19 +30,37 @@ const FilterDrawer = ({
   products,
   stockStatus,
   setStockStatus,
+  selectedColor,
+  setSelectedColor,
+  selectedSize,
+  setSelectedSize,
   selectedAttrs,
   setSelectedAttrs,
   applyFilters,
   clearFilters
 }: FilterDrawerProps) => {
 
-  // Extract dynamic attribute groups from current products
-  const attributeGroups: any = {};
-  products.forEach(product => {
-    if (product.attributes) {
-      Object.entries(product.attributes).forEach(([key, value]: [string, any]) => {
-        if (!attributeGroups[key]) attributeGroups[key] = new Set();
-        attributeGroups[key].add(value);
+  const [savedColors, setSavedColors] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/colors')
+        .then(res => setSavedColors(res.data.data))
+        .catch(err => console.error('Failed to fetch filter colors:', err));
+    }
+  }, [isOpen]);
+
+  // Extract dynamic sizes from products for the size filter
+  const availableSizes = new Set<string>();
+  products.forEach(p => {
+    if (p.sizes && typeof p.sizes === 'string') {
+      p.sizes.split(',').forEach((s: string) => availableSizes.add(s.trim()));
+    }
+    if (p.variants) {
+      p.variants.forEach((v: any) => {
+        if (v.sizes) {
+          v.sizes.forEach((sz: any) => availableSizes.add(sz.size));
+        }
       });
     }
   });
@@ -77,12 +101,12 @@ const FilterDrawer = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-10 custom-scrollbar font-sans">
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-10 custom-scrollbar font-sans uppercase">
               
               {/* Availability */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-white/5 pb-2">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Availability</h3>
+                  <h3 className="text-[11px] font-black tracking-widest text-gray-900 dark:text-white">Availability</h3>
                   <Minus size={12} className="text-[#7A578D]" />
                 </div>
                 <div className="space-y-3">
@@ -102,7 +126,7 @@ const FilterDrawer = ({
                       }`}>
                         {stockStatus === item.value && <Check size={10} className="text-white" />}
                       </div>
-                      <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${
+                      <span className={`text-[10px] font-bold transition-colors tracking-widest ${
                         stockStatus === item.value ? 'text-[#7A578D]' : 'text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white'
                       }`}>{item.label}</span>
                     </label>
@@ -113,7 +137,7 @@ const FilterDrawer = ({
               {/* Price */}
               <div className="space-y-6">
                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-white/5 pb-2">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Price Range</h3>
+                  <h3 className="text-[11px] font-black tracking-widest text-gray-900 dark:text-white">Price Range</h3>
                   <Minus size={12} className="text-[#7A578D]" />
                 </div>
                 <div className="space-y-4">
@@ -127,56 +151,74 @@ const FilterDrawer = ({
                      className="w-full h-1 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7A578D]"
                    />
                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Price:</span>
-                      <span className="text-[11px] font-black text-[#7A578D] uppercase tracking-widest ml-1">Rs. {priceRange.toLocaleString()}</span>
+                      <span className="text-[10px] font-bold text-gray-400 tracking-widest">Max Price:</span>
+                      <span className="text-[11px] font-black text-[#7A578D] tracking-widest ml-1">Rs. {priceRange.toLocaleString()}</span>
                    </div>
                 </div>
               </div>
 
-              {/* Dynamic Groups (Color, Material, etc.) */}
-              {Object.entries(attributeGroups).map(([groupKey, values]: [string, any]) => (
-                <div key={groupKey} className="space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-50 dark:border-white/5 pb-2 text-[#7A578D]">
-                    <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white">{groupKey}</h3>
-                    <Minus size={12} />
+              {/* Color Swatches Filter */}
+              {savedColors.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-gray-50 dark:border-white/5 pb-2">
+                    <h3 className="text-[11px] font-black tracking-widest text-gray-900 dark:text-white">Color Palette</h3>
+                    <Minus size={12} className="text-[#7A578D]" />
                   </div>
-                  <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
-                    {Array.from(values).sort().map((val: any) => (
-                      <label 
-                        key={val} 
-                        className="flex items-center space-x-3 cursor-pointer group"
-                        onClick={() => handleAttrToggle(groupKey, val)}
+                  <div className="flex flex-wrap gap-3">
+                    {savedColors.map((color) => (
+                      <button
+                        key={color.id}
+                        onClick={() => setSelectedColor(selectedColor === color.id ? '' : color.id)}
+                        className={`group relative flex flex-col items-center gap-1.5 transition-all p-1 rounded-xl ${
+                          selectedColor === color.id ? 'bg-[#7A578D]/5' : ''
+                        }`}
+                        title={color.name}
                       >
-                        <div className={`w-4 h-4 border rounded flex items-center justify-center transition-all ${
-                          selectedAttrs[groupKey] === val 
-                          ? 'bg-[#7A578D] border-[#7A578D]' 
-                          : 'border-gray-200 dark:border-white/10 group-hover:border-[#7A578D]'
-                        }`}>
-                          {selectedAttrs[groupKey] === val && <Check size={10} className="text-white" />}
+                        <div 
+                           className={`w-7 h-7 rounded-full border-2 shadow-sm transition-all ${
+                             selectedColor === color.id ? 'border-[#7A578D] scale-110 shadow-lg shadow-purple-500/20' : 'border-white dark:border-white/10 hover:scale-105'
+                           }`}
+                           style={{ backgroundColor: color.hexCode }}
+                        >
+                          {selectedColor === color.id && (
+                            <div className="w-full h-full flex items-center justify-center">
+                               <Check size={12} className={color.hexCode === '#FFFFFF' ? 'text-black' : 'text-white'} />
+                            </div>
+                          )}
                         </div>
-                        <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${
-                          selectedAttrs[groupKey] === val ? 'text-[#7A578D]' : 'text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white'
-                        }`}>{val}</span>
-                      </label>
+                        <span className={`text-[7px] font-black uppercase tracking-tighter max-w-[40px] truncate ${
+                           selectedColor === color.id ? 'text-[#7A578D]' : 'text-gray-400'
+                        }`}>
+                          {color.name}
+                        </span>
+                      </button>
                     ))}
                   </div>
                 </div>
-              ))}
+              )}
 
-              {/* Featured Highlights (Simplified) */}
-              {products.length > 0 && (
-                <div className="space-y-6 pt-4 border-t border-gray-100 dark:border-white/5">
-                   <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-400 italic">Trending Picks</h3>
-                   <div className="grid grid-cols-2 gap-3">
-                      {products.filter(p => !p.inventory || p.inventory.stock > 0).slice(0, 2).map(prod => (
-                         <Link key={prod.id} to={`/product/${prod.slug}`} className="block group">
-                            <div className="aspect-square bg-gray-50 dark:bg-white/5 rounded-xl overflow-hidden mb-2">
-                               <img src={prod.images?.[0]?.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="" />
-                            </div>
-                            <p className="text-[8px] font-black uppercase tracking-tighter truncate text-gray-800 dark:text-white">{prod.name}</p>
-                         </Link>
-                      ))}
-                   </div>
+              {/* Size Filter */}
+              {availableSizes.size > 0 && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-gray-50 dark:border-white/5 pb-2">
+                    <h3 className="text-[11px] font-black tracking-widest text-gray-900 dark:text-white">Size Guide</h3>
+                    <Minus size={12} className="text-[#7A578D]" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(availableSizes).sort().map((sz) => (
+                      <button
+                        key={sz}
+                        onClick={() => setSelectedSize(selectedSize === sz ? '' : sz)}
+                        className={`min-w-[40px] h-10 flex items-center justify-center rounded-xl border-2 text-[10px] font-black transition-all ${
+                          selectedSize === sz
+                            ? 'bg-[#7A578D] border-[#7A578D] text-white shadow-lg shadow-purple-500/20 scale-105'
+                            : 'border-gray-50 dark:border-white/5 text-gray-600 hover:border-[#7A578D]/30'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -190,7 +232,7 @@ const FilterDrawer = ({
 
                 <button 
                   onClick={clearFilters}
-                  className="w-full text-gray-400 hover:text-gray-900 dark:hover:text-white text-[9px] font-black uppercase tracking-widest pt-2 underline underline-offset-4"
+                  className="w-full text-gray-400 hover:text-gray-900 dark:hover:text-white text-[9px] font-black tracking-widest pt-2 underline underline-offset-4"
                 >
                   Reset All
                 </button>

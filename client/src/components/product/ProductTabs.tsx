@@ -46,15 +46,11 @@ const ProductTabs = ({
         ))}
       </div>
 
-      <div className="min-h-[200px] py-4">
+      <div className="py-4">
         {activeTab === 'details' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
              <p className="text-xs text-gray-500 font-medium leading-relaxed italic">{product.description}</p>
              <div className="grid grid-cols-1 gap-3 mt-4">
-                <div className="flex justify-between border-b border-gray-50 dark:border-white/5 pb-2 text-[11px]">
-                  <span className="text-gray-400 uppercase font-black tracking-widest">Brand</span>
-                  <span className="text-gray-900 dark:text-white font-bold">{product.brand?.name || 'Zavira'}</span>
-                </div>
                 <div className="flex justify-between border-b border-gray-50 dark:border-white/5 pb-2 text-[11px]">
                   <span className="text-gray-400 uppercase font-black tracking-widest">Category</span>
                   <span className="text-gray-900 dark:text-white font-bold">{product.category?.name}</span>

@@ -1,39 +1,26 @@
-import { Router } from "express";
-import { 
-  sendOtp, 
-  verifyOtp, 
-  login,
-  register,
-  verifyEmailLogin,
-  verifyEmailRegister,
-  logout, 
-  refreshAccessToken, 
-  getAllUsers, 
-  getMe,
-  blockUser,
-  unblockUser
-} from "../controllers/auth.controller";
-import { authenticate, isAdmin } from "../middleware/auth.middleware";
-import { validate } from "../middleware/validate.middleware";
-import { sendOtpSchema, verifyOtpSchema, loginSchema, registerSchema, refreshAccessTokenSchema, verifyEmailLoginSchema, verifyEmailRegisterSchema } from "../validations/auth.validation";
+import { Router } from 'express';
+import * as authController from '../controllers/auth.controller';
+import { authenticate, isAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post("/send-otp", validate(sendOtpSchema), sendOtp);
-router.post("/verify-otp", validate(verifyOtpSchema), verifyOtp);
-router.post("/login", validate(loginSchema), login);
-router.post("/register", validate(registerSchema), register);
-router.post("/verify-email-login", validate(verifyEmailLoginSchema), verifyEmailLogin);
-router.post("/verify-email-register", validate(verifyEmailRegisterSchema), verifyEmailRegister);
-router.get("/me", authenticate, getMe);
-router.post("/refresh-token", validate(refreshAccessTokenSchema), refreshAccessToken);
+// ── Public Routes ──────────────────────────────────────────────────────────
+router.post('/send-otp', authController.sendOtp);
+router.post('/verify-otp', authController.verifyOtpAndLogin);
+router.post('/login', authController.login);
+router.post('/verify-email-otp', authController.verifyEmailOtpAndLogin);
+router.post('/register', authController.register);
+router.post('/complete-registration', authController.completeRegistration);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authController.logout);
 
-// Protected routes
-router.post("/logout", authenticate, logout);
+// ── Admin Routes (Note: Path relative to /api/v1/auth) ──────────────────────
+router.get('/admin/users', authenticate, isAdmin, authController.getUsers);
+router.patch('/admin/users/:id/block', authenticate, isAdmin, authController.blockUser);
+router.patch('/admin/users/:id/unblock', authenticate, isAdmin, authController.unblockUser);
+router.delete('/admin/users/:id', authenticate, isAdmin, authController.deleteUser);
 
-// Admin routes
-router.get("/admin/users", authenticate, isAdmin, getAllUsers);
-router.patch("/admin/users/:id/block", authenticate, isAdmin, blockUser);
-router.patch("/admin/users/:id/unblock", authenticate, isAdmin, unblockUser);
+// ── Profile Route ────────────────────────────────────────────────────────────
+router.get('/profile', authenticate, authController.getProfile);
 
 export default router;

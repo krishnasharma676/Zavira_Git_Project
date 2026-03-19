@@ -31,7 +31,6 @@ export const UPLOAD = {
 export const CLOUDINARY_FOLDERS = {
   PRODUCTS: 'products',
   CATEGORIES: 'categories',
-  BRANDS: 'brands',
   BANNERS: 'banners',
   AVATARS: 'avatars',
 } as const;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Trash2, CheckCircle, Clock, Send, MessageSquare, User, Calendar, ExternalLink } from 'lucide-react';
+import { Mail, Trash2, CheckCircle, Clock, Send, MessageSquare, User } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -184,10 +184,10 @@ const MessageManagement = () => {
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            <header className="flex justify-between items-center border-b border-gray-100 pb-4">
+            <header className="flex justify-between items-center border-b border-gray-100 pb-2">
                 <div>
                     <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Messages</h1>
-                    <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1.5">User inquiries & support requests</p>
+                    <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">User inquiries & support requests</p>
                 </div>
                 <div className="flex items-center space-x-2 text-[8px] font-black uppercase text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                     <MessageSquare size={10} />
@@ -195,7 +195,7 @@ const MessageManagement = () => {
                 </div>
             </header>
 
-            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm relative min-h-[400px]">
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm relative min-h-[400px]">
                 {loading && (
                     <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
                         <div className="w-8 h-8 border-2 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
@@ -212,48 +212,48 @@ const MessageManagement = () => {
                 title="Message Details"
             >
                 {selectedMessage && (
-                    <div className="space-y-6">
-                        <div className="bg-[#7A578D]/5 border border-[#7A578D]/10 rounded-2xl p-5 space-y-4">
+                    <div className="space-y-4">
+                        <div className="bg-[#7A578D]/5 border border-[#7A578D]/10 rounded-xl p-3 space-y-3">
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
-                                    <h4 className="text-[12px] font-black uppercase tracking-tight text-gray-900">{selectedMessage.subject}</h4>
-                                    <div className="flex items-center space-x-2 text-[9px] font-bold text-gray-500 italic">
-                                        <User size={10} />
+                                    <h4 className="text-[11px] font-black uppercase tracking-tight text-gray-900">{selectedMessage.subject}</h4>
+                                    <div className="flex items-center space-x-2 text-[8px] font-bold text-gray-500 italic">
+                                        <User size={9} />
                                         <span>{selectedMessage.name}</span>
                                         <span>•</span>
-                                        <Mail size={10} />
+                                        <Mail size={9} />
                                         <span className="lowercase">{selectedMessage.email}</span>
                                     </div>
                                 </div>
-                                <span className="text-[8px] font-black text-gray-400">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
+                                <span className="text-[7px] font-black text-gray-400">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
                             </div>
-                            <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm italic">
-                                <p className="text-xs text-gray-600 leading-relaxed font-medium">"{selectedMessage.message}"</p>
+                            <div className="bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm italic">
+                                <p className="text-[10px] text-gray-600 leading-relaxed font-medium">"{selectedMessage.message}"</p>
                             </div>
                         </div>
 
                         {selectedMessage.status === 'REPLIED' ? (
-                            <div className="space-y-3">
-                                <div className="flex items-center space-x-2 text-[9px] font-black uppercase text-green-600">
-                                    <CheckCircle size={12} />
+                            <div className="space-y-2">
+                                <div className="flex items-center space-x-2 text-[8px] font-black uppercase text-green-600">
+                                    <CheckCircle size={10} />
                                     <span>Sent Reply:</span>
                                 </div>
-                                <div className="bg-green-50/50 border border-green-100/50 rounded-xl p-4 text-[11px] text-gray-600 font-medium italic">
+                                <div className="bg-green-50/50 border border-green-100/50 rounded-lg p-2.5 text-[10px] text-gray-600 font-medium italic">
                                     {selectedMessage.reply}
                                 </div>
                             </div>
                         ) : (
-                            <form onSubmit={handleReply} className="space-y-3 pt-2">
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-[#7A578D] ml-1 flex items-center space-x-1.5">
-                                        <Send size={10} />
+                            <form onSubmit={handleReply} className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-[#7A578DR ml-1 flex items-center space-x-1.5">
+                                        <Send size={9} />
                                         <span>Your Response</span>
                                     </label>
                                     <textarea
                                         value={replyText}
                                         onChange={(e) => setReplyText(e.target.value)}
-                                        rows={4}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 px-4 outline-none focus:border-[#7A578D] text-xs font-bold transition-all resize-none"
+                                        rows={3}
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 px-3 outline-none focus:border-[#7A578D] text-[10px] font-bold transition-all resize-none"
                                         placeholder="Type your reply here..."
                                         required
                                     />
@@ -261,7 +261,7 @@ const MessageManagement = () => {
                                 <button 
                                     type="submit" 
                                     disabled={isSubmitting || !replyText.trim()}
-                                    className="w-full luxury-button py-3.5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
+                                    className="w-full luxury-button py-2 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] disabled:opacity-50"
                                 >
                                     {isSubmitting ? 'SENDING REPLY...' : 'SEND REPLY TO USER'}
                                 </button>

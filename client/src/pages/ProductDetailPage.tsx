@@ -25,6 +25,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [activeTab, setActiveTab] = useState('details');
   
   // Review Form State
@@ -37,7 +39,11 @@ const ProductDetailPage = () => {
       setLoading(true);
       try {
         const { data } = await api.get(`/products/${slug}`);
-        setProduct(data.data);
+        const p = data.data;
+        setProduct(p);
+        if (p.variants && p.variants.length > 0) {
+          setSelectedVariant(p.variants[0]);
+        }
       } catch {
         toast.error("Product not found");
         navigate('/shop');
@@ -54,11 +60,11 @@ const ProductDetailPage = () => {
       const fetchSimilar = async () => {
         try {
           const { data } = await api.get('/products', { 
-            params: { category: product.categoryId, limit: 5 } 
+            params: { category: product.categoryId, limit: 20 } 
           });
           // Filter out the current product itself
           const filtered = data.data.products.filter((p: any) => p.id !== product.id);
-          setSimilarProducts(filtered.slice(0, 4));
+          setSimilarProducts(filtered);
         } catch (error) {
           console.error("Failed to fetch similar products", error);
         }
@@ -68,21 +74,51 @@ const ProductDetailPage = () => {
   }, [product?.id, product?.categoryId]);
 
   const handleAddToCart = () => {
-    const stock = product.inventory?.stock || 0;
-    if (stock <= 0) {
-      toast.error("This product is currently out of stock");
+    const hasVariants = product.variants && product.variants.length > 0;
+    
+    if (hasVariants && !selectedVariant) {
+      toast.error("Please select a color first");
       return;
     }
-    const primaryImage = product.images?.find((img: any) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl;
+
+    const stock = hasVariants 
+      ? (selectedVariant.sizes?.find((s: any) => s.size === selectedSize)?.stock || 0)
+      : (product.inventory?.stock || 0);
+
+    if (stock <= 0) {
+      toast.error("This selection is currently out of stock");
+      return;
+    }
+    
+    // Check sizes
+    let availableSizes: string[] = [];
+    if (hasVariants) {
+      availableSizes = selectedVariant.sizes?.map((s: any) => s.size) || [];
+    } else if (product?.sizes) {
+      availableSizes = product.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+
+    if (availableSizes.length > 0 && !selectedSize) {
+      toast.error("Please select a size first");
+      return;
+    }
+
+    const primaryImage = hasVariants
+      ? (selectedVariant.images?.find((img: any) => img.isPrimary)?.imageUrl || selectedVariant.images?.[0]?.imageUrl)
+      : (product.images?.find((img: any) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl);
+
     addItem({
       id: product.id,
+      variantId: selectedVariant?.id,
       name: product.name,
       price: product.discountPrice || product.basePrice,
       quantity: quantity,
       image: primaryImage,
-      stock: product.inventory?.stock || 0
+      stock: stock,
+      selectedSize: selectedSize || undefined,
+      cartItemId: Date.now().toString()
     });
-    toast.success(`${product.name} added to your cart`);
+    toast.success(`${product.name} Added to Cart`);
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -108,13 +144,11 @@ const ProductDetailPage = () => {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#121212] transition-colors duration-300">
-      <div className="w-12 h-12 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) return null;
 
-  const images = product.images?.map((img: any) => img.imageUrl) || ['https://via.placeholder.com/800'];
+  const variantImages = selectedVariant?.images?.map((img: any) => img.imageUrl);
+  const productImages = product.images?.map((img: any) => img.imageUrl);
+  const images = (variantImages && variantImages.length > 0) ? variantImages : (productImages && productImages.length > 0 ? productImages : ['https://via.placeholder.com/800']);
 
   return (
     <div className="bg-white dark:bg-[#121212] pt-8 pb-16 text-gray-900 dark:text-white transition-colors duration-300 min-h-screen">
@@ -141,6 +175,10 @@ const ProductDetailPage = () => {
               product={product} 
               quantity={quantity} 
               setQuantity={setQuantity} 
+              selectedVariant={selectedVariant}
+              setSelectedVariant={(v: any) => { setSelectedVariant(v); setSelectedSize(''); setSelectedImage(0); }}
+              selectedSize={selectedSize}
+              setSelectedSize={setSelectedSize}
               handleAddToCart={handleAddToCart} 
               toggleItem={toggleItem} 
               isInWishlist={isInWishlist} 
@@ -162,15 +200,16 @@ const ProductDetailPage = () => {
         </div>
 
         {/* Similar Products Section */}
-        <div className="mt-20 border-t border-gray-100 dark:border-gray-800 pt-16">
+        <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-10">
           <ProductSection 
             title="SIMILAR PRODUCTS" 
             products={similarProducts} 
-            viewAllLink={`/shop?category=${product.category?.slug || product.categoryId}`} 
             loading={loading}
             toggleItem={toggleItem}
             isInWishlist={isInWishlist}
             addItem={addItem}
+            hideViewAll={true}
+            swipeable={false}
           />
         </div>
       </div>

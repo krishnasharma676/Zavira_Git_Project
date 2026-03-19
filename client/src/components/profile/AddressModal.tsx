@@ -27,7 +27,7 @@ const AddressModal = ({ isOpen, onClose, onSubmit }: AddressModalProps) => {
           >
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-sans font-black uppercase italic tracking-tighter text-gray-900 dark:text-white">Initialize_Node</h3>
+                <h3 className="text-xl font-sans font-black uppercase italic tracking-tighter text-gray-900 dark:text-white">Add Address</h3>
                 <button onClick={onClose} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors p-2">
                   <X size={20} />
                 </button>
@@ -41,7 +41,7 @@ const AddressModal = ({ isOpen, onClose, onSubmit }: AddressModalProps) => {
               }}>
                 <div className="grid grid-cols-2 gap-4 text-gray-900 dark:text-white">
                   <div className="space-y-2">
-                     <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">Node Type</label>
+                     <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">Address Type</label>
                      <select name="type" className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-3 rounded-xl text-[10px] uppercase font-black tracking-widest outline-none focus:border-[#7A578D] dark:text-white">
                         <option value="HOME">HOME</option>
                         <option value="WORK">WORK</option>
@@ -56,7 +56,7 @@ const AddressModal = ({ isOpen, onClose, onSubmit }: AddressModalProps) => {
 
                 <div className="space-y-2">
                   <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">Coordinates (Street/Area)</label>
-                  <input name="street" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-[#7A578D] dark:text-white" placeholder="Node path address..." />
+                  <input name="street" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-[#7A578D] dark:text-white" placeholder="Street Address..." />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -81,7 +81,7 @@ const AddressModal = ({ isOpen, onClose, onSubmit }: AddressModalProps) => {
                   </div>
                 </div>
 
-                <button type="submit" className="w-full bg-black dark:bg-white text-white dark:text-black py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#7A578D] dark:hover:bg-[#7A578D] dark:hover:text-white transition-all shadow-xl shadow-black/10">Establish Logistic Node</button>
+                <button type="submit" className="w-full bg-black dark:bg-white text-white dark:text-black py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#7A578D] dark:hover:bg-[#7A578D] dark:hover:text-white transition-all shadow-xl shadow-black/10">Save Address</button>
               </form>
             </div>
           </motion.div>

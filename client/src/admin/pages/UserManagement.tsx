@@ -68,6 +68,17 @@ const UserManagement = () => {
     }
   };
 
+  const handleSoftDeleteUser = async (id: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this user record from active view?')) return;
+    try {
+      await api.patch(`/auth/admin/users/${id}/delete`);
+      toast.success('User purged successfully');
+      fetchUsers();
+    } catch (error) {
+      toast.error('Failed to purge user');
+    }
+  };
+
   const columns = [
     {
       name: "name",
@@ -144,25 +155,31 @@ const UserManagement = () => {
           const user = users[tableMeta.rowIndex];
           return (
             <div className="flex space-x-1">
-              <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400" title="Email User"><Mail size={12} /></button>
+              <button className="p-1 px-2 hover:bg-[#7A578D]/5 text-[#7A578D] rounded" title="Send Notification"><Mail size={12} /></button>
               {user.status === 'ACTIVE' ? (
                 <button 
                   onClick={() => handleBlockUser(id)}
-                  className="p-1 px-2 hover:bg-red-50 text-red-500 rounded" 
-                  title="Block User"
+                  className="p-1 px-2 hover:bg-amber-50 text-amber-600 rounded" 
+                  title="Block Access"
                 >
                   <UserX size={12} />
                 </button>
               ) : (
                 <button 
                   onClick={() => handleUnblockUser(id)}
-                  className="p-1 px-2 hover:bg-green-50 text-green-500 rounded" 
-                  title="Unblock User"
+                  className="p-1 px-2 hover:bg-green-50 text-green-600 rounded" 
+                  title="Restore Access"
                 >
                   <Lock size={12} />
                 </button>
               )}
-              <button className="p-1 px-2 hover:bg-gray-100 rounded text-gray-400"><MoreVertical size={12} /></button>
+              <button 
+                onClick={() => handleSoftDeleteUser(id)}
+                className="p-1 px-2 hover:bg-red-50 text-red-500 rounded" 
+                title="Purge Record"
+              >
+                  <MoreVertical size={12} />
+              </button>
             </div>
           )
         }
@@ -182,21 +199,21 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      <header className="flex justify-between items-center border-b border-gray-100 pb-4">
+      <header className="flex justify-between items-center border-b border-gray-100 pb-2">
         <div>
           <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Users</h1>
-          <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1.5">Manage customers & staff</p>
+          <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">Manage customers & staff</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#7A578D] text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center space-x-2 hover:bg-black transition-all"
+          className="bg-[#7A578D] text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center space-x-2 hover:bg-black transition-all"
         >
-          <UserPlus size={14} />
+          <UserPlus size={12} />
           <span>New Staff User</span>
         </button>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm relative min-h-[400px]">
+      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm relative min-h-[400px]">
         {loading && (
           <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
@@ -212,29 +229,29 @@ const UserManagement = () => {
         onClose={() => setIsModalOpen(false)} 
         title="Add Staff Member"
       >
-        <form onSubmit={handleAuthorize} className="space-y-4">
-           <div className="flex items-center space-x-4 bg-red-50/50 p-3 rounded-xl border border-red-50/50">
-              <div className="w-10 h-10 bg-white border border-red-100 rounded-lg flex items-center justify-center text-[#7A578D] shadow-sm italic relative">
-                  <Shield size={16} />
+        <form onSubmit={handleAuthorize} className="space-y-3">
+           <div className="flex items-center space-x-3 bg-red-50/30 p-2 rounded-lg border border-red-50/50">
+              <div className="w-8 h-8 bg-white border border-red-100 rounded-md flex items-center justify-center text-[#7A578D] shadow-sm italic relative">
+                  <Shield size={14} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Create Staff</h3>
-                <p className="text-gray-500 text-[8px] font-bold uppercase tracking-tight mt-0.5">Assign administrative privileges.</p>
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-[#7A578D]">Create Staff</h3>
+                <p className="text-gray-500 text-[7px] font-bold uppercase tracking-tight mt-0.5">Assign administrative privileges.</p>
               </div>
            </div>
            
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Email</label>
-                <input type="email" required value={authForm.email} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase" placeholder="admin@zavira.com" />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Email</label>
+                <input type="email" required value={authForm.email} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black lowercase" placeholder="admin@zavira.com" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone</label>
-                <input type="text" required value={authForm.phone} onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black italic" placeholder="9876543210" />
+              <div className="space-y-1">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Phone</label>
+                <input type="text" required value={authForm.phone} onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black italic" placeholder="9876543210" />
               </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Role Assignment</label>
-                <select value={authForm.role} onChange={(e) => setAuthForm({ ...authForm, role: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase appearance-none cursor-pointer">
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Role Assignment</label>
+                <select value={authForm.role} onChange={(e) => setAuthForm({ ...authForm, role: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase appearance-none cursor-pointer">
                   <option value="ADMIN">ADMINISTRATOR</option>
                   <option value="MANAGER">MANAGER</option>
                   <option value="EDITOR">EDITOR</option>
@@ -242,9 +259,11 @@ const UserManagement = () => {
               </div>
            </div>
 
-           <button type="submit" className="w-full bg-[#7A578D] text-white py-3 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
-             CREATE STAFF USER
-           </button>
+           <div className="pt-2">
+            <button type="submit" className="w-full bg-[#7A578D] text-white py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all">
+              CREATE STAFF USER
+            </button>
+           </div>
         </form>
       </ManagementModal>
     </div>

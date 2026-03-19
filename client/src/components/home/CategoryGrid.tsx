@@ -9,17 +9,6 @@ const CategoryGrid = ({ categories }: CategoryGridProps) => {
   return (
     <section className="w-full bg-[#EAD0DB] dark:bg-[#1A1A1A]/50 py-10 mb-16 transition-colors duration-500 relative">
       <div className="container mx-auto px-6 lg:px-12 relative z-10">
-        <div className="flex flex-col items-center mb-10 text-center relative">
-          <div className="flex items-center gap-6 mb-3 w-full">
-            <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#7A578D] to-[#7A578D] opacity-20" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-[#7A578D] whitespace-nowrap">Explore More</span>
-            <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-[#7A578D] to-[#7A578D] opacity-20" />
-          </div>
-          <h2 className="text-2xl md:text-3xl font-serif text-gray-900 dark:text-white tracking-tight leading-none mb-1">
-            Shop By Style
-          </h2>
-          <div className="w-12 h-0.5 bg-[#7A578D] opacity-20 mt-4 rounded-full" />
-        </div>
         <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-6 lg:gap-8 no-scrollbar pb-6 lg:pb-0 group/container">
           {categories.slice(0, 6).map((cat, idx) => (
             <motion.div 

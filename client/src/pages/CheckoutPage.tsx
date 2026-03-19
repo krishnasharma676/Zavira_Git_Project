@@ -5,14 +5,10 @@ import {
   ChevronDown, 
   ChevronUp, 
   Gift, 
-  Tag, 
-  PlusCircle, 
   ShoppingBag, 
   User, 
   ChevronRight,
-  ShieldCheck,
-  Package,
-  CheckCircle2
+  ShieldCheck
 } from 'lucide-react';
 import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
@@ -29,7 +25,6 @@ const CheckoutPage = () => {
   const openAuthModal = useUIStore((s) => s.openAuthModal);
 
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   
@@ -88,7 +83,6 @@ const CheckoutPage = () => {
       const response = await api.post('/orders/checkout', {
         addressId: addressRes.data.id,
         paymentMethod: 'COD',
-        couponCode,
         items: items.map(item => ({
           productId: item.id,
           quantity: item.quantity
@@ -187,19 +181,6 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        {/* Coupons */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-4">
-               <div className="w-12 h-12 bg-[#7A578D]/10 rounded-2xl flex items-center justify-center text-[#7A578D]">
-                  <Tag size={20} />
-               </div>
-               <div>
-                  <h3 className="text-[12px] font-black uppercase tracking-tight text-gray-900">ZAVIRA10 <span className="ml-2 bg-[#16a34a] text-white px-2 py-0.5 rounded-lg text-[9px]">SAVE {formatCurrency(savings)}</span></h3>
-                  <button className="text-[10px] font-black tracking-widest text-[#7A578D] uppercase mt-1">Enter a Coupon &gt;</button>
-               </div>
-            </div>
-            <button className="text-[11px] font-black uppercase tracking-widest text-[#7A578D] px-4 py-2 hover:bg-[#7A578D]/5 rounded-xl transition-all">Apply</button>
-        </div>
 
         {/* Items you may like (Suggestions) */}
         {suggestions.length > 0 && (
@@ -221,6 +202,7 @@ const CheckoutPage = () => {
                          name: prod.name,
                          price: prod.discountedPrice || prod.basePrice,
                          image: prod.images?.[0]?.imageUrl,
+                         stock: prod.inventory?.stock || 0,
                          quantity: 1
                        })}
                        className="w-full bg-white dark:bg-[#0A0A0A] border border-[#7A578D] text-[#7A578D] hover:bg-[#7A578D] hover:text-white py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"

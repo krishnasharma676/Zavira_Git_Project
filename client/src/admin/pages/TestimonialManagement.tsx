@@ -209,22 +209,22 @@ const TestimonialManagement = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
-      <header className="flex justify-between items-center border-b border-gray-100 pb-4">
+    <div className="space-y-3 animate-in fade-in duration-500">
+      <header className="flex justify-between items-center border-b border-gray-100 pb-2">
         <div>
           <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Testimonials</h1>
-          <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1.5">Manage Customer Feedback & Photos</p>
+          <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">Manage Customer Feedback & Photos</p>
         </div>
         <button 
           onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="bg-[#7A578D] text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center space-x-2 hover:bg-black transition-all shadow-lg"
+          className="bg-[#7A578D] text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center space-x-2 hover:bg-black transition-all shadow-lg"
         >
-          <Plus size={14} />
+          <Plus size={12} />
           <span>Add Testimonial</span>
         </button>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
         <ThemeProvider theme={getMuiTheme()}>
           <MUIDataTable title="" data={testimonials} columns={columns} options={options} />
         </ThemeProvider>
@@ -235,15 +235,15 @@ const TestimonialManagement = () => {
         onClose={() => setIsModalOpen(false)} 
         title={editingItem ? "Edit Testimonial" : "Create New Testimonial"}
       >
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
           {/* Profile Photo Upload */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center overflow-hidden transition-all group-hover:border-[#7A578D]/30 shadow-inner">
+              <div className="w-20 h-20 rounded-xl bg-gray-50 border border-dashed border-gray-100 flex items-center justify-center overflow-hidden transition-all group-hover:border-[#7A578D]/30 shadow-inner">
                 {imagePreview ? (
                   <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <Camera size={24} className="text-gray-300" />
+                  <Camera size={20} className="text-gray-300" />
                 )}
                 <input 
                   type="file" 
@@ -252,14 +252,14 @@ const TestimonialManagement = () => {
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-white p-1.5 rounded-lg shadow-lg border border-gray-50 pointer-events-none group-hover:scale-110 transition-transform">
-                <Plus size={10} className="text-[#7A578D]" strokeWidth={3} />
+              <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-md shadow-lg border border-gray-50 pointer-events-none group-hover:scale-110 transition-transform">
+                <Plus size={9} className="text-[#7A578D]" strokeWidth={3} />
               </div>
               {imagePreview && (
                 <button 
                   type="button"
                   onClick={() => { setImageFile(null); setImagePreview(null); }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
+                  className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
                 >
                   <X size={8} strokeWidth={3} />
                 </button>
@@ -267,46 +267,46 @@ const TestimonialManagement = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Customer Name</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Customer Name</label>
               <input 
                 required 
                 value={formData.name} 
                 onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase" 
+                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" 
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Role / Tagline</label>
+            <div className="space-y-1">
+              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Role / Tagline</label>
               <input 
                 value={formData.role} 
                 onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase" 
+                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" 
                 placeholder="e.g., Verified Buyer, Loyal Customer"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Rating (1-5)</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Rating (1-5)</label>
               <select 
                 value={formData.rating} 
                 onChange={(e) => setFormData({...formData, rating: parseInt(e.target.value)})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase"
+                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase"
               >
                 {[5, 4, 3, 2, 1].map(num => (
                   <option key={num} value={num}>{num} Stars</option>
                 ))}
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Status</label>
+            <div className="space-y-1">
+              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Status</label>
               <select 
                 value={formData.isActive ? 'true' : 'false'} 
                 onChange={(e) => setFormData({...formData, isActive: e.target.value === 'true'})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase"
+                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase"
               >
                 <option value="true">VISIBLE ON SITE</option>
                 <option value="false">HIDDEN</option>
@@ -314,24 +314,26 @@ const TestimonialManagement = () => {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Review Content</label>
+          <div className="space-y-1">
+            <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Review Content</label>
             <textarea 
               required
-              rows={3} 
+              rows={2} 
               value={formData.content} 
               onChange={(e) => setFormData({...formData, content: e.target.value})} 
-              className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase resize-none leading-relaxed" 
+              className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase resize-none leading-relaxed" 
             />
           </div>
 
-          <button 
-            type="submit" 
-            disabled={isSubmitting} 
-            className="w-full bg-[#7A578D] text-white py-3 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
-          >
-            {isSubmitting ? 'SAVING...' : editingItem ? 'UPDATE TESTIMONIAL' : 'SAVE TESTIMONIAL'}
-          </button>
+          <div className="pt-1">
+            <button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="w-full bg-[#7A578D] text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+            >
+              {isSubmitting ? 'SAVING...' : editingItem ? 'UPDATE TESTIMONIAL' : 'SAVE TESTIMONIAL'}
+            </button>
+          </div>
         </form>
       </ManagementModal>
     </div>

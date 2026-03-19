@@ -18,7 +18,7 @@ interface ProfileSidebarProps {
 
 const ProfileSidebar = ({ user, navItems, activeTab, setActiveTab, handleLogout }: ProfileSidebarProps) => {
   return (
-    <aside className="lg:w-1/4">
+    <aside className="lg:w-1/4 lg:sticky lg:top-24 h-max transition-all">
       <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-transparent">
           <div className="flex items-center space-x-3">

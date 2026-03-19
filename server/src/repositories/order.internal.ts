@@ -3,22 +3,25 @@ import { OrderStatus, PaymentStatus } from "@prisma/client";
 
 export class OrderRepository {
   async createOrder(orderData: any, items: any[]) {
+    const { paymentMethod, ...data } = orderData;
     return await prisma.$transaction(async (tx) => {
       // 1. Create order
-      const order = await tx.order.create({
+      const order = await (tx as any).order.create({
         data: {
-          ...orderData,
+          ...data,
           items: {
             create: items.map(item => ({
               productId: item.productId,
               quantity: item.quantity,
               price: item.price,
+              selectedSize: item.selectedSize || undefined,
+              variantId: item.variantId || undefined,
             }))
           },
           payment: {
             create: {
               amount: orderData.payableAmount,
-              paymentMethod: orderData.paymentMethod,
+              paymentMethod: paymentMethod,
               status: PaymentStatus.PENDING
             }
           }
@@ -28,7 +31,16 @@ export class OrderRepository {
 
       // 2. Deduct inventory
       for (const item of items) {
-        await tx.inventory.update({
+        if (item.variantId && item.selectedSize) {
+            // Update variantsize stock
+            try {
+              const sizes = await (tx as any).productVariantSize.findMany({ where: { variantId: item.variantId, size: item.selectedSize }});
+              if(sizes && sizes.length > 0) {
+                 await (tx as any).productVariantSize.update({ where: { id: sizes[0].id }, data: { stock: { decrement: item.quantity } }});
+              }
+            } catch(e) {}
+        }
+        await (tx as any).inventory.update({
           where: { productId: item.productId },
           data: { stock: { decrement: item.quantity } }
         });
@@ -42,7 +54,7 @@ export class OrderRepository {
     return await prisma.order.findMany({
       where: { userId, isDeleted: false },
       include: {
-        items: { include: { product: { include: { images: { where: { isPrimary: true } } } } } },
+        items: { include: { product: { include: { images: true } } } },
         payment: true,
         address: true
       },
@@ -62,10 +74,31 @@ export class OrderRepository {
     });
   }
 
+  async findByShipmentId(shipmentId: string) {
+    return await prisma.order.findFirst({
+      where: { shipmentId, isDeleted: false },
+      include: { payment: true }
+    });
+  }
+
   async updateStatus(id: string, status: OrderStatus) {
     return await prisma.order.update({
       where: { id },
       data: { status }
+    });
+  }
+
+  async updateAdminNotes(id: string, adminNotes: string) {
+    return await prisma.order.update({
+      where: { id },
+      data: { adminNotes }
+    });
+  }
+
+  async updateReturnInfo(id: string, returnReason: string, returnImages: string[], status: OrderStatus) {
+    return await prisma.order.update({
+      where: { id },
+      data: { returnReason, returnImages, status }
     });
   }
 
@@ -80,8 +113,17 @@ export class OrderRepository {
     });
   }
 
+  async updateShipmentDetails(id: string, details: any) {
+    return await prisma.order.update({
+      where: { id },
+      data: details
+    });
+  }
+
   async findAllAdmin(filters: any) {
-    const { status, page = 1, limit = 10 } = filters;
+    const status = filters.status;
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
     const skip = (page - 1) * limit;
 
     const where = {
