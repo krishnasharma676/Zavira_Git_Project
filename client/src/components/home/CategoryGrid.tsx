@@ -9,8 +9,8 @@ const CategoryGrid = ({ categories }: CategoryGridProps) => {
   return (
     <section className="w-full bg-[#EAD0DB] dark:bg-[#1A1A1A]/50 py-10 mb-16 transition-colors duration-500 relative">
       <div className="container mx-auto px-6 lg:px-12 relative z-10">
-        <div className="flex overflow-x-auto lg:grid lg:grid-cols-5 gap-6 lg:gap-8 no-scrollbar pb-6 lg:pb-0 group/container">
-          {categories.slice(0, 5).map((cat, idx) => (
+        <div className="flex overflow-x-auto lg:grid lg:grid-cols-6 gap-6 lg:gap-8 no-scrollbar pb-6 lg:pb-0 group/container">
+          {categories.slice(0, 6).map((cat, idx) => (
             <motion.div 
               key={idx}
               initial={{ opacity: 0, scale: 0.9, y: 20 }}

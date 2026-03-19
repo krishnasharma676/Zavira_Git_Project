@@ -15,8 +15,8 @@ const startServer = async () => {
     await prisma.$connect();
     console.log("✔ Database connection established");
 
-    await checkCloudinaryConnection(); // Verify Cloudinary
-    await seedAdmin(); // Auto-seed admin if not exists
+    await checkCloudinaryConnection();
+    await seedAdmin();
 
     app.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`✔ Server is running at http://localhost:${PORT}`);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { useWishlist } from '../store/useWishlist';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 import { useCart } from '../store/useCart';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import FilterDrawer from '../components/shop/FilterDrawer';
 
 const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -19,7 +20,17 @@ const ShopPage = () => {
   // Filter States from URL
   const category = searchParams.get('category') || '';
   const search = searchParams.get('search') || '';
-  const [priceRange, setPriceRange] = useState(parseInt(searchParams.get('maxPrice') || '10000'));
+  const isHotDealsRoot = location.pathname === '/hot-deals';
+  const hotDealsParam = searchParams.get('hotDeals') === 'true';
+  const hotDeals = isHotDealsRoot || hotDealsParam;
+  
+  // Dynamic New Filters
+  const stockStatus = searchParams.get('stockStatus') || '';
+  const color = searchParams.get('color') || '';
+  const size = searchParams.get('size') || '';
+  const attributesParam = searchParams.get('attributes') || '{}';
+
+  const [priceRange, setPriceRange] = useState(parseInt(searchParams.get('maxPrice') || '20000'));
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt');
   const [sortOrder, setSortOrder] = useState(searchParams.get('sortOrder') || 'desc');
 
@@ -30,12 +41,17 @@ const ShopPage = () => {
     setLoading(true);
     try {
       const params: any = {
-        limit: 20,
+        limit: 40,
         category: category || undefined,
         search: search || undefined,
         maxPrice: priceRange,
         sortBy,
-        sortOrder
+        sortOrder,
+        hotDeals: hotDeals || undefined,
+        stockStatus: stockStatus || undefined,
+        color: color || undefined,
+        size: size || undefined,
+        attributes: attributesParam !== '{}' ? attributesParam : undefined
       };
       
       const { data } = await api.get('/products', { params });
@@ -45,7 +61,7 @@ const ShopPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [category, search, priceRange, sortBy, sortOrder]);
+  }, [category, search, priceRange, sortBy, sortOrder, hotDeals, stockStatus, color, size, attributesParam]);
 
   useEffect(() => {
     fetchProducts();
@@ -68,9 +84,37 @@ const ShopPage = () => {
     setSearchParams(newParams);
   };
 
+  const [stockStatusState, setStockStatusState] = useState(searchParams.get('stockStatus') || '');
+  const [selectedColor, setSelectedColor] = useState(searchParams.get('color') || '');
+  const [selectedSize, setSelectedSize] = useState(searchParams.get('size') || '');
+  const [selectedAttrs, setSelectedAttrs] = useState<any>(JSON.parse(searchParams.get('attributes') || '{}'));
+
+  useEffect(() => {
+    setStockStatusState(searchParams.get('stockStatus') || '');
+    setSelectedColor(searchParams.get('color') || '');
+    setSelectedSize(searchParams.get('size') || '');
+    setSelectedAttrs(JSON.parse(searchParams.get('attributes') || '{}'));
+  }, [searchParams]);
+
   const applyFilters = () => {
     const next = new URLSearchParams(searchParams);
     next.set('maxPrice', priceRange.toString());
+    
+    if (stockStatusState) next.set('stockStatus', stockStatusState);
+    else next.delete('stockStatus');
+    
+    if (selectedColor) next.set('color', selectedColor);
+    else next.delete('color');
+
+    if (selectedSize) next.set('size', selectedSize);
+    else next.delete('size');
+    
+    if (Object.keys(selectedAttrs).length > 0) {
+      next.set('attributes', JSON.stringify(selectedAttrs));
+    } else {
+      next.delete('attributes');
+    }
+    
     setSearchParams(next);
     setIsFilterOpen(false);
   };
@@ -78,11 +122,15 @@ const ShopPage = () => {
   const clearFilters = () => {
     setSearchParams({});
     setIsFilterOpen(false);
-    setPriceRange(10000);
+    setPriceRange(20000);
+    setStockStatusState('');
+    setSelectedColor('');
+    setSelectedSize('');
+    setSelectedAttrs({});
   };
 
   return (
-    <div className="pt-8 pb-16 bg-white dark:bg-[#121212] min-h-screen font-sans transition-colors duration-300">
+    <div className="pt-8 pb-16 bg-transparent dark:bg-[#121212] min-h-screen font-sans transition-colors duration-300">
       <div className="container mx-auto px-4">
         
         <ShopHeader 
@@ -118,6 +166,14 @@ const ShopPage = () => {
           priceRange={priceRange}
           setPriceRange={setPriceRange}
           products={products}
+          stockStatus={stockStatusState}
+          setStockStatus={setStockStatusState}
+          selectedColor={selectedColor}
+          setSelectedColor={setSelectedColor}
+          selectedSize={selectedSize}
+          setSelectedSize={setSelectedSize}
+          selectedAttrs={selectedAttrs}
+          setSelectedAttrs={setSelectedAttrs}
           applyFilters={applyFilters}
           clearFilters={clearFilters}
         />

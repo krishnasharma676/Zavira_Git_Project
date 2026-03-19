@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Grid, MapPin, Heart, User, CheckCircle, Truck, Clock } from 'lucide-react';
+import { Package, Grid, MapPin, Heart, User, CheckCircle, Truck, Clock, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -14,6 +14,8 @@ import WishlistTab from '../components/profile/WishlistTab';
 import AddressesTab from '../components/profile/AddressesTab';
 import AccountTab from '../components/profile/AccountTab';
 import AddressModal from '../components/profile/AddressModal';
+import ReturnModal from '../components/profile/ReturnModal';
+
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -22,7 +24,11 @@ const ProfilePage = () => {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [returnModal, setReturnModal] = useState<{ open: boolean; orderId: string; orderNumber: string }>(
+    { open: false, orderId: '', orderNumber: '' }
+  );
   const { user, logout } = useAuth();
+
   const { items: wishlistItems } = useWishlist();
   const navigate = useNavigate();
 
@@ -66,9 +72,11 @@ const ProfilePage = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'DELIVERED': return <CheckCircle size={14} className="text-green-500" />;
-      case 'SHIPPED': return <Truck size={14} className="text-blue-500" />;
-      default: return <Clock size={14} className="text-orange-500" />;
+      case 'DELIVERED': return <CheckCircle size={10} className="text-green-500" />;
+      case 'SHIPPED': return <Truck size={10} className="text-blue-500" />;
+      case 'RETURN_REQUESTED': return <RefreshCw size={10} className="text-orange-500" />;
+      case 'RETURNED': return <RefreshCw size={10} className="text-gray-400" />;
+      default: return <Clock size={10} className="text-orange-500" />;
     }
   };
 
@@ -91,6 +99,27 @@ const ProfilePage = () => {
       toast.error('Failed to update default address');
     }
   };
+
+  const handleRequestReturn = (orderId: string, orderNumber: string) => {
+    setReturnModal({ open: true, orderId, orderNumber });
+  };
+
+  const handleReturnSubmit = async (orderId: string, reason: string, files: File[]) => {
+    const formData = new FormData();
+    formData.append('reason', reason);
+    files.forEach(f => formData.append('images', f));
+    try {
+      await api.post(`/orders/${orderId}/return`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Return request submitted successfully!');
+      fetchProfileData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit return request');
+      throw error; // propagate so modal stays open on error
+    }
+  };
+
 
   const handleAddressSubmit = async (data: any) => {
     try {
@@ -133,7 +162,8 @@ const ProfilePage = () => {
               <OrdersTab 
                 orders={orders} 
                 loading={loading} 
-                getStatusIcon={getStatusIcon} 
+                getStatusIcon={getStatusIcon}
+                onRequestReturn={(orderId, orderNumber) => handleRequestReturn(orderId, orderNumber)}
               />
             )}
 
@@ -165,6 +195,14 @@ const ProfilePage = () => {
         isOpen={isAddressModalOpen} 
         onClose={() => setIsAddressModalOpen(false)} 
         onSubmit={handleAddressSubmit} 
+      />
+
+      <ReturnModal
+        isOpen={returnModal.open}
+        orderId={returnModal.orderId}
+        orderNumber={returnModal.orderNumber}
+        onClose={() => setReturnModal({ ...returnModal, open: false })}
+        onSubmit={handleReturnSubmit}
       />
     </div>
   );

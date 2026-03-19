@@ -14,7 +14,7 @@ const NavLinks = ({ categories, isActive }: NavLinksProps) => {
           <MegaMenu categories={categories} isActive={isActive} />
 
           <li className="flex items-center relative">
-            <Link to="/shop" className={`hover:text-[#7A578D] transition-colors relative flex items-center ${isActive('/shop') ? 'text-[#7A578D]' : ''}`}>
+            <Link to="/hot-deals" className={`hover:text-[#7A578D] transition-colors relative flex items-center ${isActive('/hot-deals') ? 'text-[#7A578D]' : ''}`}>
               HOT DEALS
               <div className="absolute -top-3.5 -right-7 bg-[#ed4c14] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm scale-90 -rotate-2 transform">
                 SALE

@@ -66,12 +66,12 @@ const ProductGallery = ({ images, selectedImage, setSelectedImage, productName }
         )}
       </motion.div>
       
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex flex-wrap gap-2 md:gap-3">
         {images.map((img: string, idx: number) => (
           <button
             key={idx}
             onClick={() => setSelectedImage(idx)}
-            className={`aspect-square overflow-hidden border-2 transition-all rounded-lg ${
+            className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 overflow-hidden border-2 transition-all rounded-lg ${
               selectedImage === idx ? 'border-[#7A578D] shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'
             }`}
           >

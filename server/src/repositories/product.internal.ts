@@ -3,12 +3,11 @@ import { prisma } from "../config/prisma";
 export class ProductRepository {
   async findAll(filters: any, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const { category, brand, minPrice, maxPrice, search, featured, trending, sortBy, sortOrder } = filters;
+    const { category, minPrice, maxPrice, search, featured, trending, sortBy, sortOrder } = filters;
 
     const where: any = {
       isDeleted: false,
       ...(category && { category: { slug: category } }),
-      ...(brand && { brand: { slug: brand } }),
       ...(featured && { featured: true }),
       ...(trending && { trending: true }),
       ...(minPrice || maxPrice ? {
@@ -32,7 +31,6 @@ export class ProductRepository {
         include: {
           images: { where: { isDeleted: false } },
           category: true,
-          brand: true,
           inventory: true,
         },
         skip,
@@ -50,7 +48,6 @@ export class ProductRepository {
       include: {
         images: { where: { isDeleted: false } },
         category: true,
-        brand: true,
         inventory: true,
         reviews: {
           where: { isApproved: true, isDeleted: false },

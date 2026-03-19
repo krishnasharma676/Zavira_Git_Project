@@ -38,3 +38,22 @@ export const refreshAccessTokenSchema = z.object({
     refreshToken: z.string().optional()
   })
 });
+
+export const verifyEmailLoginSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    code: z.string().min(6).max(6).regex(/^\d+$/, "OTP must be 6 digits"),
+  })
+});
+
+export const verifyEmailRegisterSchema = z.object({
+  body: z.object({
+    data: z.object({
+      name: z.string().min(2),
+      email: z.string().email(),
+      phone: z.string().min(10).max(10).regex(/^\d+$/, "Invalid phone number"),
+      password: z.string().min(6),
+    }),
+    code: z.string().min(6).max(6).regex(/^\d+$/, "OTP must be 6 digits"),
+  })
+});

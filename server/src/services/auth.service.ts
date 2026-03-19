@@ -60,65 +60,100 @@ export class AuthService {
   async login(email: string, password: string, deviceInfo?: string, ip?: string) {
     if (!email || !password) throw new ApiError(400, "Email and password are required");
 
-    const user = await userRepository.findByEmail(email);
-    if (!user || user.isDeleted) {
-      throw new ApiError(401, "Invalid credentials");
+    const normalizedEmail = email.toLowerCase();
+    const user = await userRepository.findByEmail(normalizedEmail);
+    if (!user || user.status === "DELETED") throw new ApiError(404, "User not found");
+
+    if (user.status === "BLOCKED") {
+      throw new ApiError(403, "Your account has been blocked.");
     }
 
-    // Use bcrypt to compare password
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) {
-       throw new ApiError(401, "Invalid credentials");
-    }
+    if (!user.password) throw new ApiError(400, "This account uses social login");
 
-    const accessToken = generateAccessToken({ 
-      id: user.id, 
-      phone: (user as any).phoneNumber, 
-      email: user.email,
-      role: user.role 
-    });
-    
-    const refreshToken = generateRefreshToken({ id: user.id });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new ApiError(401, "Invalid credentials");
 
-    await userRepository.createSession({
-      userId: user.id,
-      refreshToken,
-      deviceInfo,
-      ipAddress: ip,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    const { password: _, ...userWithoutPassword } = user as any;
-    return { user: userWithoutPassword, accessToken, refreshToken };
+    return await this.createTokensAndSession(user, deviceInfo, ip);
   }
 
-  async register(data: any, deviceInfo?: string, ip?: string) {
+  async verifyEmailOtpAndLogin(email: string, code: string, deviceInfo?: string, ip?: string) {
+    if (!email || !code) throw new ApiError(400, "Email and OTP are required");
+
+    const normalizedEmail = email.toLowerCase();
+    const otpVerification = await otpService.verifyOtp(normalizedEmail, code, "EMAIL");
+    if (!otpVerification.success) {
+      throw new ApiError(401, otpVerification.message);
+    }
+
+    const user = await userRepository.findByEmail(normalizedEmail);
+    if (!user || user.isDeleted) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.status === "BLOCKED") {
+      throw new ApiError(403, "Your account has been blocked.");
+    }
+
+    // Mark email as verified if not already
+    if (!user.isEmailVerified) {
+      await userRepository.update(user.id, { isEmailVerified: true });
+    }
+
+    // ISSUE TOKENS
+    return await this.createTokensAndSession(user, deviceInfo, ip);
+  }
+
+  async register(data: any) {
     const { name, email, phone, password } = data;
+    const normalizedEmail = email.toLowerCase();
     
     // Check if user already exists
-    const existingUser = await userRepository.findByEmail(email);
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
     if (existingUser) throw new ApiError(400, "User with this email already exists");
     
     const existingPhone = await userRepository.findByPhone(phone);
     if (existingPhone) throw new ApiError(400, "User with this phone already exists");
 
-    // Hash the password before saving
+    // Send OTP first
+    await otpService.sendEmailOtp(normalizedEmail);
+
+    return { data, message: "Verification code sent to your email" };
+  }
+
+  async completeRegistration(data: any, code: string, deviceInfo?: string, ip?: string) {
+    const { name, email, phone, password } = data;
+    const normalizedEmail = email.toLowerCase();
+
+    const otpVerification = await otpService.verifyOtp(normalizedEmail, code, "EMAIL");
+    if (!otpVerification.success) {
+      throw new ApiError(401, otpVerification.message);
+    }
+
+    // Check again
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
+    if (existingUser) throw new ApiError(400, "User already registered");
+
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     const user = await userRepository.create({
       name,
-      email,
+      email: normalizedEmail,
       phoneNumber: phone,
       password: hashedPassword,
-      isPhoneVerified: false,
+      isEmailVerified: true,
       cart: { create: {} },
       wishlist: { create: {} },
     });
 
+    return await this.createTokensAndSession(user, deviceInfo, ip);
+  }
+
+  private async createTokensAndSession(user: any, deviceInfo?: string, ip?: string) {
     const accessToken = generateAccessToken({ 
       id: user.id, 
-      phone: (user as any).phoneNumber, 
+      phone: user.phoneNumber, 
       email: user.email,
       role: user.role 
     });
@@ -152,6 +187,10 @@ export class AuthService {
       throw new ApiError(401, "Refresh token expired or invalid");
     }
 
+    if (session.user.status === "BLOCKED") {
+      throw new ApiError(403, "Account blocked");
+    }
+
     const newAccessToken = generateAccessToken({ 
       id: session.user.id, 
       phone: session.user.phoneNumber, 
@@ -172,6 +211,18 @@ export class AuthService {
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
+  async blockUser(id: string) {
+    return await userRepository.updateStatus(id, "BLOCKED");
+  }
+
+  async unblockUser(id: string) {
+    return await userRepository.updateStatus(id, "ACTIVE");
+  }
+
+  async deleteUser(id: string) {
+    return await userRepository.softDeleteUser(id);
+  }
+
   async getUsers() {
     return await userRepository.findAll();
   }
@@ -179,6 +230,7 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) throw new ApiError(404, "User not found");
+    if (user.status === "BLOCKED") throw new ApiError(403, "Account blocked");
     const { password: _, ...userWithoutPassword } = user as any;
     return userWithoutPassword;
   }

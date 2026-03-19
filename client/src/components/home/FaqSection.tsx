@@ -22,7 +22,7 @@ const FaqSection = ({ activeFaq, setActiveFaq }: FaqSectionProps) => {
     },
     {
       q: 'Is my purchase insured?',
-      a: 'Every shipment from the Zavira archives is fully insured and handled by our logistics partners with white-glove delivery standards to ensure its safe arrival.'
+      a: 'Every order is fully insured and handled by our delivery partners carefully to ensure safe arrival.'
     }
   ];
 

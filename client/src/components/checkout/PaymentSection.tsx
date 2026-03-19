@@ -17,7 +17,7 @@ const PaymentSection = ({ paymentMethod, setPaymentMethod, handleCompleteOrder, 
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-6">Settlement Protocol</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-6">Payment Method</h3>
         
         <div className="grid grid-cols-1 gap-4">
           <div 
@@ -49,7 +49,7 @@ const PaymentSection = ({ paymentMethod, setPaymentMethod, handleCompleteOrder, 
                  <Banknote size={18} />
               </div>
               <div>
-                <p className="text-[11px] font-black uppercase">Deferred Settlement</p>
+                <p className="text-[11px] font-black uppercase">Cash on Delivery</p>
                 <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Cash on Delivery</p>
               </div>
             </div>

@@ -15,21 +15,21 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableHeadCell: {
       styleOverrides: {
         root: {
-          fontSize: '8px',
+          fontSize: '9px',
           fontWeight: '900',
           textTransform: 'uppercase',
-          letterSpacing: '0.15em',
-          padding: '5px 10px',
+          letterSpacing: '0.1em',
+          padding: '4px 10px',
           whiteSpace: 'nowrap',
           backgroundColor: '#fafafa',
           borderBottom: '1px solid #f3f4f6',
         },
         data: {
-          fontSize: '8px',
+          fontSize: '9px',
           fontWeight: '900',
         },
         sortAction: {
-          fontSize: '8px',
+          fontSize: '9px',
         },
       },
     },
@@ -37,11 +37,11 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableBodyCell: {
       styleOverrides: {
         root: {
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: '700',
           textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-          padding: '3px 10px',
+          letterSpacing: '0.02em',
+          padding: '2px 10px',
           borderBottom: '1px solid #f9fafb',
           lineHeight: '1.2',
           height: '32px',
@@ -84,14 +84,14 @@ export const getMuiTheme = () => createTheme({
     MuiTablePagination: {
       styleOverrides: {
         root: {
-          fontSize: '9px',
+          fontSize: '10px',
         },
         selectLabel: {
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: '700',
         },
         displayedRows: {
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: '700',
         },
       },

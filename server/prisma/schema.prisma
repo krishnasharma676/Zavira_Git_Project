@@ -41,12 +41,15 @@ model User {
 
 model Otp {
   id        String   @id @default(uuid())
-  phone     String
+  phone     String?
+  email     String?
   code      String
+  type      String   @default("PHONE")
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([phone])
+  @@index([email])
 }
 
 model Session {
@@ -118,57 +121,47 @@ model SubCategory {
   @@index([categoryId])
 }
 
-model Brand {
-  id            String    @id @default(uuid())
-  publicId      String    @unique @default(uuid())
-  name          String    @unique
-  slug          String    @unique
-  description   String?
-  website       String?
-  imageUrl      String?
-  imagePublicId String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  isDeleted     Boolean   @default(false)
-  products      Product[]
-
-  @@index([slug])
-}
-
 model Product {
-  id              String         @id @default(uuid())
-  publicId        String         @unique @default(uuid())
+  id              String           @id @default(uuid())
+  publicId        String           @unique @default(uuid())
   name            String
-  slug            String         @unique
+  slug            String           @unique
   description     String
   basePrice       Float
   discountedPrice Float?
   categoryId      String
   subCategoryId   String?
-  brandId         String?
-  featured        Boolean        @default(false)
-  trending        Boolean        @default(false)
-  avgRating       Float          @default(0)
-  totalReviews    Int            @default(0)
+  featured        Boolean          @default(false)
+  trending        Boolean          @default(false)
+  hotDeals        Boolean          @default(false)
+  attributes      Json?
+  sizes           String?
+  avgRating       Float            @default(0)
+  totalReviews    Int              @default(0)
   metaTitle       String?
   metaDescription String?
   metaKeywords    String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  isDeleted       Boolean        @default(false)
+  weight          Float?           @default(0)
+  length          Float?           @default(0)
+  width           Float?           @default(0)
+  height          Float?           @default(0)
+  hsnCode         String?
+  taxRate         Float?           @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isDeleted       Boolean          @default(false)
   cartItems       CartItem[]
   inventory       Inventory?
   orderItems      OrderItem[]
-  brand           Brand?         @relation(fields: [brandId], references: [id])
-  category        Category       @relation(fields: [categoryId], references: [id])
-  subCategory     SubCategory?   @relation(fields: [subCategoryId], references: [id])
+  category        Category         @relation(fields: [categoryId], references: [id])
+  subCategory     SubCategory?     @relation(fields: [subCategoryId], references: [id])
   images          ProductImage[]
+  variants        ProductVariant[]
   reviews         Review[]
   wishlistItems   WishlistItem[]
 
   @@index([slug])
   @@index([categoryId])
-  @@index([brandId])
 }
 
 model ProductImage {
@@ -201,6 +194,62 @@ model Inventory {
   @@index([productId])
 }
 
+model ProductVariant {
+  id         String                @id @default(uuid())
+  productId  String
+  color      String
+  colorCode  String?
+  stock      Int                   @default(0)
+  sku        String?               @unique
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  colorId    String?
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  colorRel   Color?                @relation(fields: [colorId], references: [id])
+  product    Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images     ProductVariantImage[]
+  sizes      ProductVariantSize[]
+
+  @@index([productId])
+  @@index([colorId])
+}
+
+model Color {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  hexCode   String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  variants  ProductVariant[]
+}
+
+model ProductVariantImage {
+  id                 String         @id @default(uuid())
+  variantId          String
+  cloudinaryPublicId String
+  imageUrl           String
+  isPrimary          Boolean        @default(false)
+  sortOrder          Int            @default(0)
+  createdAt          DateTime       @default(now())
+  variant            ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
+model ProductVariantSize {
+  id        String         @id @default(uuid())
+  variantId String
+  size      String
+  stock     Int            @default(0)
+  sku       String?        @unique
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
 model Cart {
   id        String     @id @default(uuid())
   userId    String     @unique
@@ -211,16 +260,17 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
-
-  @@unique([cartId, productId])
+  id           String          @id @default(uuid())
+  cartId       String
+  productId    String
+  variantId    String?
+  selectedSize String?
+  quantity     Int             @default(1)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  cart         Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product      Product         @relation(fields: [productId], references: [id])
+  variant      ProductVariant? @relation(fields: [variantId], references: [id])
 }
 
 model Wishlist {
@@ -250,11 +300,20 @@ model Order {
   userId          String
   addressId       String
   totalAmount     Float
+  taxAmount       Float       @default(0)
   discountAmount  Float       @default(0)
   couponCode      String?
   shippingCharges Float       @default(0)
   payableAmount   Float
   status          OrderStatus @default(PENDING)
+  shipmentId      String?
+  awbNumber       String?
+  courierName     String?
+  shippingStatus  String?
+  trackingUrl     String?
+  adminNotes      String?
+  returnReason    String?
+  returnImages    String[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   isDeleted       Boolean     @default(false)
@@ -269,14 +328,18 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
+  id            String          @id @default(uuid())
+  orderId       String
+  productId     String
+  variantId     String?
+  selectedColor String?
+  selectedSize  String?
+  quantity      Int
+  price         Float
+  createdAt     DateTime        @default(now())
+  order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product         @relation(fields: [productId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
 }
 
 model Payment {
@@ -313,6 +376,21 @@ model Review {
 
   @@index([productId])
   @@index([userId])
+}
+
+model Testimonial {
+  id            String   @id @default(uuid())
+  publicId      String   @unique @default(uuid())
+  name          String
+  role          String?  @default("Verified Buyer")
+  rating        Int      @default(5)
+  content       String
+  imageUrl      String?
+  imagePublicId String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isDeleted     Boolean  @default(false)
 }
 
 model Banner {
@@ -382,6 +460,37 @@ model AnalyticsEvent {
   @@index([createdAt])
 }
 
+model ContactMessage {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    MessageStatus @default(PENDING)
+  reply     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+enum MessageStatus {
+  PENDING
+  READ
+  REPLIED
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -401,6 +510,8 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   REFUNDED
+  RETURN_REQUESTED
+  RETURNED
 }
 
 enum PaymentStatus {

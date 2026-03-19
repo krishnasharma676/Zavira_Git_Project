@@ -8,11 +8,12 @@ export const productSchema = z.object({
     discountedPrice: z.preprocess((val) => (val ? parseFloat(val as string) : null), z.number().positive().nullable().optional()),
     categoryId: z.string().uuid(),
     subCategoryId: z.string().uuid().optional().nullable(),
-    brandId: z.string().uuid().optional().nullable(),
     stock: z.preprocess((val) => parseInt(val as string), z.number().int().nonnegative()).default(0),
     sku: z.string().optional().nullable(),
     featured: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
     trending: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
+    hotDeals: z.union([z.boolean(), z.string()]).transform((val) => val === "true" || val === true).optional(),
+    attributes: z.any().optional(),
   })
 });
 

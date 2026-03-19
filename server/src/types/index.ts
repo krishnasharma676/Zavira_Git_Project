@@ -34,7 +34,6 @@ export interface LoginInput {
 
 export interface ProductFilters {
   category?: string;
-  brand?: string;
   minPrice?: string;
   maxPrice?: string;
   search?: string;
@@ -53,7 +52,6 @@ export interface CreateProductInput {
   discountedPrice?: string | number | null;
   categoryId: string;
   subCategoryId?: string;
-  brandId?: string;
   stock: string | number;
   sku?: string;
   featured?: boolean | string;

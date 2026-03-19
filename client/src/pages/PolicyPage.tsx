@@ -8,7 +8,7 @@ const PolicyPage = () => {
   const content: Record<string, any> = {
     'shipping-returns': {
       title: 'Shipping & Returns',
-      text: 'Our logistics are as refined as our jewelry. We offer complimentary white-glove delivery on all acquisitions within India. International shipments are handled by our dedicated global partners with full insurance coverage. Returns are accepted within 14 days for standard collection pieces, provided the security seal remains intact.'
+      text: 'We carefully pack and ship every order. We offer free delivery anywhere in India. For international orders, we use reliable delivery partners with full insurance. You can return items within 14 days, as long as the security seal is not broken.'
     },
     'faqs': {
       title: 'Frequently Asked Questions',

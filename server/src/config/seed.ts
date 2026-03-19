@@ -7,11 +7,13 @@ export const seedAdmin = async () => {
     const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123";
     const adminPhone = process.env.ADMIN_PHONE || "9999999999";
 
+    const normalizedEmail = adminEmail.toLowerCase();
+
     const existingAdmin = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: adminEmail },
-          { role: "SUPER_ADMIN" }
+          { email: normalizedEmail, isDeleted: false },
+          { role: "SUPER_ADMIN", isDeleted: false }
         ]
       }
     });
@@ -21,7 +23,7 @@ export const seedAdmin = async () => {
       await prisma.user.create({
         data: {
           name: "Super Admin",
-          email: adminEmail,
+          email: normalizedEmail,
           password: hashedPassword,
           phoneNumber: adminPhone,
           role: "SUPER_ADMIN",
@@ -31,9 +33,18 @@ export const seedAdmin = async () => {
           wishlist: { create: {} },
         }
       });
-      console.log("✔ Default Super Admin created successfully");
+      console.log(`✔ Default Super Admin created: ${normalizedEmail}`);
     } else {
-      console.log("ℹ Super Admin already exists in database");
+       // Check if email sync is needed
+       if (existingAdmin.email !== normalizedEmail) {
+          await prisma.user.update({
+             where: { id: existingAdmin.id },
+             data: { email: normalizedEmail }
+          });
+          console.log(`✔ Updated Super Admin email to match .env: ${normalizedEmail}`);
+       } else {
+          console.log(`ℹ Super Admin verified: ${normalizedEmail}`);
+       }
     }
   } catch (error) {
     console.error("✘ Error seeding admin:", error);

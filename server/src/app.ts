@@ -16,14 +16,21 @@ import dashboardRoutes from './routes/dashboard.routes';
 import reviewRoutes from './routes/review.routes';
 import addressRoutes from './routes/address.routes';
 import bannerRoutes from './routes/banner.routes';
-import brandRoutes from './routes/brand.routes';
 import firebaseAuthRoutes from './routes/firebase.auth.routes';
+import testimonialRoutes from './routes/testimonial.routes';
+import contactRoutes from './routes/contact.routes';
+import settingRoutes from './routes/setting.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import reportRoutes from './routes/report.routes';
+import shiprocketRoutes from './routes/shiprocket.routes';
+import variantRoutes from './routes/variant.routes';
+import colorRoutes from './routes/color.routes';
 
 const app = express();
 
 // Security Middlewares
 app.use(cors({
-  origin: true,
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
 
@@ -47,17 +54,24 @@ app.get('/health', (req, res) => {
 });
 
 // Register Routes
+app.use('/api/v1/auth/firebase', firebaseAuthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/orders', orderRoutes);
-app.use('/api/v1/admin/dashboard', dashboardRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/addresses', addressRoutes);
 app.use('/api/v1/banners', bannerRoutes);
-app.use('/api/v1/brands', brandRoutes);
-app.use('/api/v1/auth/firebase', firebaseAuthRoutes);
+app.use('/api/v1/testimonials', testimonialRoutes);
+app.use('/api/v1/contact', contactRoutes);
+app.use('/api/v1/settings', settingRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/shiprocket', shiprocketRoutes);
+app.use('/api/v1/variants', variantRoutes);
+app.use('/api/v1/colors', colorRoutes);
 
 // Error Handling
 app.use(errorHandler);

@@ -1,33 +1,49 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, ChevronLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  ChevronDown, 
+  ChevronUp, 
+  Gift, 
+  ShoppingBag, 
+  User, 
+  ChevronRight,
+  ShieldCheck
+} from 'lucide-react';
 import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
 import { useUIStore } from '../store/useUIStore';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-
-import AddressSection from '../components/checkout/AddressSection';
-import PaymentSection from '../components/checkout/PaymentSection';
-import OrderSummary from '../components/checkout/OrderSummary';
-import AddressModal from '../components/profile/AddressModal';
+import { formatCurrency } from '../utils/format';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const CheckoutPage = () => {
-  const { items, clearCart } = useCart();
-  const { user } = useAuth();
+  const { items, clearCart, addItem } = useCart();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const openAuthModal = useUIStore((s) => s.openAuthModal);
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [addresses, setAddresses] = useState<any[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD');
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal >= 1000 ? 0 : 49;
-  const tax = subtotal * 0.03;
-  const total = subtotal + tax + shipping;
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  
+  // Form State
+  const [formData, setFormData] = useState({
+    pincode: '',
+    firstName: '',
+    lastName: '',
+    address: '',
+    area: '',
+    city: '',
+    state: '',
+    email: user?.email || '',
+    type: 'Home'
+  });
+
+  const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 0), 0);
+  const savings = subtotal * 0.15; // Mock savings
+  const total = subtotal + (subtotal * 0.03) + (subtotal >= 1000 ? 0 : 49) - savings;
 
   useEffect(() => {
     if (!user) {
@@ -35,136 +51,359 @@ const CheckoutPage = () => {
       openAuthModal('login');
       return;
     }
-    fetchAddresses();
-  }, [user, navigate]);
+    // Fetch suggestions for recommendations
+    api.get('/products', { params: { limit: 4 } })
+      .then(res => setSuggestions(res.data.data.products))
+      .catch(() => {});
+  }, [user]);
 
-
-  const fetchAddresses = async () => {
-    try {
-      const { data } = await api.get('/addresses');
-      setAddresses(data.data);
-      const defaultAddress = data.data.find((a: any) => a.isDefault);
-      if (defaultAddress) setSelectedAddressId(defaultAddress.id);
-      else if (data.data.length > 0) setSelectedAddressId(data.data[0].id);
-    } catch {
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleCompleteOrder = async () => {
-    if (!selectedAddressId) {
-      toast.error('Please select a delivery node');
+    if (!formData.pincode || !formData.address || !formData.firstName) {
+      toast.error('Please fill in required shipping fields');
       return;
     }
 
-    setLoading(true);
     try {
+      // Logic for saving address and then creating order
+      const { data: addressRes } = await api.post('/addresses', {
+        name: `${formData.firstName} ${formData.lastName}`,
+        type: formData.type.toUpperCase(),
+        street: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        phone: 'Not provided', // Placeholder
+        isDefault: true
+      });
+
       const response = await api.post('/orders/checkout', {
-        addressId: selectedAddressId,
-        paymentMethod,
-        couponCode: '', // Placeholder
+        addressId: addressRes.data.id,
+        paymentMethod: 'COD',
         items: items.map(item => ({
           productId: item.id,
           quantity: item.quantity
         }))
       });
       
-      toast.success('Protocol Complete: Order archived in registry');
+      toast.success('Order placed successfully!');
       clearCart();
       navigate(`/order-success/${response.data.data.id}`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Logistic failure');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddressSubmit = async (data: any) => {
-    try {
-      await api.post('/addresses', data);
-      toast.success('Coordinates locked');
-      setIsAddressModalOpen(false);
-      fetchAddresses();
-    } catch (error) {
-      toast.error('Input failure');
+      toast.error(error.response?.data?.message || 'Failed to place order');
     }
   };
 
   if (items.length === 0) {
     return (
-      <div className="pt-8 pb-20 text-center">
-        <h2 className="text-xl font-sans font-black mb-4">Cart empty_</h2>
-        <button onClick={() => navigate('/shop')} className="luxury-button !py-2 !px-8">Back to Shop</button>
+      <div className="min-h-screen bg-[#FDFBF9] flex flex-col items-center justify-center p-6 text-center">
+        <ShoppingBag size={48} className="text-gray-200 mb-6" />
+        <h2 className="text-2xl font-sans font-black uppercase mb-4">Your Bag is Empty</h2>
+        <p className="text-gray-400 text-sm mb-8 uppercase tracking-widest leading-relaxed">Add some masterpieces before <br/>proceeding to checkout.</p>
+        <button onClick={() => navigate('/shop')} className="luxury-button !px-10">Start Selection</button>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#0A0A0A] pt-8 pb-20 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
-      <div className="container mx-auto px-6 max-w-6xl">
-        <div className="grid lg:grid-cols-2 gap-20">
-          {/* Form Side */}
-          <div className="space-y-12">
-            <button 
-              onClick={() => step > 1 ? setStep(step - 1) : navigate('/cart')}
-              className="flex items-center space-x-2 text-[10px] uppercase tracking-[0.2em] font-black text-gray-400 hover:text-[#7A578D] transition-colors"
-            >
-              <ChevronLeft size={16} />
-              <span>Back to {step === 1 ? 'Collection' : 'Logistics'}</span>
-            </button>
+    <div className="min-h-screen bg-[#FDFBF9] pb-20 font-sans text-gray-900 overflow-x-hidden">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-100 flex items-center justify-between px-6 py-4 sticky top-0 z-50">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-400 hover:text-black transition-colors">
+          <ArrowLeft size={20} />
+        </button>
+        <Link to="/" className="text-3xl font-serif tracking-tighter font-black text-[#7A578D]">ZAVIRAA</Link>
+        <div className="w-10"></div> {/* Spacer for symmetry */}
+      </header>
 
-            <div className="space-y-2">
-              <p className="text-[#7A578D] uppercase tracking-[0.4em] text-[10px] font-black">Secure Pipeline</p>
-              <h1 className="text-4xl font-sans font-black uppercase italic tracking-tighter">
-                {step === 1 ? 'Dispatch_Node' : 'Financial_Authorization'}
-              </h1>
-            </div>
-
-            {step === 1 ? (
-              <div className="space-y-10">
-                <AddressSection 
-                  addresses={addresses}
-                  selectedAddressId={selectedAddressId}
-                  setSelectedAddressId={setSelectedAddressId}
-                  setIsAddressModalOpen={setIsAddressModalOpen}
-                />
-
-                <button 
-                  onClick={() => selectedAddressId ? setStep(2) : toast.error('Selection required')}
-                  className="luxury-button w-full rounded-2xl flex items-center justify-center space-x-4"
-                >
-                  <span>AUTHORIZE LOGISTICS</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            ) : (
-              <PaymentSection 
-                paymentMethod={paymentMethod}
-                setPaymentMethod={setPaymentMethod}
-                handleCompleteOrder={handleCompleteOrder}
-                loading={loading}
-              />
-            )}
-          </div>
-
-          {/* Summary Side - Stay relatively fixed or sticky */}
-          <OrderSummary 
-            items={items}
-            subtotal={subtotal}
-            shipping={shipping}
-            tax={tax}
-            total={total}
-          />
-        </div>
+      {/* Promo Banner */}
+      <div className="bg-[#fca5a5] text-white py-2 px-6 text-center text-[10px] font-black uppercase tracking-widest leading-tight">
+        Extra 15% Off on Prepaid Orders | COD available on orders above ₹199
       </div>
 
-      <AddressModal 
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-        onSubmit={handleAddressSubmit}
-      />
+      <main className="max-w-[540px] mx-auto mt-4 px-4 space-y-4">
+        
+        {/* Order Summary Accordion */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <button 
+            onClick={() => setIsSummaryOpen(!isSummaryOpen)}
+            className="w-full px-6 py-5 flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-[13px] font-black uppercase tracking-tight text-gray-900">Order Summary</span>
+              <span className="text-[11px] font-bold text-gray-400 italic">({items.length} {items.length === 1 ? 'Item' : 'Items'})</span>
+            </div>
+            <div className="flex items-center gap-4">
+               <span className="text-sm font-black text-gray-900">{formatCurrency(total)}</span>
+               {isSummaryOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" /> }
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {isSummaryOpen && (
+              <motion.div 
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                className="overflow-hidden border-t border-gray-50"
+              >
+                <div className="px-6 py-6 space-y-6">
+                  {items.map(item => (
+                    <div key={item.id} className="flex gap-4">
+                      <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                        <img src={item.image} className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="flex-grow pt-1">
+                        <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-1">{item.name}</h4>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
+                        <p className="text-[11px] font-black text-[#7A578D] mt-1">{formatCurrency(item.price)}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="mt-4 p-3 bg-gray-100/50 rounded-2xl flex items-center justify-between cursor-pointer border border-gray-100">
+                    <div className="flex items-center gap-2">
+                       <Gift size={16} className="text-[#7A578D]" />
+                       <span className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Make It a Gift! ₹99.00</span>
+                    </div>
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="bg-[#f0fdf4] py-2 px-6 text-center text-[10px] font-black text-[#16a34a] uppercase tracking-widest border-t border-[#dcfce7]">
+             Yay! You've saved {formatCurrency(savings)} so far 🥳
+          </div>
+        </div>
+
+
+        {/* Items you may like (Suggestions) */}
+        {suggestions.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+             <h3 className="text-[12px] font-black uppercase tracking-tight mb-6">Items you may like</h3>
+             <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x pb-4">
+                {suggestions.map(prod => (
+                  <div key={prod.id} className="min-w-[200px] snap-start p-3 bg-gray-50/50 rounded-2xl border border-gray-100 flex flex-col">
+                     <div className="flex gap-3 mb-4 flex-1">
+                        <img src={prod.images?.[0]?.imageUrl} className="w-14 h-14 object-cover rounded-xl border border-gray-100" alt="" />
+                        <div className="min-w-0">
+                           <h4 className="text-[9px] font-black text-gray-900 uppercase tracking-tight line-clamp-2 leading-tight mb-1">{prod.name}</h4>
+                           <p className="text-[10px] font-black text-[#7A578D]">{formatCurrency(prod.discountedPrice || prod.basePrice)}</p>
+                        </div>
+                     </div>
+                     <button 
+                       onClick={() => addItem({
+                         id: prod.id,
+                         name: prod.name,
+                         price: prod.discountedPrice || prod.basePrice,
+                         image: prod.images?.[0]?.imageUrl,
+                         stock: prod.inventory?.stock || 0,
+                         quantity: 1
+                       })}
+                       className="w-full bg-white dark:bg-[#0A0A0A] border border-[#7A578D] text-[#7A578D] hover:bg-[#7A578D] hover:text-white py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                     >
+                        Add
+                     </button>
+                  </div>
+                ))}
+             </div>
+             {/* Simple progress bar as seen in image */}
+             <div className="w-full h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                <div className="w-1/3 h-full bg-[#7A578D]"></div>
+             </div>
+          </div>
+        )}
+
+        {/* Shipping Address Form */}
+        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm space-y-8">
+            <h3 className="text-xl font-black uppercase tracking-tight">Add shipping address</h3>
+            
+            <div className="space-y-4">
+               <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block ml-1">Pincode*</label>
+                  <input 
+                    name="pincode" value={formData.pincode} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="Enter Pincode"
+                  />
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <input 
+                      name="firstName" value={formData.firstName} onChange={handleInputChange}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                      placeholder="First name*"
+                    />
+                  </div>
+                  <div>
+                    <input 
+                      name="lastName" value={formData.lastName} onChange={handleInputChange}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                      placeholder="Last name*"
+                    />
+                  </div>
+               </div>
+
+               <div>
+                  <input 
+                    name="address" value={formData.address} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="Flat, house number, floor, building*"
+                  />
+               </div>
+
+               <div>
+                  <input 
+                    name="area" value={formData.area} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="Area, street, sector, village*"
+                  />
+               </div>
+
+               <button className="text-[11px] font-black tracking-widest text-[#7A578D] uppercase flex items-center gap-1.5 ml-1">+ Landmark area</button>
+
+               <div className="grid grid-cols-2 gap-4">
+                  <input 
+                    name="city" value={formData.city} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="City*"
+                  />
+                  <input 
+                    name="state" value={formData.state} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="State*"
+                  />
+               </div>
+
+               <div>
+                  <input 
+                    name="email" value={formData.email} onChange={handleInputChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    placeholder="E-mail (optional)"
+                  />
+                  <p className="text-[10px] text-gray-400 font-bold italic mt-2 ml-1 italic">Order delivery details will be sent here</p>
+               </div>
+
+               <div className="pt-4 space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block ml-1">Address type</span>
+                  <div className="flex gap-6 items-center flex-wrap">
+                     {['Home', 'Office', 'Others'].map(type => (
+                       <label key={type} className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="radio" name="type" value={type} checked={formData.type === type} onChange={handleInputChange}
+                            className="w-4 h-4 accent-[#7A578D]"
+                          />
+                          <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.type === type ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>{type}</span>
+                       </label>
+                     ))}
+                  </div>
+               </div>
+            </div>
+
+            <button 
+              onClick={handleCompleteOrder}
+              className="luxury-button w-full !py-5 rounded-2xl"
+            >
+               Add address
+            </button>
+        </div>
+
+        {/* Account Summary Accordion */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <button 
+            onClick={() => setIsAccountOpen(!isAccountOpen)}
+            className="w-full px-8 py-5 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <User size={18} className="text-gray-400" />
+              <span className="text-[12px] font-black uppercase tracking-tight text-gray-900">Account</span>
+            </div>
+            {isAccountOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" /> }
+          </button>
+
+          <AnimatePresence>
+            {isAccountOpen && (
+              <motion.div 
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                className="overflow-hidden border-t border-gray-50"
+              >
+                <div className="px-8 py-8 space-y-8">
+                   <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
+                         <User size={18} />
+                      </div>
+                      <div className="flex-1">
+                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Logged in as</p>
+                         <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl">
+                            <span className="text-[12px] font-black text-gray-900">{user?.name || 'Protocol Guest'}</span>
+                            <button className="text-[10px] font-black uppercase text-[#7A578D]">Edit</button>
+                         </div>
+                         <button onClick={() => logout()} className="text-[10px] font-black uppercase text-gray-400 mt-2 underline decoration-gray-200">Logout</button>
+                      </div>
+                   </div>
+
+                   <div className="flex items-start gap-4 pt-4 border-t border-gray-50">
+                      <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
+                         <ShieldCheck size={18} />
+                      </div>
+                      <div className="flex-1">
+                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4">Account & Security</p>
+                         <div className="space-y-4">
+                            <Link to="/terms" className="flex items-center justify-between text-[11px] font-black uppercase tracking-tight text-gray-700 hover:text-[#7A578D] transition-colors">
+                               <span>Terms & conditions</span>
+                               <ChevronRight size={14} />
+                            </Link>
+                            <Link to="/privacy" className="flex items-center justify-between text-[11px] font-black uppercase tracking-tight text-gray-700 hover:text-[#7A578D] transition-colors">
+                               <span>Privacy policy</span>
+                               <ChevronRight size={14} />
+                            </Link>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer Links */}
+        <div className="flex items-center justify-center gap-4 text-[9px] font-black uppercase tracking-widest text-gray-400 pb-10">
+           <Link to="/terms" className="hover:text-gray-900">T&C</Link>
+           <span>|</span>
+           <Link to="/privacy" className="hover:text-gray-900">Privacy Policy</Link>
+           <span>|</span>
+           <span className="flex items-center gap-1.5 opacity-60">
+              Powered by <span className="font-black italic text-gray-600">Zavira Logistics</span>
+           </span>
+        </div>
+      </main>
+
+      {/* Sticky Bottom Order Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_30px_rgba(0,0,0,0.03)] font-sans">
+         <div className="space-y-0.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Shipping: <span className="text-green-600">Free</span></span>
+            <div>
+               <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block">Total Amount</span>
+               <span className="text-xl font-black text-gray-900">{formatCurrency(total)}</span>
+            </div>
+         </div>
+         <button 
+           onClick={handleCompleteOrder}
+           className="bg-[#7A578D] text-white px-10 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#7A578D]/20 active:scale-95 transition-all flex items-center gap-3"
+         >
+            Buy Now <ChevronRight size={18} />
+         </button>
+      </div>
     </div>
   );
 };
 
 export default CheckoutPage;
-

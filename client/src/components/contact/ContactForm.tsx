@@ -3,9 +3,10 @@ import { Send } from 'lucide-react';
 
 interface ContactFormProps {
   onSubmit: (e: React.FormEvent) => void;
+  loading?: boolean;
 }
 
-const ContactForm = ({ onSubmit }: ContactFormProps) => {
+const ContactForm = ({ onSubmit, loading }: ContactFormProps) => {
   return (
     <motion.div
       key="contact-form"
@@ -20,6 +21,7 @@ const ContactForm = ({ onSubmit }: ContactFormProps) => {
             <label className="text-[10px] uppercase font-black tracking-widest text-[#7A578D] ml-1">Full Name</label>
             <input
               type="text"
+              name="name"
               className="w-full bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#7A578D] text-[13px] text-gray-900 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 font-medium"
               placeholder="John Doe"
               required
@@ -29,6 +31,7 @@ const ContactForm = ({ onSubmit }: ContactFormProps) => {
             <label className="text-[10px] uppercase font-black tracking-widest text-[#7A578D] ml-1">Email Address</label>
             <input
               type="email"
+              name="email"
               className="w-full bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#7A578D] text-[13px] text-gray-900 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 font-medium"
               placeholder="john@example.com"
               required
@@ -40,6 +43,7 @@ const ContactForm = ({ onSubmit }: ContactFormProps) => {
           <label className="text-[10px] uppercase font-black tracking-widest text-[#7A578D] ml-1">Subject</label>
           <input
             type="text"
+            name="subject"
             className="w-full bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#7A578D] text-[13px] text-gray-900 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 font-medium"
             placeholder="How can we help?"
             required
@@ -50,6 +54,7 @@ const ContactForm = ({ onSubmit }: ContactFormProps) => {
           <label className="text-[10px] uppercase font-black tracking-widest text-[#7A578D] ml-1">Message</label>
           <textarea
             rows={4}
+            name="message"
             className="w-full bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#7A578D] text-[13px] text-gray-900 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none font-medium"
             placeholder="Tell us about your requirements..."
             required
@@ -59,9 +64,10 @@ const ContactForm = ({ onSubmit }: ContactFormProps) => {
         <div className="pt-2">
           <button
             type="submit"
-            className="luxury-button rounded-xl w-full py-4 flex items-center justify-center gap-3 group text-[11px]"
+            disabled={loading}
+            className="luxury-button rounded-xl w-full py-4 flex items-center justify-center gap-3 group text-[11px] disabled:opacity-50"
           >
-            SEND MESSAGE
+            {loading ? 'SENDING...' : 'SEND MESSAGE'}
             <Send size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </button>
         </div>
