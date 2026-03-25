@@ -8,9 +8,9 @@ import {
   removeItem, 
   clearCart, 
   syncCart, 
-  bulkSync, 
-  getAbandonedCarts 
+  bulkSync
 } from "../controllers/cart.controller";
+
 import { validate } from "../middleware/validate.middleware";
 import { 
   addToCartSchema, 
