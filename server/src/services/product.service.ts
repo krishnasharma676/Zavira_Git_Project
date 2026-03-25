@@ -138,9 +138,12 @@ export class ProductService {
           inventory: true,
           variants: {
             include: {
-              images: true
+              images: { orderBy: { sortOrder: 'asc' } },
+              sizes: { orderBy: { size: 'asc' } }
             }
           },
+
+
           _count: {
             select: { reviews: true }
           }

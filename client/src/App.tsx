@@ -56,10 +56,11 @@ const AppContent = () => {
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Only sync cart for customers on public/customer paths
+    if (isAuthenticated && !isAdminPath) {
       useCart.getState().syncCart();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAdminPath]);
 
   return (
     <div className="flex flex-col min-h-screen">

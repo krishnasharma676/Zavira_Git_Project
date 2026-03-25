@@ -38,7 +38,12 @@ export class OrderService {
     let taxAmount = 0;
     const itemsToOrder = [];
     
+    console.log("📦 NEW ORDER REQUEST - USER:", userId);
+    console.log("🛒 BASE ITEMS RECEIVED:", JSON.stringify(baseItems, null, 2));
+    
+    console.log('[ORDER_DEBUG] Items to Order Array Building:');
     for (const item of baseItems) {
+      console.log(` - Product: ${item.productId}, Qty: ${item.quantity}, VariantId: ${item.variantId}, Size: ${item.selectedSize}`);
       const product = await productRepository.findById(item.productId);
       if (!product || !product.inventory || product.inventory.stock < item.quantity) {
         throw new ApiError(400, `Product ${product?.name || "ID: " + item.productId} is out of stock`);
@@ -61,6 +66,8 @@ export class OrderService {
          variantId: item.variantId
       });
     }
+
+    console.log("🚚 ITEMS PREPARED FOR DATABASE:", JSON.stringify(itemsToOrder, null, 2));
 
     // Get shipping and COD settings
     const settings = await settingService.getAllSettings();
@@ -275,6 +282,39 @@ export class OrderService {
     }
 
     return await orderRepository.updateStatus(orderId, OrderStatus.RETURNED);
+  }
+
+  async syncShiprocketStatuses() {
+    const activeOrders = await orderRepository.findAllAdmin({ limit: 100 });
+    const ordersToSync = activeOrders.orders.filter((o: any) => 
+      o.shipmentId && !['DELIVERED', 'CANCELLED', 'RETURNED', 'REFUNDED'].includes(o.status)
+    );
+
+    for (const order of ordersToSync) {
+      if (!order.shipmentId) continue;
+      try {
+        const tracking = await shiprocketService.getTrackingDetails(order.shipmentId!);
+        if (tracking && tracking.status) {
+          const srStatus = tracking.status.toLowerCase();
+          let newStatus: OrderStatus | null = null;
+          let newShippingStatus = tracking.current_status || tracking.status;
+
+          if (srStatus.includes('delivered')) newStatus = OrderStatus.DELIVERED;
+          else if (srStatus.includes('shipped') || srStatus.includes('transit') || srStatus.includes('out for delivery')) newStatus = OrderStatus.SHIPPED;
+          else if (srStatus.includes('canceled')) newStatus = OrderStatus.CANCELLED;
+
+          if (newStatus || newShippingStatus !== order.shippingStatus) {
+            await orderRepository.updateShipmentDetails(order.id, {
+               ...(newStatus && { status: newStatus }),
+               shippingStatus: newShippingStatus
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`Status sync failed for order ${order.id}:`, err);
+      }
+    }
+    return { success: true };
   }
 }
 

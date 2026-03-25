@@ -26,8 +26,10 @@ const ProductGallery = ({ images, selectedImage, setSelectedImage, productName }
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative aspect-[4/5] bg-gray-50 dark:bg-[#1A1A1A] overflow-hidden group rounded-xl cursor-crosshair"
+        className="relative aspect-[4/3] lg:max-h-[480px] bg-gray-50 dark:bg-[#1A1A1A] overflow-hidden group rounded-xl cursor-crosshair shadow-sm border border-gray-100 dark:border-white/5 mx-auto"
         onMouseMove={handleMouseMove}
+
+
         onMouseLeave={() => {
           if(imgRef.current) {
             imgRef.current.style.transformOrigin = 'center center';
@@ -43,7 +45,8 @@ const ProductGallery = ({ images, selectedImage, setSelectedImage, productName }
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
             src={images[selectedImage]}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[2] ease-out will-change-transform"
+            className="w-full h-full object-contain bg-white dark:bg-black transition-transform duration-200 group-hover:scale-[1.8] ease-out will-change-transform"
+
             style={{ transformOrigin: "center center" }}
             alt={productName}
           />

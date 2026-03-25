@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, Edit2, Trash2, Upload, Package,
   Search, RefreshCw, Layers, AlertTriangle,
-  ChevronRight, X, Maximize2, Calendar, Filter
+  ChevronRight, X, Maximize2, Calendar, Filter, Truck, Palette
 } from 'lucide-react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -98,7 +98,7 @@ const BulkProductManagement = () => {
       }
     },
     { name: 'name', label: 'Name', options: { customBodyRender: (v: string) => <span className="text-[10px] font-black uppercase text-gray-900">{v}</span> } },
-    { name: 'id', label: 'ID', options: { customBodyRender: (v: string) => <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded">{v?.slice(0, 8).toUpperCase()}..</span> } },
+    { name: 'id', label: 'ID', options: { customBodyRender: (v: string) => <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded uppercase">{v}</span> } },
     {
       name: 'createdAt', label: 'Date',
       options: {
@@ -167,7 +167,103 @@ const BulkProductManagement = () => {
     },
   ];
 
-  const options = { selectableRows: 'none' as const, elevation: 0, responsive: 'standard' as const, rowsPerPage: 10, download: false, print: false, viewColumns: false, search: false, filter: false, textLabels: { body: { noMatch: loading ? 'Loading...' : 'No bulk products found' } } };
+  const options = {
+    selectableRows: 'none' as const,
+    elevation: 0,
+    responsive: 'standard' as const,
+    rowsPerPage: 10,
+    download: false,
+    print: false,
+    viewColumns: false,
+    search: false,
+    filter: false,
+    expandableRows: true,
+    expandableRowsOnClick: true,
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const product = products[rowMeta.rowIndex];
+      if (!product) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
+              {/* Product Profile */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                   <div className="w-1.5 h-6 bg-[#7A578D] rounded-full" />
+                   <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                     <Package size={14} className="text-[#7A578D]" /> Bulk Identity
+                   </h3>
+                </div>
+                <div className="space-y-3 pl-4">
+                   <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5">Description Ledger</span>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase leading-relaxed max-w-[300px]">{product.description || 'No description provided'}</p>
+                   </div>
+                   <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                         <Truck size={12} className="text-[#7A578D]" />
+                         <span className="text-[9px] font-black uppercase tracking-widest text-[#7A578D]">Shipping Hub</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-2">
+                         <span className="text-[8px] font-black text-gray-400 uppercase">Weight:</span>
+                         <span className="text-[9px] font-black text-gray-700">{product.weight || 0} KG</span>
+                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Dims (LxWxH):</span>
+                         <span className="text-[9px] font-black text-gray-700">{product.length || 0}x{product.width || 0}x{product.height || 0} CM</span>
+                         <span className="text-[8px] font-black text-gray-400 uppercase">Tax Rate:</span>
+                         <span className="text-[9px] font-black text-gray-700">{product.taxRate || 0}% GST</span>
+                         <span className="text-[8px] font-black text-gray-400 uppercase">HSN Code:</span>
+                         <span className="text-[9px] font-black text-gray-900">{product.hsnCode || 'N/A'}</span>
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              {/* Variants Breakdown */}
+              <div className="space-y-4 border-l border-gray-100 pl-6 lg:col-span-2">
+                 <div className="flex justify-between items-center">
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                       <Palette size={14} className="text-[#7A578D]" /> Color Variant Matrix
+                    </h3>
+                    <span className="text-[9px] font-black text-gray-400 uppercase">{product.variants?.length || 0} Colors Managed</span>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {product.variants?.length > 0 ? (
+                      product.variants.map((v: any) => (
+                        <div key={v.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-100 rounded-xl hover:shadow-md transition-all group">
+                           <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-100 shrink-0">
+                                 <img src={v.images?.[0]?.imageUrl || 'https://via.placeholder.com/50'} className="w-full h-full object-cover" alt="" />
+                              </div>
+                              <div className="flex flex-col">
+                                 <span className="text-[10px] font-black text-gray-900 uppercase">{v.color}</span>
+                                 <span className="text-[8px] font-mono text-gray-400 uppercase tracking-tighter">#{v.id}</span>
+                              </div>
+                           </div>
+                           <div className="text-right flex flex-col items-end">
+                              <span className={`text-[10px] font-black ${v.inventory?.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                 {v.inventory?.stock || 0} UNIT
+                              </span>
+                              <div className="w-3 h-3 rounded-full border border-gray-100 shadow-sm mt-1" style={{ backgroundColor: v.colorCode }} />
+                           </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 p-10 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                         <AlertTriangle className="text-gray-300 mb-2" size={24} />
+                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No active variants detected</p>
+                      </div>
+                    )}
+                 </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    textLabels: { body: { noMatch: loading ? 'Loading...' : 'No bulk products found' } }
+  };
+
 
   return (
     <div className="space-y-3.5 animate-in fade-in duration-500 max-w-[1400px]">

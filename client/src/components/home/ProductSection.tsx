@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import ProductCard from '../ProductCard';
+
 
 interface ProductSectionProps {
   title: string;
@@ -28,20 +30,22 @@ const ProductSection = ({
 
   return (
     <section className="container mx-auto px-4 mb-12 lg:mb-16">
-      <div className="flex flex-col items-center mb-10 text-center relative">
+      <div className="flex flex-col items-center mb-10 text-center relative max-w-4xl mx-auto">
         <div className="flex items-center gap-6 mb-3 w-full">
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#7A578D] to-[#7A578D] opacity-20" />
-          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-[#7A578D] whitespace-nowrap">The Collection</span>
-          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-[#7A578D] to-[#7A578D] opacity-20" />
+           <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#7A578D] to-[#7A578D] opacity-10" />
+           <span className="text-[11px] md:text-[13px] font-black uppercase tracking-[0.4em] text-[#7A578D]/80 whitespace-nowrap leading-none">{title}</span>
+           <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-[#7A578D] to-[#7A578D] opacity-10" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-serif text-gray-900 dark:text-white tracking-tight leading-none mb-1">
-          {title}
-        </h2>
-        <div className="w-12 h-0.5 bg-[#7A578D] opacity-20 mt-4 rounded-full" />
+        <div className="w-12 h-0.5 bg-[#7A578D] opacity-10 mt-2 rounded-full" />
       </div>
+
+
+
+
       <div className={swipeable ? "flex overflow-x-auto gap-4 mb-6 pb-6 snap-x snap-mandatory no-scrollbar" : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6"}>
         {products.map((product) => (
-          <div key={product.id} className={swipeable ? "w-[160px] md:w-[240px] flex-shrink-0 snap-start" : ""}>
+          <div key={product._cardKey || product.id} className={swipeable ? "w-[160px] md:w-[240px] flex-shrink-0 snap-start" : ""}>
+
             <ProductCard 
               product={product} 
               toggleItem={toggleItem} 
@@ -55,12 +59,25 @@ const ProductSection = ({
         ))}
       </div>
       {!hideViewAll && viewAllLink && (
-        <div className="flex justify-center mt-6">
-          <Link to={viewAllLink} className="luxury-button rounded-full py-2 px-6 text-[10px]">
-            VIEW ALL
+        <div className="flex justify-center mt-12 mb-4">
+          <Link 
+            to={viewAllLink} 
+            className="group relative flex items-center gap-4 px-10 py-3.5 bg-white dark:bg-[#0A0A0A] border border-[#7A578D]/15 hover:border-[#7A578D]/40 transition-all duration-700 rounded-full"
+          >
+            {/* Hover fill effect */}
+            <div className="absolute inset-0 bg-[#7A578D] opacity-0 group-hover:opacity-[0.03] transition-opacity duration-700 rounded-full" />
+            
+            <span className="relative z-10 text-[9px] font-black uppercase tracking-[0.4em] text-[#7A578D]/80 group-hover:text-[#7A578D] transition-colors">
+              Explore {title}
+            </span>
+            
+            <ArrowRight size={14} className="relative z-10 text-[#7A578D]/60 group-hover:text-[#7A578D] group-hover:translate-x-1 transition-all duration-500" />
           </Link>
         </div>
       )}
+
+
+
     </section>
   );
 };

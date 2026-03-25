@@ -45,6 +45,8 @@ const AuthModal = () => {
   const [registerData, setRegisterData] = useState({
     name: '', email: '', phone: '', password: '', confirmPassword: ''
   });
+  const [loginErrors, setLoginErrors] = useState<any>({});
+  const [registerErrors, setRegisterErrors] = useState<any>({});
 
   // Phone OTP state
   const [phone, setPhone] = useState('');
@@ -100,6 +102,14 @@ const AuthModal = () => {
   // ── Email / Password Login ────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: any = {};
+    if (!loginData.email) errors.email = 'Email Address Required';
+    else if (!loginData.email.includes('@')) errors.email = 'Invalid Email Profile';
+    if (!loginData.password) errors.password = 'Security Key Required';
+    
+    setLoginErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setLoadingMsg('Signing in…');
     try {
       const { data } = await api.post('/auth/login', loginData);
@@ -116,10 +126,20 @@ const AuthModal = () => {
   // ── Email / Password Register ─────────────────────────────────────────────
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: any = {};
+    if (!registerData.name) errors.name = 'Identity Required';
+    if (!registerData.email) errors.email = 'Secure Email Required';
+    else if (!registerData.email.includes('@')) errors.email = 'Invalid Email Pattern';
+    if (!registerData.phone) errors.phone = 'Contact Data Required';
+    if (!registerData.password) errors.password = 'Credential Key Required';
+    else if (registerData.password.length < 6) errors.password = 'Key Too Short (Min 6)';
     if (registerData.password !== registerData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+      errors.confirmPassword = 'Keys Do Not Match';
     }
+    
+    setRegisterErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setLoadingMsg('Sending verification code…');
     try {
       await api.post('/auth/register', registerData);
@@ -425,11 +445,13 @@ const AuthModal = () => {
                     <InputGroup icon={<Mail size={13} />} label="Email Address"
                       placeholder="name@example.com" type="email"
                       value={loginData.email}
-                      onChange={v => setLoginData({ ...loginData, email: v })} />
+                      error={loginErrors.email}
+                      onChange={v => { setLoginData({ ...loginData, email: v }); if(loginErrors.email) setLoginErrors({...loginErrors, email: ''}); }} />
                     <InputGroup icon={<Lock size={13} />} label="Password"
                       placeholder="••••••••••" type="password"
                       value={loginData.password}
-                      onChange={v => setLoginData({ ...loginData, password: v })} />
+                      error={loginErrors.password}
+                      onChange={v => { setLoginData({ ...loginData, password: v }); if(loginErrors.password) setLoginErrors({...loginErrors, password: ''}); }} />
                     <button type="submit" disabled={loading}
                       className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
                       <span className="text-[9px] font-black uppercase tracking-[0.3em]">
@@ -444,7 +466,6 @@ const AuthModal = () => {
                   {/* Social buttons */}
                   <div className="space-y-2">
                     <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Continue with Google" />
-                    <SocialButton onClick={() => switchMode('phone')} icon={<Phone size={14} className="text-[#7A578D]" />} label="Continue with Phone OTP" />
                   </div>
                 </motion.div>
               )}
@@ -461,25 +482,30 @@ const AuthModal = () => {
                       <InputGroup icon={<User size={13} />} label="Name"
                         placeholder="Your name"
                         value={registerData.name}
-                        onChange={v => setRegisterData({ ...registerData, name: v })} />
+                        error={registerErrors.name}
+                        onChange={v => { setRegisterData({ ...registerData, name: v }); if(registerErrors.name) setRegisterErrors({...registerErrors, name: ''}); }} />
                       <InputGroup icon={<Mail size={13} />} label="Email"
                         placeholder="email@example.com" type="email"
                         value={registerData.email}
-                        onChange={v => setRegisterData({ ...registerData, email: v })} />
+                        error={registerErrors.email}
+                        onChange={v => { setRegisterData({ ...registerData, email: v }); if(registerErrors.email) setRegisterErrors({...registerErrors, email: ''}); }} />
                     </div>
                     <InputGroup icon={<Phone size={13} />} label="Phone"
                       placeholder="10 digit number"
                       value={registerData.phone}
-                      onChange={v => setRegisterData({ ...registerData, phone: v })} />
+                      error={registerErrors.phone}
+                      onChange={v => { setRegisterData({ ...registerData, phone: v }); if(registerErrors.phone) setRegisterErrors({...registerErrors, phone: ''}); }} />
                     <div className="grid grid-cols-2 gap-2.5">
                       <InputGroup icon={<Lock size={13} />} label="Password"
                         placeholder="Min 6 chars" type="password"
                         value={registerData.password}
-                        onChange={v => setRegisterData({ ...registerData, password: v })} />
+                        error={registerErrors.password}
+                        onChange={v => { setRegisterData({ ...registerData, password: v }); if(registerErrors.password) setRegisterErrors({...registerErrors, password: ''}); }} />
                       <InputGroup icon={<ShieldCheck size={13} />} label="Confirm"
                         placeholder="Repeat" type="password"
                         value={registerData.confirmPassword}
-                        onChange={v => setRegisterData({ ...registerData, confirmPassword: v })} />
+                        error={registerErrors.confirmPassword}
+                        onChange={v => { setRegisterData({ ...registerData, confirmPassword: v }); if(registerErrors.confirmPassword) setRegisterErrors({...registerErrors, confirmPassword: ''}); }} />
                     </div>
                     <button type="submit" disabled={loading}
                       className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
@@ -494,7 +520,6 @@ const AuthModal = () => {
 
                   <div className="space-y-2">
                     <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Sign up with Google" />
-                    <SocialButton onClick={() => switchMode('phone')} icon={<Phone size={14} className="text-[#7A578D]" />} label="Sign up with Phone OTP" />
                   </div>
                 </motion.div>
               )}
@@ -717,9 +742,9 @@ const FeatureItem = ({ icon, title, desc }: { icon: React.ReactNode; title: stri
   </div>
 );
 
-const InputGroup = ({ icon, label, placeholder, type = 'text', value, onChange }: {
+const InputGroup = ({ icon, label, placeholder, type = 'text', value, error, onChange }: {
   icon: React.ReactNode; label: string; placeholder: string;
-  type?: string; value: string; onChange: (val: string) => void;
+  type?: string; value: string; error?: string; onChange: (val: string) => void;
 }) => (
   <div className="space-y-1.5 group">
     <label className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 group-focus-within:text-[#7A578D] transition-colors">
@@ -734,11 +759,20 @@ const InputGroup = ({ icon, label, placeholder, type = 'text', value, onChange }
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-2.5 pl-10 pr-3.5 outline-none focus:border-[#7A578D]/30 focus:bg-white dark:focus:bg-[#1A1A1A] transition-all text-xs font-bold placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-900 dark:text-white"
-        required
+        className={`w-full bg-gray-50 dark:bg-white/5 border ${error ? 'border-red-500/50' : 'border-gray-100 dark:border-white/5'} rounded-xl py-2.5 pl-10 pr-3.5 outline-none focus:border-[#7A578D]/30 focus:bg-white dark:focus:bg-[#1A1A1A] transition-all text-xs font-bold placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-900 dark:text-white`}
       />
     </div>
+    {error && (
+      <motion.p
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-[7px] font-black uppercase tracking-widest text-red-500 ml-1.5"
+      >
+        {error}
+      </motion.p>
+    )}
   </div>
 );
+
 
 export default AuthModal;

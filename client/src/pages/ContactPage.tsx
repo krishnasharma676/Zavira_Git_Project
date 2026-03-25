@@ -34,10 +34,11 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] pt-[100px] pb-10 transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] pt-12 pb-10 transition-colors duration-300">
       <div className="container mx-auto px-6 max-w-5xl">
         {/* Header Section */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-6">
+
           <h1 className="text-xl md:text-2xl text-gray-900 dark:text-white uppercase font-black tracking-[0.2em] leading-none mb-3">
             Contact <span className="text-[#7A578D]">Us_</span>
           </h1>

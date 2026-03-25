@@ -110,3 +110,7 @@ export const approveReturn = asyncHandler(async (req: Request, res: Response) =>
   const order = await orderService.approveReturn(id);
   return res.status(200).json(new ApiResponse(200, order, "Return approved successfully"));
 });
+export const syncShiprocketStatuses = asyncHandler(async (req: Request, res: Response) => {
+  const result = await orderService.syncShiprocketStatuses();
+  return res.status(200).json(new ApiResponse(200, result, "Shiprocket statuses synced successfully"));
+});

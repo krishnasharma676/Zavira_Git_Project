@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Upload, Search, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Search, Calendar, RefreshCw, Layers, Package, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -157,12 +157,12 @@ const CategoryManagement = () => {
       label: "Identity",
       options: {
         customBodyRender: (id: string) => {
-          const shortId = id?.slice(0, 8).toUpperCase();
           return (
             <div className="flex items-center gap-1.5" title={id}>
-              <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10">{shortId}..</span>
+              <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10 uppercase">{id}</span>
             </div>
           )
+
         }
       }
     },
@@ -253,12 +253,75 @@ const CategoryManagement = () => {
     viewColumns: false,
     search: false,
     filter: false,
+    expandableRows: true, // USER REQ
+    expandableRowsOnClick: true, // USER REQ
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const cat = filteredCategories[rowMeta.rowIndex];
+      if (!cat) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
+                     <Layers size={12} /> Collection Dossier
+                  </h3>
+                  <div className="space-y-3 pl-4">
+                     <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Narrative Detail</span>
+                        <p className="text-[10px] font-bold text-gray-600 uppercase leading-relaxed max-w-[400px]">
+                           {cat.description || 'No descriptive metadata provided for this collection.'}
+                        </p>
+                     </div>
+                     <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-4 group">
+                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 group-hover:text-[#7A578D] transition-colors">
+                           <Package size={16} />
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[7px] font-black text-gray-400 uppercase">System Identity</span>
+                           <span className="text-[9px] font-mono font-black text-gray-900 truncate tracking-widest leading-none mt-1">#{cat.id}</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="space-y-4 border-l border-gray-100 pl-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
+                     <Clock size={12} /> Registry Timeline
+                  </h3>
+                  <div className="space-y-4">
+                     <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 group">
+                        <Calendar size={14} className="text-gray-400 mt-1" />
+                        <div className="flex flex-col">
+                           <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Enrollment Stamp</span>
+                           <span className="text-[10px] font-black text-gray-900 uppercase mt-0.5">{new Date(cat.createdAt).toLocaleString()}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 group">
+                        <RefreshCw size={14} className="text-gray-400 mt-1" />
+                        <div className="flex flex-col">
+                           <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Audit Terminal</span>
+                           <span className="text-[10px] font-black text-gray-900 uppercase mt-0.5">{new Date(cat.updatedAt).toLocaleString()}</span>
+                        </div>
+                     </div>
+                     <div className="p-2 border border-[#7A578D]/10 bg-[#7A578D]/5 rounded-lg flex items-center justify-between">
+                        <span className="text-[7px] font-black text-[#7A578D] uppercase tracking-widest">Global Priority</span>
+                        <span className="text-[9px] font-black text-gray-900 uppercase">Tier 01</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </td>
+        </tr>
+      );
+    },
     textLabels: {
       body: {
         noMatch: loading ? "Synchronizing..." : "No items found in ledger",
       }
     }
   };
+
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500 max-w-[1400px]">

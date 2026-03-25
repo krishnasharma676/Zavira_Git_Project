@@ -31,7 +31,8 @@ const ProductGrid = ({
       ) : products.length > 0 ? (
         products.map((product: any) => (
           <ProductCard 
-            key={product.id}
+            key={product._cardKey || product.id}
+
             product={product} 
             toggleItem={toggleItem} 
             isInWishlist={isInWishlist} 

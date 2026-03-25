@@ -9,71 +9,108 @@ import { ThemeProvider } from '@mui/material/styles';
 import { getMuiTheme } from '../utils/muiTableTheme';
 import OrderInvoice from '../components/OrderInvoice';
 import { useUIStore } from '../../store/useUIStore';
+import { useLoading } from '../../store/useLoading';
+import { useSettings } from '../../store/useSettings';
+import { useNavigate } from 'react-router-dom';
 
 const OrderManagement = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [settings, setSettings] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    pending: 0,
-    shipped: 0,
-    delivered: 0,
-    total: 0
-  });
+    const navigate = useNavigate();
+    const { startLoading, stopLoading } = useLoading();
+    const { settings, fetchSettings: fetchGlobalSettings } = useSettings();
+    
+    // Pagination state
+    const [page, setPage] = useState(0);
+    const [totalOrders, setTotalOrders] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(20);
 
-  const fetchOrders = async () => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        pending: 0,
+        shipped: 0,
+        delivered: 0,
+        total: 0
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState('ALL');
+
+  const tabs = [
+    { label: 'All Orders', value: 'ALL' },
+    { label: 'Unfulfilled', value: 'PENDING' },
+    { label: 'In Transit', value: 'SHIPPED' },
+    { label: 'Delivered', value: 'DELIVERED' },
+    { label: 'Returns', value: 'RETURNS' },
+  ];
+
+  const fetchOrders = async (targetPage = page, targetLimit = rowsPerPage) => {
     try {
-      const { data } = await api.get('/orders/admin/all', { params: { limit: 100 } });
-      const fetchedOrders = data.data.orders;
+      startLoading('Syncing Order Records...');
+      const { data } = await api.get('/orders/admin/all', { 
+        params: { 
+          page: targetPage + 1, 
+          limit: targetLimit,
+          status: activeTab === 'ALL' ? undefined : (activeTab === 'RETURNS' ? 'RETURN_REQUESTED' : activeTab)
+        } 
+      });
+      
+      const { orders: fetchedOrders, total, stats: fetchedStats } = data.data;
       setOrders(fetchedOrders);
+      setTotalOrders(total);
       
-      const s = fetchedOrders.reduce((acc: any, curr: any) => {
-        if (curr.status === 'PENDING') acc.pending++;
-        if (curr.status === 'SHIPPED') acc.shipped++;
-        if (curr.status === 'DELIVERED') acc.delivered++;
-        return acc;
-      }, { pending: 0, shipped: 0, delivered: 0 });
-      
-      setStats({ ...s, total: fetchedOrders.length });
+      // Update stats from server-side aggregation
+      setStats({
+        total: total,
+        pending: fetchedStats.pending + (fetchedStats.confirmed || 0),
+        shipped: fetchedStats.shipped,
+        delivered: fetchedStats.delivered
+      });
     } catch (error) {
       toast.error('Failed to load orders');
+    } finally {
+      stopLoading();
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const { data } = await api.get('/settings');
-      setSettings(data.data);
-    } catch (e) {}
-  };
-
   useEffect(() => {
-    fetchOrders();
-    fetchSettings();
-  }, []);
+    fetchOrders(page, rowsPerPage);
+    fetchGlobalSettings(); // Only fetches once per session thanks to store logic
+  }, [page, rowsPerPage, activeTab]);
 
   const viewOrder = async (id: string) => {
+    const basicOrder = orders.find(o => o.id === id);
+    if (basicOrder) setSelectedOrder(basicOrder);
+    setIsModalOpen(true);
+    setIsDetailsLoading(true);
+    
     try {
       const { data } = await api.get(`/orders/${id}`);
       setSelectedOrder(data.data);
-      setIsModalOpen(true);
     } catch (error) {
       toast.error('Failed to load order details');
+    } finally {
+      setIsDetailsLoading(false);
     }
   };
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
+    if (isSubmitting) return;
     try {
+      setIsSubmitting(true);
+      startLoading(`Transitioning Order to ${newStatus}...`);
       await api.patch(`/orders/admin/${id}/status`, { status: newStatus });
       toast.success('Status updated');
-      fetchOrders();
+      await fetchOrders();
       if (selectedOrder?.id === id) {
-        viewOrder(id);
+        await viewOrder(id);
       }
     } catch (error) {
       toast.error('Failed to update status');
+    } finally {
+      setIsSubmitting(false);
+      stopLoading();
     }
   };
 
@@ -104,13 +141,19 @@ const OrderManagement = () => {
   };
 
   const handleTriggerShipment = async (id: string) => {
+    if (isSubmitting) return;
     try {
       if (!window.confirm("Are you sure you want to trigger Shiprocket for this order?")) return;
+      setIsSubmitting(true);
+      startLoading('Generating Shiprocket Fulfillment...');
       await api.post(`/orders/admin/${id}/trigger-shipment`);
       toast.success('Shipment triggered successfully');
-      fetchOrders();
+      await fetchOrders();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to trigger shipment');
+    } finally {
+      setIsSubmitting(false);
+      stopLoading();
     }
   };
 
@@ -124,6 +167,38 @@ const OrderManagement = () => {
       toast.error(error.response?.data?.message || 'Failed to approve return');
     }
   };
+
+  const handleSyncSingleOrder = async (id: string) => {
+    try {
+      startLoading('Syncing Order Status...');
+      await api.get(`/orders/${id}`); // Refresh single order info
+      toast.success('Refreshed');
+      await fetchOrders();
+    } catch (error) {
+       toast.error('Failed to sync');
+    } finally {
+       stopLoading();
+    }
+  };
+
+  const syncShiprocketStatus = async () => {
+    try {
+      startLoading('Syncing statuses with Shiprocket...');
+      await api.post('/orders/admin/sync-shiprocket');
+      toast.success('Wait for 5-10 sec all status will be sync');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error('Sync failed');
+    } finally {
+      stopLoading();
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'ALL') return true;
+    if (activeTab === 'RETURNS') return order.status === 'RETURN_REQUESTED' || order.status === 'RETURNED';
+    return order.status === activeTab;
+  });
 
   const getTimelineEvents = (order: any) => {
     const events = [];
@@ -153,13 +228,14 @@ const OrderManagement = () => {
       label: "Order#",
       options: {
         customBodyRender: (val: string, meta: any) => {
-          const orderId = orders[meta.rowIndex]?.publicId?.slice(-6).toUpperCase();
+          const orderId = orders[meta.rowIndex]?.publicId?.toUpperCase();
           return (
             <div className="flex flex-col">
-               <span className="text-[10px] font-black">#{val.split('-')[2] || val.slice(-6)}</span>
+               <span className="text-[10px] font-black">#{val}</span>
                <span className="text-[7px] text-gray-400 font-mono tracking-tighter">ID: {orderId}</span>
             </div>
           )
+
         }
       }
     },
@@ -185,7 +261,7 @@ const OrderManagement = () => {
         customBodyRender: (val: any, meta: any) => {
           const user = orders[meta.rowIndex]?.user;
           return (
-            <div className="flex flex-col leading-tight">
+            <div className="flex flex-col leading-tight min-w-[100px]">
                <span className="text-[9px] font-black text-[#7A578D]">{val?.phone || user?.phoneNumber || 'N/A'}</span>
                <span className="text-[8px] font-bold text-gray-500 uppercase">{val?.city || 'N/A'}</span>
             </div>
@@ -194,21 +270,66 @@ const OrderManagement = () => {
       }
     },
     {
+      name: "address",
+      label: "Full Address",
+      options: {
+        customBodyRender: (val: any) => (
+          <div className="flex flex-col leading-tight min-w-[200px]">
+            <span className="text-[8px] font-bold text-gray-600 uppercase tracking-tighter truncate max-w-[200px]">{val?.street || 'N/A'}</span>
+            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">{val?.city}, {val?.state} - {val?.pincode}</span>
+          </div>
+        )
+      }
+    },
+    {
       name: "items",
       label: "Product Details",
       options: {
         customBodyRender: (items: any[]) => (
-          <div className="flex flex-col gap-0 py-0.5">
-             {items?.slice(0, 1).map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                   <img src={item.product?.images?.[0]?.imageUrl} className="w-5 h-6 object-cover rounded shadow-sm border border-gray-100" />
-                   <div className="flex flex-col leading-none">
-                      <span className="text-[10px] font-black text-gray-800 uppercase truncate max-w-[110px]">{item.product?.name}</span>
-                      <span className="text-[7px] font-bold text-gray-400">Qty: {item.quantity}</span>
+          <div className="flex flex-col gap-1.5 py-1 min-w-[180px]">
+             {items?.map((item, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                   <div className="relative">
+                      <img 
+                        src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/50?text=NP'} 
+                        className="w-7 h-9 object-cover rounded shadow-sm border border-gray-100 group-hover:scale-105 transition-transform" 
+                      />
+                      <span className="absolute -top-1 -right-1 bg-[#7A578D] text-white text-[6px] font-black w-3 h-3 flex items-center justify-center rounded-full border border-white">
+                        {item.quantity}
+                      </span>
+                   </div>
+                   <div className="flex flex-col leading-tight pt-0.5">
+                      <span className="text-[9px] font-black text-gray-800 uppercase truncate max-w-[140px] block" title={item.product?.name}>
+                        {item.product?.name}
+                      </span>
+                      <div className="flex flex-wrap gap-1 items-center mt-1">
+                         <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 rounded uppercase tracking-tighter">
+                            SKU: {
+                              item.variant?.sizes?.find((s: any) => s.size === item.selectedSize)?.sku || 
+                              item.variant?.sku || 
+                              item.product?.inventory?.sku || 
+                              'N/A'
+                            }
+                         </span>
+                         {item.selectedSize && (
+                            <span className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1 rounded uppercase tracking-tighter">
+                               Size: {item.selectedSize}
+                            </span>
+                         )}
+                         {item.variant?.color && (
+                            <span className="text-[7px] font-black text-gray-500 bg-gray-50 px-1 rounded uppercase tracking-tighter">
+                               Col: {item.variant.color}
+                            </span>
+                         )}
+                      </div>
                    </div>
                 </div>
-             ))}
-             {items?.length > 1 && <span className="text-[8px] font-black text-[#7A578D] ml-7 leading-none">+{items.length - 1} more</span>}
+             )).slice(0, 2)}
+             {items?.length > 2 && (
+                <span className="text-[7px] font-black text-[#7A578D] ml-9 border-t border-dashed border-[#7A578D]/20 pt-0.5">
+                   +{items.length - 2} more items in this order
+                </span>
+             )}
           </div>
         )
       }
@@ -263,40 +384,45 @@ const OrderManagement = () => {
           if (!order) return null;
           
           return (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button 
                  onClick={() => viewOrder(id)} 
-                 title="View Details"
-                 className="p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition-all"
+                 className="px-2 py-1 bg-[#7A578D]/5 hover:bg-[#7A578D]/10 text-[#7A578D] text-[8px] font-black uppercase tracking-widest rounded transition-all border border-[#7A578D]/10"
               >
-                 <Eye size={12} />
+                 VIEW
               </button>
               
               <button 
                  onClick={() => { setSelectedOrder(order); setIsInvoiceOpen(true); }}
-                 title="Print Bill"
-                 className="p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition-all"
+                 className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-gray-100"
               >
-                 <Printer size={12} />
+                 BILL
               </button>
 
               {['PENDING', 'CONFIRMED'].includes(order.status) && !order.shipmentId && (
                 <button 
                    onClick={() => handleTriggerShipment(id)}
-                   title="Ship via Shiprocket"
-                   className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-lg transition-all border border-blue-50"
+                   className="px-2 py-1 bg-green-500 text-white hover:bg-black text-[8px] font-black uppercase tracking-widest rounded transition-all border border-green-500 shadow-lg shadow-green-200"
                 >
-                   <Truck size={12} />
+                   SHIP NOW
                 </button>
+              )}
+
+              {order.shipmentId && order.status !== 'DELIVERED' && (
+                 <button 
+                    onClick={() => handleSyncSingleOrder(id)}
+                    className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-blue-100"
+                 >
+                    SYNC
+                 </button>
               )}
 
               {order.status === 'RETURN_REQUESTED' && (
                 <button 
                    onClick={() => handleApproveReturn(id)}
-                   title="Approve Return"
-                   className="p-1.5 bg-orange-50 text-orange-500 hover:bg-orange-100 rounded-lg transition-all"
+                   className="px-2 py-1 bg-orange-50 text-orange-600 hover:bg-orange-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-orange-100"
                 >
-                   <RefreshCw size={12} />
+                   APPROVE
                 </button>
               )}
             </div>
@@ -307,16 +433,32 @@ const OrderManagement = () => {
   ];
 
   const options = {
+    serverSide: true,
+    count: totalOrders,
+    page: page,
+    rowsPerPage: rowsPerPage,
     selectableRows: 'none' as const,
     elevation: 0,
     responsive: 'standard' as const,
-    rowsPerPage: 10,
-    download: false,
+    download: true,
     print: false,
-    viewColumns: false,
-    filter: false,
+    viewColumns: true,
+    filter: true,
     search: true,
+    expandableRows: false,
+    onTableChange: (action: string, tableState: any) => {
+      switch (action) {
+        case 'changePage':
+          setPage(tableState.page);
+          break;
+        case 'changeRowsPerPage':
+          setRowsPerPage(tableState.rowsPerPage);
+          setPage(0);
+          break;
+      }
+    }
   };
+
 
   if (isInvoiceOpen && selectedOrder) {
      return (
@@ -360,7 +502,11 @@ const OrderManagement = () => {
            </div>
         </div>
         <div className="flex items-center space-x-1.5">
-           <button onClick={fetchOrders} className="p-1 px-2.5 bg-white border border-gray-100 rounded-lg text-gray-400 hover:text-[#7A578D] hover:rotate-180 transition-all duration-500 shadow-sm flex items-center gap-1">
+           <button onClick={syncShiprocketStatus} className="p-1 px-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-600 hover:bg-blue-100 transition-all shadow-sm flex items-center gap-1">
+              <RefreshCw size={11} className={isSubmitting ? 'animate-spin' : ''} />
+              <span className="text-[7px] font-black uppercase tracking-widest">Sync Status</span>
+           </button>
+           <button onClick={() => fetchOrders()} className="p-1 px-2.5 bg-white border border-gray-100 rounded-lg text-gray-400 hover:text-[#7A578D] hover:rotate-180 transition-all duration-500 shadow-sm flex items-center gap-1">
               <RefreshCw size={11} />
               <span className="text-[7px] font-black uppercase tracking-widest">Refresh</span>
            </button>
@@ -370,6 +516,22 @@ const OrderManagement = () => {
            </button>
         </div>
       </header>
+
+      <div className="flex items-center gap-1.5 bg-gray-50/50 p-1 rounded-xl mb-3 overflow-x-auto no-scrollbar">
+         {tabs.map((tab) => (
+            <button
+               key={tab.value}
+               onClick={() => setActiveTab(tab.value)}
+               className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap ${
+                  activeTab === tab.value 
+                  ? 'bg-white text-[#7A578D] shadow-sm border border-gray-100' 
+                  : 'text-gray-400 hover:text-gray-600'
+               }`}
+            >
+               {tab.label}
+            </button>
+         ))}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-2.5">
         {[
@@ -392,7 +554,7 @@ const OrderManagement = () => {
 
       <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
         <ThemeProvider theme={getMuiTheme()}>
-          <MUIDataTable title="" data={orders} columns={columns} options={options} />
+          <MUIDataTable title="" data={filteredOrders} columns={columns} options={options} />
         </ThemeProvider>
       </div>
 
@@ -401,8 +563,14 @@ const OrderManagement = () => {
         onClose={() => setIsModalOpen(false)} 
         title={`Order: ${selectedOrder?.orderNumber.split('-')[2] || selectedOrder?.orderNumber}`}
       >
+        {isDetailsLoading && !selectedOrder && (
+           <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <RefreshCw className="w-8 h-8 text-[#7A578D] animate-spin" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Retrieving Secure Dossier...</p>
+           </div>
+        )}
         {selectedOrder && (
-           <div className="space-y-3 animate-in fade-in duration-300">
+           <div className={`space-y-3 animate-in fade-in duration-300 ${isDetailsLoading ? 'opacity-50 pointer-events-none' : ''}`}>
               
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/50 p-3 rounded-xl border border-gray-100 gap-3">
                  <div>
@@ -503,10 +671,23 @@ const OrderManagement = () => {
                        <div className="p-1.5 space-y-1">
                           {selectedOrder.items?.map((item: any) => (
                               <div key={item.id} className="flex items-center gap-2.5 bg-gray-50/30 p-1.5 rounded-lg border border-transparent hover:border-gray-100 hover:bg-white transition-all">
-                                 <img src={item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} className="w-8 h-10 object-cover rounded-md bg-gray-100 shadow-sm" />
+                                 <img src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} 
+                                    className="w-8 h-10 object-cover rounded-md bg-gray-100 shadow-sm" />
                                  <div className="flex-1">
                                     <h4 className="text-[9px] font-black uppercase tracking-tight text-gray-900 truncate max-w-[200px]">{item.product?.name}</h4>
-                                    <p className="text-[7px] font-black text-[#7A578D] mt-0.5 uppercase tracking-widest">Qty: {item.quantity} | SKU: {item.product?.inventory?.sku || 'N/A'}</p>
+                                    <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                       <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Qty: {item.quantity}</span>
+                                       {item.selectedSize && <span className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 rounded uppercase leading-loose">Size: {item.selectedSize}</span>}
+                                       {item.variant?.color && <span className="text-[7px] font-black text-gray-500 bg-gray-50 px-1.5 rounded uppercase leading-loose">Color: {item.variant.color}</span>}
+                                                                               <span className="text-[7px] font-black text-blue-600 uppercase ml-auto">
+                                          SKU: {
+                                            item.variant?.sizes?.find((s: any) => s.size === item.selectedSize)?.sku || 
+                                            item.variant?.sku || 
+                                            item.product?.inventory?.sku || 
+                                            'N/A'
+                                          }
+                                        </span>
+                                    </div>
                                  </div>
                                  <div className="text-right">
                                     <span className="text-[10px] font-black text-gray-900 block leading-none">₹{(item.price * item.quantity).toLocaleString()}</span>

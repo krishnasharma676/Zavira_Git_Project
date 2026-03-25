@@ -16,13 +16,16 @@ interface CartItem {
   selectedSize?: string;
   variantId?: string;
   taxRate?: number;
+  slug?: string;
 }
+
 
 interface CartState {
   items: CartItem[];
   addItem: (item: CartItem) => Promise<void>;
-  removeItem: (id: string) => Promise<void>;
-  updateQuantity: (id: string, quantity: number) => Promise<void>;
+  removeItem: (cartItemId: string) => Promise<void>;
+  updateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
+
   clearCart: () => Promise<void>;
   syncCart: () => Promise<void>; // Fetch from server
   bulkSync: (localItems: CartItem[]) => Promise<void>; // Merge local into server on login
@@ -62,25 +65,27 @@ export const useCart = create<CartState>()(
           }
         }
 
-        // Guest logic
-        if (existingItem && existingItem.selectedSize === item.selectedSize && existingItem.variantId === item.variantId) {
+        // Guest logic - check uniqueness by ID, size AND variant
+        const isDuplicate = state.items.some(i => i.id === item.id && i.selectedSize === item.selectedSize && i.variantId === item.variantId);
+        
+        if (isDuplicate) {
           set({
             items: state.items.map((i) =>
-              (i.id === item.id && i.selectedSize === item.selectedSize) 
-                ? { ...i, quantity: newQuantity } : i
+              (i.id === item.id && i.selectedSize === item.selectedSize && i.variantId === item.variantId) 
+                ? { ...i, quantity: i.quantity + item.quantity } : i
             ),
           });
         } else {
           set({ items: [...state.items, { ...item, cartItemId: item.cartItemId || Date.now().toString() }] });
         }
       },
-      removeItem: async (id) => {
+      removeItem: async (cartItemId) => {
         const state = get();
         const isAuthenticated = useAuth.getState().isAuthenticated;
 
         if (isAuthenticated) {
           try {
-            await api.delete(`/cart/remove/${id}`);
+            await api.delete(`/cart/remove/${cartItemId}`);
             await get().syncCart();
             return;
           } catch (err) {
@@ -91,14 +96,14 @@ export const useCart = create<CartState>()(
 
         // Guest logic
         set({
-          items: state.items.filter((i) => i.cartItemId !== id),
+          items: state.items.filter((i) => (i.cartItemId || i.id) !== cartItemId),
         });
       },
-      updateQuantity: async (id, quantity) => {
+      updateQuantity: async (cartItemId, quantity) => {
         const state = get();
         const isAuthenticated = useAuth.getState().isAuthenticated;
         
-        const item = state.items.find((i) => i.id === id);
+        const item = state.items.find((i) => (i.cartItemId || i.id) === cartItemId);
         if (item && quantity > item.stock) {
           toast.error(`Stock limit reached: ${item.stock} pieces`);
           return;
@@ -106,7 +111,8 @@ export const useCart = create<CartState>()(
 
         if (isAuthenticated) {
           try {
-            await api.patch('/cart/update', { productId: id, quantity });
+            // Updated to use the specific cartItemId for patch
+            await api.patch('/cart/update', { cartItemId, quantity });
             await get().syncCart();
             return;
           } catch (err) {
@@ -118,10 +124,11 @@ export const useCart = create<CartState>()(
         // Guest logic
         set({
           items: state.items.map((i) =>
-            i.cartItemId === id ? { ...i, quantity } : i
+            (i.cartItemId || i.id) === cartItemId ? { ...i, quantity } : i
           ),
         });
       },
+
       clearCart: async () => {
          const isAuthenticated = useAuth.getState().isAuthenticated;
          if (isAuthenticated) {
@@ -140,16 +147,18 @@ export const useCart = create<CartState>()(
             if (serverCart && serverCart.items) {
                const parsedItems = serverCart.items.map((si: any) => ({
                   id: si.product.id,
-                  cartItemId: si.id, // backend cart item ID
+                  cartItemId: si.id,
                   name: si.product.name,
                   price: si.product.discountedPrice || si.product.basePrice,
                   quantity: si.quantity,
-                  image: si.product.images?.[0]?.imageUrl || '',
-                  stock: si.product.inventory?.stock || 0,
+                  image: si.variant?.images?.[0]?.imageUrl || si.product.images?.[0]?.imageUrl || '',
+                  stock: si.variant?.stock || si.product.inventory?.stock || 0,
                   selectedSize: si.selectedSize,
                   variantId: si.variantId,
+                  slug: si.product.slug,
                   taxRate: si.product.taxRate,
                }));
+
                set({ items: parsedItems });
             } else {
                set({ items: [] });
@@ -163,7 +172,9 @@ export const useCart = create<CartState>()(
          
          const payload = localItems.map(item => ({
             productId: item.id,
-            quantity: item.quantity
+            quantity: item.quantity,
+            variantId: item.variantId,
+            selectedSize: item.selectedSize
          }));
 
          try {
@@ -176,12 +187,14 @@ export const useCart = create<CartState>()(
                   name: si.product.name,
                   price: si.product.discountedPrice || si.product.basePrice,
                   quantity: si.quantity,
-                  image: si.product.images?.[0]?.imageUrl || '',
-                  stock: si.product.inventory?.stock || 0,
+                  image: si.variant?.images?.[0]?.imageUrl || si.product.images?.[0]?.imageUrl || '',
+                  stock: si.variant?.stock || si.product.inventory?.stock || 0,
                   selectedSize: si.selectedSize,
                   variantId: si.variantId,
+                  slug: si.product.slug,
                   taxRate: si.product.taxRate,
                }));
+
                set({ items: parsedItems });
             }
          } catch (err) {

@@ -16,8 +16,10 @@ export class ReviewService {
       productId,
       rating: parseInt(data.rating),
       comment: data.comment,
+      images: data.images || [],
       isApproved: false, // Moderation required
     });
+
   }
 
   async getProductReviews(productId: string) {

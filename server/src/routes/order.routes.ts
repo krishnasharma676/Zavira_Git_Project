@@ -11,7 +11,8 @@ import {
   refundOrder,
   requestReturn,
   approveReturn,
-  uploadReturnImages
+  uploadReturnImages,
+  syncShiprocketStatuses
 } from "../controllers/order.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { isAdmin } from "../middleware/admin.middleware";
@@ -39,5 +40,6 @@ router.patch("/admin/:id/notes", isAdmin, updateOrderNotes);
 router.post("/admin/:id/trigger-shipment", isAdmin, triggerShipment);
 router.post("/admin/:id/refund", isAdmin, refundOrder);
 router.post("/admin/:id/approve-return", isAdmin, approveReturn);
+router.post("/admin/sync-shiprocket", isAdmin, syncShiprocketStatuses);
 
 export default router;

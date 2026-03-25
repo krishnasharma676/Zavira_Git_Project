@@ -130,8 +130,27 @@ export class CategoryService {
     });
 
     if (!category) throw new ApiError(404, 'Category not found');
+
+    // If there are products, move them to a generic "Uncategorized" category
     if (category._count.products > 0) {
-      throw new ApiError(400, 'Cannot delete category with associated products');
+      let uncategorized = await prisma.category.findFirst({
+        where: { name: 'Uncategorized', isDeleted: false }
+      });
+
+      if (!uncategorized) {
+        uncategorized = await prisma.category.create({
+          data: {
+            name: 'Uncategorized',
+            slug: 'uncategorized',
+            isActive: false // Hidden collection by default
+          }
+        });
+      }
+
+      await prisma.product.updateMany({
+        where: { categoryId: id },
+        data: { categoryId: uncategorized.id }
+      });
     }
 
     if (category.imagePublicId) {
@@ -139,6 +158,7 @@ export class CategoryService {
     }
 
     return await prisma.category.update({ where: { id }, data: { isDeleted: true } });
+
   }
 }
 

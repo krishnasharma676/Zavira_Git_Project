@@ -81,7 +81,7 @@ const VariantManager = () => {
           <div>
             <h1 className="text-lg font-black uppercase tracking-tighter text-gray-900 leading-none">Manage Variants</h1>
             <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-0.5">
-               {product?.name} (ID: {product?.id?.slice(0, 8)})
+               {product?.name} (ID: {product?.id})
             </p>
           </div>
         </div>
@@ -126,7 +126,7 @@ const VariantManager = () => {
                         <div key={s.id} className="border border-gray-100 rounded-lg p-2 bg-gray-50 flex items-center justify-between group">
                            <div>
                               <span className="block text-[12px] font-black text-gray-900 leading-none">{s.size}</span>
-                              <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">SKU: {s.sku?.slice(-4) || 'N/A'}</span>
+                              <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">SKU: {s.sku || 'N/A'}</span>
                            </div>
                            
                            <div className="flex flex-col items-end gap-1">

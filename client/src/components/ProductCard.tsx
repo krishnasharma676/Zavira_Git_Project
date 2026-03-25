@@ -4,6 +4,8 @@ import { Heart, Star, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/format';
+import { getPrimaryImage } from '../utils/productHelpers';
+
 
 interface ProductCardProps {
   product: any;
@@ -13,9 +15,19 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCardProps) => {
-  const primaryImage = product.images?.find((img: any) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl || 'https://via.placeholder.com/400';
+  const primaryImage = getPrimaryImage(product, 'https://via.placeholder.com/400');
+
+
   const isOutOfStock = product.inventory && product.inventory.stock <= 0;
   const inWishlist = isInWishlist(product.id);
+
+  const availableSizes = (product.currentVariantSizes?.length > 0)
+    ? product.currentVariantSizes.map((s: any) => s.size)
+    : (product.variants?.[0]?.sizes?.length > 0)
+    ? product.variants[0].sizes.map((s: any) => s.size)
+    : (product.sizes ? product.sizes.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+  
+  const defaultSize = availableSizes[0];
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -24,14 +36,20 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
     
     addItem({
       id: product.id,
+      variantId: product.currentVariantId,
       name: product.name,
       price: product.discountedPrice || product.basePrice || 0,
       quantity: 1,
       image: primaryImage,
+      selectedSize: defaultSize,
+      slug: product.slug,
       stock: product.inventory?.stock || 0
+
     });
-    toast.success('Added to your collection!');
+    toast.success(`Small Luxury! Added Size: ${defaultSize || 'Unified'}`);
   };
+
+
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -87,6 +105,8 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
           <img 
             src={primaryImage} 
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className={`w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
           />
           {/* Subtle Overlay on hover */}
@@ -98,13 +118,19 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
           <div className="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-20 hidden md:block">
             <button 
               onClick={handleAddToCart}
-              className="w-full bg-white dark:bg-[#7A578D] text-[#7A578D] dark:text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-[#7A578D] hover:text-white transition-all flex items-center justify-center gap-2"
+              className="w-full bg-white dark:bg-[#7A578D] text-[#7A578D] dark:text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-[#7A578D] hover:text-white transition-all flex flex-col items-center justify-center gap-0.5"
             >
-              <ShoppingBag size={12} />
-              ADD TO BAG
+              <div className="flex items-center gap-2">
+                <ShoppingBag size={12} />
+                <span>ADD TO BAG</span>
+              </div>
+              {defaultSize && (
+                <span className="text-[7px] opacity-60 font-black">SIZE: {defaultSize}</span>
+              )}
             </button>
           </div>
         )}
+
 
         {/* Out of Stock Overlay */}
         {isOutOfStock && (
@@ -139,10 +165,14 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
         </div>
 
         <div className="mt-2 flex items-center justify-between">
-          <div className="flex items-center space-x-1">
-             <Star size={7} className="fill-yellow-400 text-yellow-400" />
-             <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{product.avgRating || 4.8}</span>
-          </div>
+          {product.totalReviews > 0 ? (
+            <div className="flex items-center space-x-1">
+              <Star size={7} className="fill-yellow-400 text-yellow-400" />
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                {(product.avgRating || 0).toFixed(1)}
+              </span>
+            </div>
+          ) : <div />}
 
           {/* Mobile Quick Add */}
           <button 
@@ -155,6 +185,7 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
         </div>
       </div>
     </motion.div>
+
   );
 };
 

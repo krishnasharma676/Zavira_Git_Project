@@ -13,6 +13,7 @@ import {
 import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
 import { useUIStore } from '../store/useUIStore';
+import { useLoading } from '../store/useLoading';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/format';
@@ -23,10 +24,12 @@ const CheckoutPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const openAuthModal = useUIStore((s) => s.openAuthModal);
+  const { startLoading, stopLoading } = useLoading();
 
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -62,12 +65,16 @@ const CheckoutPage = () => {
   };
 
   const handleCompleteOrder = async () => {
+    if (isSubmitting) return;
     if (!formData.pincode || !formData.address || !formData.firstName) {
       toast.error('Please fill in required shipping fields');
       return;
     }
 
     try {
+      setIsSubmitting(true);
+      startLoading('Securing your transaction...');
+      
       // Logic for saving address and then creating order
       const { data: addressRes } = await api.post('/addresses', {
         name: `${formData.firstName} ${formData.lastName}`,
@@ -80,12 +87,15 @@ const CheckoutPage = () => {
         isDefault: true
       });
 
+      startLoading('Crafting your order details...');
       const response = await api.post('/orders/checkout', {
         addressId: addressRes.data.id,
         paymentMethod: 'COD',
         items: items.map(item => ({
           productId: item.id,
-          quantity: item.quantity
+          quantity: item.quantity,
+          variantId: item.variantId,
+          selectedSize: item.selectedSize
         }))
       });
       
@@ -94,6 +104,9 @@ const CheckoutPage = () => {
       navigate(`/order-success/${response.data.data.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to place order');
+    } finally {
+      setIsSubmitting(false);
+      stopLoading();
     }
   };
 
@@ -158,6 +171,10 @@ const CheckoutPage = () => {
                       </div>
                       <div className="flex-grow pt-1">
                         <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-1">{item.name}</h4>
+                        <div className="flex gap-2 mt-1">
+                          {item.selectedSize && <span className="text-[7px] font-black bg-gray-100 px-1 rounded uppercase">Size: {item.selectedSize}</span>}
+                          {item.variantId && <span className="text-[7px] font-black bg-[#7A578D]/10 text-[#7A578D] px-1 rounded uppercase">Selected Variant</span>}
+                        </div>
                         <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
                         <p className="text-[11px] font-black text-[#7A578D] mt-1">{formatCurrency(item.price)}</p>
                       </div>
@@ -228,8 +245,9 @@ const CheckoutPage = () => {
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block ml-1">Pincode*</label>
                   <input 
                     name="pincode" value={formData.pincode} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="Enter Pincode"
+                    disabled={isSubmitting}
                   />
                </div>
 
@@ -237,15 +255,17 @@ const CheckoutPage = () => {
                   <div>
                     <input 
                       name="firstName" value={formData.firstName} onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                       placeholder="First name*"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div>
                     <input 
                       name="lastName" value={formData.lastName} onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                       placeholder="Last name*"
+                      disabled={isSubmitting}
                     />
                   </div>
                </div>
@@ -253,39 +273,44 @@ const CheckoutPage = () => {
                <div>
                   <input 
                     name="address" value={formData.address} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="Flat, house number, floor, building*"
+                    disabled={isSubmitting}
                   />
                </div>
 
                <div>
                   <input 
                     name="area" value={formData.area} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="Area, street, sector, village*"
+                    disabled={isSubmitting}
                   />
                </div>
 
-               <button className="text-[11px] font-black tracking-widest text-[#7A578D] uppercase flex items-center gap-1.5 ml-1">+ Landmark area</button>
+               <button disabled={isSubmitting} className="text-[11px] font-black tracking-widest text-[#7A578D] uppercase flex items-center gap-1.5 ml-1 disabled:opacity-50">+ Landmark area</button>
 
                <div className="grid grid-cols-2 gap-4">
                   <input 
                     name="city" value={formData.city} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="City*"
+                    disabled={isSubmitting}
                   />
                   <input 
                     name="state" value={formData.state} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="State*"
+                    disabled={isSubmitting}
                   />
                </div>
 
                <div>
                   <input 
                     name="email" value={formData.email} onChange={handleInputChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-[#7A578D] transition-all disabled:opacity-50"
                     placeholder="E-mail (optional)"
+                    disabled={isSubmitting}
                   />
                   <p className="text-[10px] text-gray-400 font-bold italic mt-2 ml-1 italic">Order delivery details will be sent here</p>
                </div>
@@ -308,9 +333,10 @@ const CheckoutPage = () => {
 
             <button 
               onClick={handleCompleteOrder}
-              className="luxury-button w-full !py-5 rounded-2xl"
+              disabled={isSubmitting}
+              className="luxury-button w-full !py-5 rounded-2xl disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-               Add address
+               {isSubmitting ? 'Finalizing Order...' : 'Add address'}
             </button>
         </div>
 
@@ -397,9 +423,10 @@ const CheckoutPage = () => {
          </div>
          <button 
            onClick={handleCompleteOrder}
-           className="bg-[#7A578D] text-white px-10 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#7A578D]/20 active:scale-95 transition-all flex items-center gap-3"
+           disabled={isSubmitting}
+           className="bg-[#7A578D] text-white px-10 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#7A578D]/20 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
          >
-            Buy Now <ChevronRight size={18} />
+            {isSubmitting ? 'Processing...' : 'Buy Now'} <ChevronRight size={18} />
          </button>
       </div>
     </div>

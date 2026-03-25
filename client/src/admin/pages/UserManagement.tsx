@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Mail, Shield, UserX, UserPlus, BadgeCheck, Globe, Lock, MoreVertical } from 'lucide-react';
+import { Mail, Shield, UserX, UserPlus, BadgeCheck, Globe, Lock, MoreVertical, Activity, Calendar, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -108,6 +108,19 @@ const UserManagement = () => {
       }
     },
     {
+      name: "id",
+      label: "Identity",
+      options: {
+        customBodyRender: (id: string) => (
+          <div className="flex items-center gap-1.5" title={id}>
+            <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10 uppercase">{id}</span>
+          </div>
+        )
+      }
+    },
+
+
+    {
       name: "isEmailVerified",
       label: "Verified",
       options: {
@@ -194,8 +207,96 @@ const UserManagement = () => {
     rowsPerPage: 10,
     download: false,
     print: false,
-    viewColumns: false
+    viewColumns: false,
+    expandableRows: true, // USER REQ
+    expandableRowsOnClick: true, // USER REQ
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const user = users[rowMeta.rowIndex];
+      if (!user) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
+               {/* User Context */}
+               <div className="space-y-4">
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2">
+                     <BadgeCheck size={14} /> User Identity
+                  </h3>
+                  <div className="space-y-3 pl-4">
+                     <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Full Legal Name</span>
+                        <span className="text-[11px] font-black text-gray-900 uppercase">{user.name || 'ANONYMOUS_CLIENT'}</span>
+                     </div>
+                     <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Electronic Mail</span>
+                        <span className="text-[10px] font-bold text-[#7A578D] lowercase select-all">{user.email}</span>
+                     </div>
+                     <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Primary Phone</span>
+                        <span className="text-[10px] font-black text-gray-700 italic">{user.phoneNumber || 'NO_CONTACT_DATA'}</span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Access Governance */}
+               <div className="space-y-4 border-l border-gray-100 pl-6">
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                     <Shield size={14} className="text-[#7A578D]" /> Account Governance
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
+                         <span className="text-[8px] font-black text-gray-400 uppercase block mb-1">Role</span>
+                         <span className="text-[10px] font-black text-gray-900 uppercase">{user.role}</span>
+                      </div>
+                      <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
+                         <span className="text-[8px] font-black text-gray-400 uppercase block mb-1">Verification</span>
+                         <span className={`text-[10px] font-black uppercase ${user.isEmailVerified ? 'text-green-600' : 'text-amber-500'}`}>
+                            {user.isEmailVerified ? 'VERIFIED' : 'PENDING'}
+                         </span>
+                      </div>
+                      <div className="col-span-2 p-2 bg-white border border-gray-100 rounded-lg shadow-sm flex items-center justify-between">
+                         <span className="text-[8px] font-black text-gray-400 uppercase">System Status</span>
+                         <div className="flex items-center gap-1.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <span className="text-[9px] font-black text-gray-900 uppercase">{user.status}</span>
+                         </div>
+                      </div>
+                  </div>
+               </div>
+
+               {/* Admin Ledger */}
+               <div className="space-y-4 border-l border-gray-100 pl-6">
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                     <Activity size={14} className="text-[#7A578D]" /> Admin Ledger
+                  </h3>
+                  <div className="space-y-3">
+                     <div className="flex items-start gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-100 group">
+                        <Calendar size={14} className="text-gray-400 mt-0.5" />
+                        <div className="flex flex-col">
+                           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Enrollment Date</span>
+                           <span className="text-[10px] font-black text-gray-900 uppercase">{new Date(user.createdAt).toLocaleString()}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-100 group">
+                        <Clock size={14} className="text-gray-400 mt-0.5" />
+                        <div className="flex flex-col">
+                           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Last Modified</span>
+                           <span className="text-[10px] font-black text-gray-900 uppercase">{new Date(user.updatedAt).toLocaleString()}</span>
+                        </div>
+                     </div>
+                     <div className="p-2.5 bg-[#7A578D]/5 rounded-xl border border-[#7A578D]/10 flex flex-col items-center justify-center">
+                        <span className="text-[7px] font-black text-[#7A578D] uppercase tracking-widest">Internal DB Record</span>
+                        <span className="text-[8px] font-mono text-gray-400 mt-1 uppercase select-all leading-none truncate max-w-full">#{user.id}</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </td>
+        </tr>
+      );
+    }
   };
+
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">

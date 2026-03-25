@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { useWishlist } from '../store/useWishlist';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 import { useCart } from '../store/useCart';
-import toast from 'react-hot-toast';
+import { expandProductsByVariant } from '../utils/productHelpers';
+import SEOMeta from '../components/SEOMeta';
 
 import ShopHeader from '../components/shop/ShopHeader';
 import ProductGrid from '../components/shop/ProductGrid';
@@ -37,34 +38,43 @@ const ShopPage = () => {
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {
-        limit: 40,
-        category: category || undefined,
-        search: search || undefined,
-        maxPrice: priceRange,
-        sortBy,
-        sortOrder,
-        hotDeals: hotDeals || undefined,
-        stockStatus: stockStatus || undefined,
-        color: color || undefined,
-        size: size || undefined,
-        attributes: attributesParam !== '{}' ? attributesParam : undefined
-      };
-      
-      const { data } = await api.get('/products', { params });
-      setProducts(data.data.products);
-    } catch {
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
-    }
+
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchProducts = useCallback(() => {
+    // Debounce: wait 300ms after the last filter change before firing
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    fetchTimerRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const params: any = {
+          limit: 40,
+          category: category || undefined,
+          search: search || undefined,
+          maxPrice: priceRange,
+          sortBy,
+          sortOrder,
+          hotDeals: hotDeals || undefined,
+          stockStatus: stockStatus || undefined,
+          color: color || undefined,
+          size: size || undefined,
+          attributes: attributesParam !== '{}' ? attributesParam : undefined
+        };
+        const { data } = await api.get('/products', { params });
+        setProducts(expandProductsByVariant(data.data.products));
+      } catch {
+        // Silent fail — grid stays intact
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
   }, [category, search, priceRange, sortBy, sortOrder, hotDeals, stockStatus, color, size, attributesParam]);
 
   useEffect(() => {
     fetchProducts();
+    return () => {
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    };
   }, [fetchProducts]);
 
   const sortOptions = [
@@ -131,6 +141,10 @@ const ShopPage = () => {
 
   return (
     <div className="pt-8 pb-16 bg-transparent dark:bg-[#121212] min-h-screen font-sans transition-colors duration-300">
+      <SEOMeta
+        title={category ? `${category.charAt(0).toUpperCase() + category.slice(1)} Collection` : (hotDeals ? 'Hot Deals' : 'Shop All')}
+        description={`Browse our ${category || 'full'} jewellery collection. Premium quality rings, bangles, earrings and more at Zaviraa.`}
+      />
       <div className="container mx-auto px-4">
         
         <ShopHeader 

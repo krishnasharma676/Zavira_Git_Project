@@ -5,6 +5,7 @@ import { Lock, Mail, ChevronRight, CornerDownRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../store/useAuth';
+import { useLoading } from '../../store/useLoading';
 import api from '../../api/axios';
 import zaviraLogo from '../../assets/zavira-logo.png';
 
@@ -14,10 +15,16 @@ const AdminLogin = () => {
   const navigate = useNavigate();
 
   const { setAuth } = useAuth();
+  const { startLoading, stopLoading, isLoading: isGlobalLoading } = useLoading();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
+      startLoading('Verifying Admin Credentials...');
       const { data } = await api.post('/auth/login', { email, password });
       
       const user = data.data.user;
@@ -25,15 +32,20 @@ const AdminLogin = () => {
 
       if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
         toast.error('Unauthorized access. Admin role required.');
+        setIsSubmitting(false);
+        stopLoading();
         return;
       }
 
-      setAuth(user, token);
+      await setAuth(user, token);
       localStorage.setItem('isAdmin', 'true');
       toast.success('System Access Granted');
       navigate('/admin/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Login failed');
+    } finally {
+      setIsSubmitting(false);
+      stopLoading();
     }
   };
 
@@ -71,6 +83,7 @@ const AdminLogin = () => {
                     className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5 transition-all text-[9px] font-bold text-white uppercase tracking-widest placeholder:text-white/10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -85,6 +98,7 @@ const AdminLogin = () => {
                     className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5 transition-all text-[9px] font-bold text-white uppercase tracking-widest placeholder:text-white/10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -92,11 +106,13 @@ const AdminLogin = () => {
 
             <button 
               type="submit"
-              className="w-full bg-[#7A578D] text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center space-x-2 hover:bg-white hover:text-black transition-all shadow-[0_10px_30px_rgba(227,29,37,0.2)] group"
+              disabled={isSubmitting}
+              className={`w-full ${isSubmitting ? 'bg-[#7A578D]/50 cursor-not-allowed' : 'bg-[#7A578D] hover:bg-white hover:text-black'} text-white py-3 rounded-xl font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all shadow-[0_10px_30px_rgba(122,87,141,0.2)] group`}
             >
-              <span>Login</span>
-              <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+              <span>{isSubmitting ? 'Verifying...' : 'Login'}</span>
+              <ChevronRight size={12} className={isSubmitting ? '' : 'group-hover:translate-x-1 transition-transform'} />
             </button>
+
           </form>
 
           <footer className="mt-6 pt-5 border-t border-white/5 flex flex-col items-center space-y-3 text-center">

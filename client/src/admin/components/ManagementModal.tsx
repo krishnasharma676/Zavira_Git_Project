@@ -25,7 +25,7 @@ const ManagementModal = ({ isOpen, onClose, title, children }: ManagementModalPr
             initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 10 }}
-            className="bg-white w-full max-w-2xl rounded-2xl border border-gray-100 shadow-[0_30px_60px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white w-full max-w-6xl rounded-2xl border border-gray-100 shadow-[0_30px_60px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col max-h-[90vh]"
           >
             <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
               <div>

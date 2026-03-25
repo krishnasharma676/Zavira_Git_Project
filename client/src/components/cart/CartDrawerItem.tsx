@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion';
 import { Trash2, Minus, Plus, ShieldCheck } from 'lucide-react';
+
+import { Link } from 'react-router-dom';
 import { formatCurrency } from '../../utils/format';
+
 
 interface CartDrawerItemProps {
   item: any;
@@ -10,34 +13,34 @@ interface CartDrawerItemProps {
 
 const CartDrawerItem = ({ item, removeItem, updateQuantity }: CartDrawerItemProps) => {
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="group relative bg-white dark:bg-[#1A1A1A] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.1)] transition-all duration-500 flex items-center space-x-3 gap-1"
+    <div 
+      className="group relative bg-white dark:bg-[#1A1A1A] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.1)] transition-all duration-500 flex items-center space-x-3 gap-1 animate-in fade-in slide-in-from-bottom-2"
     >
+
       {/* Product Image */}
-      <div className="relative w-14 h-14 bg-gray-50 dark:bg-black rounded-lg overflow-hidden shrink-0 border border-gray-50 dark:border-white/5">
+      <Link to={`/product/${item.slug}`} className="relative w-14 h-14 bg-gray-50 dark:bg-black rounded-lg overflow-hidden shrink-0 border border-gray-50 dark:border-white/5">
         <img 
           src={item.image} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
           alt={item.name} 
         />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-      </div>
-
+      </Link>
+ 
       {/* Content */}
       <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
          <div className="flex justify-between items-start gap-2">
             <div className="min-w-0">
-               <h3 className="text-[9px] font-black uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1 leading-tight mb-0.5 decoration-[#7A578D]/20 group-hover:underline underline-offset-2">
-                  {item.name}
-               </h3>
+               <Link to={`/product/${item.slug}`}>
+                  <h3 className="text-[9px] font-black uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1 leading-tight mb-0.5 decoration-[#7A578D]/20 group-hover:underline underline-offset-2">
+                     {item.name}
+                  </h3>
+               </Link>
                <div className="flex items-center space-x-1.5">
                    <span className="text-[7px] font-black text-gray-400 dark:text-gray-500 bg-gray-100/50 dark:bg-white/5 px-1 py-0.5 rounded uppercase tracking-[0.15em]">
-                     SKU: {item.id.slice(0,6)}
+                     SKU: {String(item.id || '').slice(0,6)}
                    </span>
+
                    {item.selectedSize && (
                      <span className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded uppercase">Size: {item.selectedSize}</span>
                    )}
@@ -83,7 +86,8 @@ const CartDrawerItem = ({ item, removeItem, updateQuantity }: CartDrawerItemProp
             </div>
          </div>
       </div>
-    </motion.div>
+    </div>
+
   );
 };
 

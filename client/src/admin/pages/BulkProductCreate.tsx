@@ -36,6 +36,7 @@ const BulkProductCreate = () => {
     height: '0',
     hsnCode: '',
     taxRate: '0',
+    weightUnit: 'kg',
   });
 
   const [variants, setVariants] = useState<VariantForm[]>([
@@ -76,6 +77,7 @@ const BulkProductCreate = () => {
               height: (p.height || 0).toString(),
               hsnCode: p.hsnCode || '',
               taxRate: (p.taxRate || 0).toString(),
+              weightUnit: (p.weightUnit as string) || 'kg',
             });
 
             // Fetch variants
@@ -174,8 +176,11 @@ const BulkProductCreate = () => {
     try {
       const productData = new FormData();
       Object.keys(formData).forEach(key => {
-        const val = (formData as any)[key];
-        if (val !== undefined && val !== null) {
+        let val = (formData as any)[key];
+        if (key === 'weight' && formData.weightUnit === 'gm') {
+          val = (parseFloat(val) / 1000).toString();
+        }
+        if (key !== 'weightUnit' && val !== undefined && val !== null) {
           productData.append(key, val.toString());
         }
       });
@@ -270,42 +275,46 @@ const BulkProductCreate = () => {
             <textarea rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase resize-none" />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 pt-2 border-t border-gray-50">
-             <div className="col-span-2 md:col-span-5 flex items-center gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 pt-4 border-t border-gray-100">
+             <div className="col-span-full flex items-center gap-3">
                 <div className="h-px bg-gray-100 flex-1" />
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#7A578D]">Shipping Details</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#7A578D]">Shipping Intelligence Hub</span>
                 <div className="h-px bg-gray-100 flex-1" />
              </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">Weight (KG)</label>
-                <input type="number" step="0.01" value={formData.weight} onChange={(e) => setFormData({...formData, weight: e.target.value})} placeholder="0.5" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black" />
+             
+             {/* Weight & Unit */}
+             <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block px-1">Total Weight</label>
+                <div className="flex bg-gray-50 border border-gray-100 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#7A578D]/20 focus-within:border-[#7A578D] transition-all shadow-sm">
+                   <input type="number" step="0.01" value={formData.weight} onChange={(e) => setFormData({...formData, weight: e.target.value})} placeholder="0.5" className="w-full bg-transparent py-2 px-3 outline-none text-[11px] font-black" />
+                   <select value={formData.weightUnit} onChange={(e) => setFormData({...formData, weightUnit: e.target.value})} className="bg-gray-100/50 border-l border-gray-100 px-3 outline-none text-[9px] font-black uppercase cursor-pointer hover:bg-gray-100 transition-colors">
+                      <option value="kg">KG</option>
+                      <option value="gm">GM</option>
+                   </select>
+                </div>
              </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">L (cm)</label>
-                <input type="number" value={formData.length} onChange={(e) => setFormData({...formData, length: e.target.value})} placeholder="10" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black" />
+
+             {/* Dimensions */}
+             {[
+               { label: 'Length (cm)', key: 'length', placeholder: 'Length' },
+               { label: 'Width (cm)', key: 'width', placeholder: 'Width' },
+               { label: 'Height (cm)', key: 'height', placeholder: 'Height' }
+             ].map((dim) => (
+                <div key={dim.key} className="space-y-1.5">
+                   <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block px-1">{dim.label}</label>
+                   <input type="number" value={(formData as any)[dim.key]} onChange={(e) => setFormData({...formData, [dim.key]: e.target.value})} placeholder={dim.placeholder} className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-[11px] font-black shadow-sm transition-all" />
+                </div>
+             ))}
+
+             {/* HSN & Tax */}
+             <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block px-1">HSN CODE</label>
+                <input value={formData.hsnCode} onChange={(e) => setFormData({...formData, hsnCode: e.target.value})} placeholder="CODE" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-[11px] font-black uppercase shadow-sm transition-all" />
              </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">W (cm)</label>
-                <input type="number" value={formData.width} onChange={(e) => setFormData({...formData, width: e.target.value})} placeholder="10" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black" />
-             </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">H (cm)</label>
-                <input type="number" value={formData.height} onChange={(e) => setFormData({...formData, height: e.target.value})} placeholder="10" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black" />
-             </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">HSN Code</label>
-                <input value={formData.hsnCode} onChange={(e) => setFormData({...formData, hsnCode: e.target.value})} placeholder="e.g. 6109" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" />
-             </div>
-             <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">GST Rate (%)</label>
-                <select value={formData.taxRate} onChange={(e) => setFormData({...formData, taxRate: e.target.value})} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase">
-                   <option value="0">0%</option>
-                   <option value="3">3%</option>
-                   <option value="5">5%</option>
-                   <option value="12">12%</option>
-                   <option value="18">18%</option>
-                   <option value="28">28%</option>
-                </select>
+
+             <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block px-1">GST RATE (%)</label>
+                <input type="number" value={formData.taxRate} onChange={(e) => setFormData({...formData, taxRate: e.target.value})} placeholder="18" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-[11px] font-black shadow-sm transition-all" />
              </div>
           </div>
         </section>

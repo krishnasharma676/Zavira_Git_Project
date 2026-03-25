@@ -25,7 +25,8 @@ router.use(authenticate);
 router.get("/", getCart);
 router.post("/add", validate(addToCartSchema), addItem);
 router.patch("/update", validate(updateCartItemSchema), updateQuantity);
-router.delete("/remove/:productId", validate(removeCartItemSchema), removeItem);
+router.delete("/remove/:cartItemId", validate(removeCartItemSchema), removeItem);
+
 router.delete("/clear", clearCart);
 router.get("/sync", syncCart);
 router.post("/bulk-sync", bulkSync);

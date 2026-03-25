@@ -12,6 +12,7 @@ import ProductGallery from '../components/product/ProductGallery';
 import ProductInfo from '../components/product/ProductInfo';
 import ProductTabs from '../components/product/ProductTabs';
 import ProductSection from '../components/home/ProductSection';
+import SEOMeta from '../components/SEOMeta';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -29,10 +30,11 @@ const ProductDetailPage = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [activeTab, setActiveTab] = useState('details');
   
-  // Review Form State
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [reviewImages, setReviewImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -41,9 +43,17 @@ const ProductDetailPage = () => {
         const { data } = await api.get(`/products/${slug}`);
         const p = data.data;
         setProduct(p);
+        
         if (p.variants && p.variants.length > 0) {
-          setSelectedVariant(p.variants[0]);
+          const firstVariant = p.variants[0];
+          setSelectedVariant(firstVariant);
+          const firstSize = firstVariant.sizes?.find((s: any) => s.stock > 0)?.size || firstVariant.sizes?.[0]?.size;
+          if (firstSize) setSelectedSize(firstSize);
+        } else if (p.sizes) {
+          const sizes = p.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (sizes.length > 0) setSelectedSize(sizes[0]);
         }
+
       } catch {
         toast.error("Product not found");
         navigate('/shop');
@@ -116,7 +126,9 @@ const ProductDetailPage = () => {
       image: primaryImage,
       stock: stock,
       selectedSize: selectedSize || undefined,
+      slug: product.slug,
       cartItemId: Date.now().toString()
+
     });
     toast.success(`${product.name} Added to Cart`);
   };
@@ -133,11 +145,23 @@ const ProductDetailPage = () => {
 
     setIsSubmitting(true);
     try {
-      await api.post(`/reviews/product/${product.id}`, { rating, comment });
+      const formData = new FormData();
+      formData.append('rating', rating.toString());
+      formData.append('comment', comment);
+      reviewImages.forEach((img) => {
+        formData.append('images', img);
+      });
+
+      await api.post(`/reviews/product/${product.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
       toast.success("Review submitted! It will be visible after approval.");
       setComment('');
       setRating(5);
+      setReviewImages([]);
     } catch (error: any) {
+
       toast.error(error.response?.data?.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
@@ -152,6 +176,12 @@ const ProductDetailPage = () => {
 
   return (
     <div className="bg-white dark:bg-[#121212] pt-8 pb-16 text-gray-900 dark:text-white transition-colors duration-300 min-h-screen">
+      <SEOMeta
+        title={product.name}
+        description={product.description?.slice(0, 155) || `Shop ${product.name} at Zaviraa. Premium jewellery with fast delivery.`}
+        ogImage={images[0] || ''}
+        ogUrl={window.location.href}
+      />
       <div className="container mx-auto px-4 max-w-6xl">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-2 text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-6 font-bold">
@@ -162,21 +192,48 @@ const ProductDetailPage = () => {
           <span className="text-gray-900 dark:text-gray-200">{product?.name?.slice(0, 20)}...</span>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-10">
-          <ProductGallery 
-            images={images} 
-            selectedImage={selectedImage} 
-            setSelectedImage={setSelectedImage} 
-            productName={product.name} 
-          />
-          
+        <div className="grid lg:grid-cols-[45%_1fr] gap-12 items-start">
           <div className="flex flex-col">
+            <ProductGallery 
+              images={images} 
+              selectedImage={selectedImage} 
+              setSelectedImage={setSelectedImage} 
+              productName={product.name} 
+            />
+            
+            {/* Tabs for desktop - positioned under image to utilize space */}
+            <div className="hidden lg:block mt-8">
+              <ProductTabs 
+                product={product} 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                rating={rating} 
+                setRating={setRating} 
+                comment={comment} 
+                setComment={setComment} 
+                images={reviewImages}
+                setImages={setReviewImages}
+                isSubmitting={isSubmitting} 
+                handleReviewSubmit={handleReviewSubmit} 
+              />
+
+            </div>
+          </div>
+          
+          <div className="flex flex-col lg:sticky lg:top-32 h-fit">
+
             <ProductInfo 
               product={product} 
               quantity={quantity} 
               setQuantity={setQuantity} 
               selectedVariant={selectedVariant}
-              setSelectedVariant={(v: any) => { setSelectedVariant(v); setSelectedSize(''); setSelectedImage(0); }}
+              setSelectedVariant={(v: any) => { 
+                setSelectedVariant(v); 
+                const firstS = v.sizes?.find((s: any) => s.stock > 0)?.size || v.sizes?.[0]?.size;
+                setSelectedSize(firstS || ''); 
+                setSelectedImage(0); 
+              }}
+
               selectedSize={selectedSize}
               setSelectedSize={setSelectedSize}
               handleAddToCart={handleAddToCart} 
@@ -185,19 +242,26 @@ const ProductDetailPage = () => {
               toast={toast} 
             />
             
-            <ProductTabs 
-              product={product} 
-              activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
-              rating={rating} 
-              setRating={setRating} 
-              comment={comment} 
-              setComment={setComment} 
-              isSubmitting={isSubmitting} 
-              handleReviewSubmit={handleReviewSubmit} 
-            />
+            {/* Tabs for mobile - positioned below info as per standard flow */}
+            <div className="lg:hidden mt-8">
+              <ProductTabs 
+                product={product} 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                rating={rating} 
+                setRating={setRating} 
+                comment={comment} 
+                setComment={setComment} 
+                images={reviewImages}
+                setImages={setReviewImages}
+                isSubmitting={isSubmitting} 
+                handleReviewSubmit={handleReviewSubmit} 
+              />
+
+            </div>
           </div>
         </div>
+
 
         {/* Similar Products Section */}
         <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-10">

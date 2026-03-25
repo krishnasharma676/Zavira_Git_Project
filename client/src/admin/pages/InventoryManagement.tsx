@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, Edit2, Trash2, Upload, Package,
   Search, RefreshCw, Layers, AlertTriangle,
-  Minus, ChevronRight, X, Maximize2, Calendar, Filter
+  Minus, ChevronRight, X, Maximize2, Calendar, Filter, Truck, Palette
 } from 'lucide-react';
+
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
 import MUIDataTable from 'mui-datatables';
 import { ThemeProvider } from '@mui/material/styles';
 import { getMuiTheme } from '../utils/muiTableTheme';
+import { useLoading } from '../../store/useLoading';
 
 const emptyForm = {
   name: '', description: '', basePrice: '', discountedPrice: '',
@@ -33,6 +35,7 @@ const InventoryManagement = () => {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [formData, setFormData] = useState({ ...emptyForm });
   const [attributes, setAttributes] = useState<{ key: string; value: string }[]>([]);
+  const { startLoading, stopLoading } = useLoading();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -155,6 +158,7 @@ const InventoryManagement = () => {
     images.forEach(img => fd.append('images', img));
 
     try {
+      startLoading(editingProduct ? 'Saving modifications...' : 'Committing to Vault...');
       if (editingProduct) {
         await api.patch(`/products/${editingProduct.id}`, fd);
         toast.success('Product updated!');
@@ -163,11 +167,12 @@ const InventoryManagement = () => {
         toast.success('Product added!');
       }
       setIsModalOpen(false);
-      fetchProducts();
+      await fetchProducts();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed');
     } finally {
       setIsSubmitting(false);
+      stopLoading();
     }
   };
 
@@ -195,7 +200,7 @@ const InventoryManagement = () => {
       }
     },
     { name: 'name', label: 'Name', options: { customBodyRender: (v: string) => <span className="text-[10px] font-black uppercase text-gray-900">{v}</span> } },
-    { name: 'id', label: 'ID', options: { customBodyRender: (v: string) => <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded">{v?.slice(0, 8).toUpperCase()}..</span> } },
+    { name: 'id', label: 'ID', options: { customBodyRender: (v: string) => <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded uppercase">{v}</span> } },
     { name: 'inventory', label: 'SKU', options: { customBodyRender: (v: any) => <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">{v?.sku || 'UNASSIGNED'}</span> } },
     {
       name: 'createdAt', label: 'Date',
@@ -264,7 +269,110 @@ const InventoryManagement = () => {
     },
   ];
 
-  const options = { selectableRows: 'none' as const, elevation: 0, responsive: 'standard' as const, rowsPerPage: 10, download: false, print: false, viewColumns: false, search: false, filter: false, textLabels: { body: { noMatch: loading ? 'Loading...' : 'No products found' } } };
+  const options = {
+    selectableRows: 'none' as const,
+    elevation: 0,
+    responsive: 'standard' as const,
+    rowsPerPage: 10,
+    download: false,
+    print: false,
+    viewColumns: false,
+    search: false,
+    filter: false,
+    expandableRows: true,
+    expandableRowsOnClick: true,
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const product = products[rowMeta.rowIndex];
+      if (!product) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
+              {/* Product Profile */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                   <div className="w-1.5 h-6 bg-[#7A578D] rounded-full" />
+                   <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                     <Package size={14} className="text-[#7A578D]" /> Full Identity
+                   </h3>
+                </div>
+                <div className="space-y-2.5 pl-4 px-2">
+                   <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5">Description Detail</span>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase leading-relaxed max-w-[300px]">{product.description || 'No description provided'}</p>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="flex flex-col">
+                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">ID (Full)</span>
+                         <span className="text-[9px] font-mono font-black text-[#7A578D]">{product.id}</span>
+                      </div>
+                      <div className="flex flex-col">
+                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Added Ledger</span>
+                         <span className="text-[9px] font-black text-gray-700">{new Date(product.createdAt).toLocaleString()}</span>
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              {/* Advanced Specs */}
+              <div className="space-y-4 border-l border-gray-100 pl-6">
+                 <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                    <Layers size={14} className="text-[#7A578D]" /> Technical Specifications
+                 </h3>
+                 <div className="space-y-2">
+                    {Object.keys(product.attributes || {}).length > 0 ? (
+                      Object.keys(product.attributes).map(k => (
+                        <div key={k} className="flex justify-between items-center border-b border-gray-50 pb-1 align-baseline">
+                           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{k}</span>
+                           <span className="text-[10px] font-black text-gray-800 uppercase leading-none">{String(product.attributes[k])}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[9px] font-black text-gray-300 uppercase italic">No custom attributes</p>
+                    )}
+                 </div>
+                 <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-2 mb-2">
+                       <Truck size={12} className="text-[#7A578D]" />
+                       <span className="text-[9px] font-black uppercase tracking-widest text-[#7A578D]">Logistics Vault</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-y-2">
+                       <span className="text-[8px] font-black text-gray-400 uppercase">Weight:</span>
+                       <span className="text-[9px] font-black text-gray-700">{product.weight || 0} KG</span>
+                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Dimensions:</span>
+                       <span className="text-[9px] font-black text-gray-700">{product.length || 0}x{product.width || 0}x{product.height || 0} CM</span>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Taxation & Compliance */}
+              <div className="space-y-4 border-l border-gray-100 pl-6">
+                 <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-orange-500" /> Compliance & Tax
+                 </h3>
+                 <div className="grid grid-cols-1 gap-3">
+                    <div className="flex justify-between p-2 bg-white border border-gray-100 rounded-lg shadow-sm group">
+                       <span className="text-[8px] font-black text-gray-400 uppercase mt-1">HSN CODE</span>
+                       <span className="text-[14px] font-black text-gray-900 group-hover:text-[#7A578D] transition-colors">{product.hsnCode || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-white border border-gray-100 rounded-lg shadow-sm group">
+                       <span className="text-[8px] font-black text-gray-400 uppercase mt-1">GST RATE</span>
+                       <span className="text-[14px] font-black text-gray-900 group-hover:text-[#7A578D] transition-colors">{product.taxRate || 0}%</span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-white border border-gray-100 rounded-lg shadow-sm group">
+                       <span className="text-[8px] font-black text-gray-400 uppercase mt-1">LAST SYNC</span>
+                       <span className="text-[10px] font-black text-[#7A578D] uppercase mt-0.5">{new Date(product.updatedAt).toLocaleTimeString()}</span>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    textLabels: { body: { noMatch: loading ? 'Loading...' : 'No products found' } }
+  };
+
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500 max-w-[1400px]">
@@ -307,40 +415,40 @@ const InventoryManagement = () => {
         <form onSubmit={handleSubmit} className="space-y-3">
           {editingProduct && (
             <div className="bg-[#7A578D]/5 p-2 rounded-lg border border-[#7A578D]/10 text-[9px] font-black text-[#7A578D] uppercase">
-              Editing ID: {editingProduct.id?.slice(0, 12)}...
+              Editing ID: {editingProduct.id}
             </div>
           )}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="col-span-2 space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Product Name *</label>
-              <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase" />
+               <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} disabled={isSubmitting} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase disabled:opacity-50" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Category *</label>
-              <select required value={formData.categoryId} onChange={e => setFormData({ ...formData, categoryId: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase">
+              <select required value={formData.categoryId} onChange={e => setFormData({ ...formData, categoryId: e.target.value })} disabled={isSubmitting} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase disabled:opacity-50">
                 <option value="">Select</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Base Price (₹) *</label>
-              <input type="number" required value={formData.basePrice} onChange={e => setFormData({ ...formData, basePrice: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black" />
+               <input type="number" required value={formData.basePrice} onChange={e => setFormData({ ...formData, basePrice: e.target.value })} disabled={isSubmitting} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black disabled:opacity-50" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sale Price (₹)</label>
-              <input type="number" value={formData.discountedPrice} onChange={e => setFormData({ ...formData, discountedPrice: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black" />
+              <input type="number" value={formData.discountedPrice} onChange={e => setFormData({ ...formData, discountedPrice: e.target.value })} disabled={isSubmitting} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black disabled:opacity-50" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Stock</label>
-              <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black" />
+              <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} disabled={isSubmitting} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black disabled:opacity-50" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">SKU</label>
-              <input value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} placeholder="ZV-XXX-000" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-mono font-black uppercase" />
+               <input value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} disabled={isSubmitting} placeholder="ZV-XXX-000" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-mono font-black uppercase disabled:opacity-50" />
             </div>
             <div className="col-span-2 space-y-1">
               <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sizes (comma separated)</label>
-              <input value={formData.sizes} onChange={e => setFormData({ ...formData, sizes: e.target.value })} placeholder="S, M, L, XL or 40, 42" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase" />
+              <input value={formData.sizes} onChange={e => setFormData({ ...formData, sizes: e.target.value })} disabled={isSubmitting} placeholder="S, M, L, XL or 40, 42" className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[11px] font-black uppercase disabled:opacity-50" />
             </div>
 
             <div className="col-span-2 grid grid-cols-4 gap-2 border-y border-gray-50 py-2 my-1">
@@ -447,7 +555,7 @@ const InventoryManagement = () => {
 
           <button type="submit" disabled={isSubmitting} className="w-full bg-[#7A578D] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2">
             {isSubmitting ? <RefreshCw size={12} className="animate-spin" /> : <Package size={12} />}
-            {isSubmitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
+            {isSubmitting ? (editingProduct ? 'Syncing...' : 'Recording...') : editingProduct ? 'Update Product' : 'Add Product'}
           </button>
         </form>
       </ManagementModal>

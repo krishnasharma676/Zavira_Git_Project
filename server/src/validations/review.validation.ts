@@ -5,7 +5,8 @@ export const addReviewSchema = z.object({
     productId: z.string().uuid()
   }),
   body: z.object({
-    rating: z.number().int().min(1).max(5),
+    rating: z.coerce.number().int().min(1).max(5),
+
     comment: z.string().min(5).max(1000),
   })
 });

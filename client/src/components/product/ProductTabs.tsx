@@ -12,6 +12,8 @@ interface ProductTabsProps {
   setRating: (rating: number) => void;
   comment: string;
   setComment: (comment: string) => void;
+  images: File[];
+  setImages: (images: File[] | ((prev: File[]) => File[])) => void;
   isSubmitting: boolean;
   handleReviewSubmit: (e: React.FormEvent) => Promise<void>;
 }
@@ -24,9 +26,12 @@ const ProductTabs = ({
   setRating,
   comment,
   setComment,
+  images,
+  setImages,
   isSubmitting,
   handleReviewSubmit
 }: ProductTabsProps) => {
+
   return (
     <div className="space-y-4">
       <div className="flex space-x-8 border-b border-gray-100 dark:border-white/5">
@@ -48,16 +53,35 @@ const ProductTabs = ({
 
       <div className="py-4">
         {activeTab === 'details' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-             <p className="text-xs text-gray-500 font-medium leading-relaxed italic">{product.description}</p>
-             <div className="grid grid-cols-1 gap-3 mt-4">
-                <div className="flex justify-between border-b border-gray-50 dark:border-white/5 pb-2 text-[11px]">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+             <div className="grid grid-cols-1 gap-1">
+                {product.attributes && Object.entries(product.attributes)
+                   .filter(([key]) => !['isVariantProduct', '_id', '__v', 'id', 'productId'].includes(key.toLowerCase()))
+                   .map(([key, value]: [string, any]) => (
+                   <div key={key} className="flex justify-between py-1.5 text-[11px]">
+                     <span className="text-gray-400 uppercase font-black tracking-widest">{key}</span>
+                     <span className="text-gray-900 dark:text-white font-bold uppercase">{String(value)}</span>
+                   </div>
+                 ))}
+
+                
+                <div className="flex justify-between py-1.5 text-[11px]">
                   <span className="text-gray-400 uppercase font-black tracking-widest">Category</span>
-                  <span className="text-gray-900 dark:text-white font-bold">{product.category?.name}</span>
+                  <span className="text-gray-900 dark:text-white font-bold uppercase">{product.category?.name || 'Jewelry'}</span>
                 </div>
+
+
+                {product.sku && (
+                  <div className="flex justify-between py-1.5 text-[11px]">
+                    <span className="text-gray-400 uppercase font-black tracking-widest">SKU</span>
+                    <span className="text-gray-900 dark:text-white font-bold uppercase">{product.sku}</span>
+                  </div>
+                )}
+
              </div>
           </motion.div>
         )}
+
 
         {activeTab === 'reviews' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
@@ -67,9 +91,12 @@ const ProductTabs = ({
               setRating={setRating} 
               comment={comment} 
               setComment={setComment} 
+              images={images}
+              setImages={setImages}
               isSubmitting={isSubmitting} 
               handleReviewSubmit={handleReviewSubmit} 
             />
+
           </motion.div>
         )}
         

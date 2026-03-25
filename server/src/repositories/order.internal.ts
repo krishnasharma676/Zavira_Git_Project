@@ -32,14 +32,18 @@ export class OrderRepository {
       // 2. Deduct inventory
       for (const item of items) {
         if (item.variantId && item.selectedSize) {
-            // Update variantsize stock
-            try {
-              const sizes = await (tx as any).productVariantSize.findMany({ where: { variantId: item.variantId, size: item.selectedSize }});
-              if(sizes && sizes.length > 0) {
-                 await (tx as any).productVariantSize.update({ where: { id: sizes[0].id }, data: { stock: { decrement: item.quantity } }});
-              }
-            } catch(e) {}
+          // Update variant size stock directly
+          await (tx as any).productVariantSize.updateMany({
+            where: { 
+              variantId: item.variantId, 
+              size: item.selectedSize 
+            },
+            data: { 
+              stock: { decrement: item.quantity } 
+            }
+          });
         }
+        
         await (tx as any).inventory.update({
           where: { productId: item.productId },
           data: { stock: { decrement: item.quantity } }
@@ -47,6 +51,8 @@ export class OrderRepository {
       }
 
       return order;
+    }, {
+      timeout: 30000 // Increase timeout to 30 seconds for complex orders
     });
   }
 
@@ -66,7 +72,12 @@ export class OrderRepository {
     return await prisma.order.findFirst({
       where: { id, isDeleted: false },
       include: {
-        items: { include: { product: true } },
+        items: { 
+          include: { 
+            product: { include: { images: true } }, 
+            variant: { include: { images: true, sizes: true } } 
+          } 
+        },
         payment: true,
         address: true,
         user: { select: { name: true, email: true, phoneNumber: true } }
@@ -131,18 +142,41 @@ export class OrderRepository {
       ...(status && { status })
     };
 
-    const [total, orders] = await Promise.all([
-      prisma.order.count({ where }),
-      prisma.order.findMany({
+    // 1. Total Count
+    const total = await prisma.order.count({ where });
+
+    // 2. Fetch Orders
+    const orders = await prisma.order.findMany({
         where,
-        include: { user: { select: { name: true, email: true } }, payment: true },
+        include: { 
+           user: { select: { name: true, email: true, phoneNumber: true } }, 
+           payment: true, 
+           address: true,
+           items: { 
+             include: { 
+               product: { include: { images: true } }, 
+               variant: { include: { images: true, sizes: true } } 
+             } 
+           }
+        },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' }
-      })
-    ]);
+    });
 
-    return { total, orders, page, totalPages: Math.ceil(total / limit) };
+    // 3. Stats by GroupBy
+    const statusStats = await prisma.order.groupBy({
+        by: ['status'],
+        where: { isDeleted: false },
+        _count: { _all: true }
+    });
+
+    const stats = statusStats.reduce((acc: any, curr: any) => {
+      acc[curr.status.toLowerCase()] = curr._count._all;
+      return acc;
+    }, { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 });
+
+    return { total, orders, stats, page, totalPages: Math.ceil(total / limit) };
   }
 }
 

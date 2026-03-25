@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import api from '../api/axios';
 import { useCart } from '../store/useCart';
 import { useWishlist } from '../store/useWishlist';
+import { expandProductsByVariant } from '../utils/productHelpers';
+import SEOMeta from '../components/SEOMeta';
 
 import HeroCarousel from '../components/home/HeroCarousel';
 import CategoryGrid from '../components/home/CategoryGrid';
@@ -27,37 +29,38 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         const [featRes, catRes, bannerRes, reviewRes] = await Promise.all([
-          api.get('/products', { params: { limit: 4, sortBy: 'createdAt', sortOrder: 'desc' } }),
+          api.get('/products', { params: { limit: 12, sortBy: 'createdAt', sortOrder: 'desc' } }),
           api.get('/categories'),
           api.get('/banners'),
           api.get('/testimonials').catch(() => ({ data: { data: [] } }))
         ]);
         
         const cats = catRes.data.data;
-        setFeaturedProducts(featRes.data.data.products);
+        setFeaturedProducts(expandProductsByVariant(featRes.data.data.products));
         setCategories(cats);
         setReviews(reviewRes.data.data);
-
-        // Fetch products for each category (latest 4)
-        const catProds: any = {};
-        await Promise.all(cats.map(async (cat: any) => {
-          try {
-            const { data } = await api.get('/products', { 
-              params: { category: cat.id, limit: 4 } 
-            });
-            if (data.data.products.length > 0) {
-              catProds[cat.id] = data.data.products;
-            }
-          } catch {
-            // silently skip unavailable category
-          }
-        }));
-        setCategoryProducts(catProds);
 
         const heroBanners = bannerRes.data.data.filter((b: any) => b.type === 'HERO');
         setHeroSlides(heroBanners);
         setPromoBanners(bannerRes.data.data.filter((b: any) => b.type === 'PROMO'));
+
+        // Fetch category products — done after hero loads so it doesn't block LCP
+        const catProds: any = {};
+        await Promise.all(cats.map(async (cat: any) => {
+          try {
+            const { data } = await api.get('/products', { 
+              params: { category: cat.id, limit: 8 } 
+            });
+            if (data.data.products.length > 0) {
+              catProds[cat.id] = expandProductsByVariant(data.data.products);
+            }
+          } catch {
+            // Silently skip failed category
+          }
+        }));
+        setCategoryProducts(catProds);
       } catch {
+        // Silent fail — page still renders
       } finally {
         setLoading(false);
       }
@@ -65,6 +68,7 @@ const HomePage = () => {
     fetchData();
   }, []);
 
+  // Auto-advance hero carousel
   useEffect(() => {
     if (heroSlides.length <= 1) return;
     const timer = setInterval(() => {
@@ -73,18 +77,27 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, [heroSlides]);
 
-  const scrollReviews = (direction: 'left' | 'right') => {
+  // Memoized to avoid creating a new function on every render
+  const scrollReviews = useCallback((direction: 'left' | 'right') => {
     if (reviewScrollRef.current) {
       const { scrollLeft, clientWidth } = reviewScrollRef.current;
       const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
       reviewScrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
-  };
+  }, []);
 
-  // Static fallback removed as per user request
+  // Only re-compute category sections when data changes
+  const categorySections = useMemo(() =>
+    categories.filter((cat) => !!categoryProducts[cat.id]),
+    [categories, categoryProducts]
+  );
 
   return (
     <div className="bg-transparent dark:bg-[#121212] transition-colors duration-300 min-h-screen">
+      <SEOMeta
+        title="Home"
+        description="Discover Zaviraa's premium jewellery — rings, bangles, earrings and more. Curated collections for every occasion."
+      />
       <HeroCarousel 
         slides={heroSlides} 
         currentSlide={currentSlide} 
@@ -103,18 +116,16 @@ const HomePage = () => {
         addItem={addItem}
       />
 
-      {categories.map((cat) => (
-        categoryProducts[cat.id] && (
-          <ProductSection 
-            key={cat.id}
-            title={cat.name} 
-            products={categoryProducts[cat.id]} 
-            viewAllLink={`/shop?category=${cat.slug}`}
-            toggleItem={toggleItem}
-            isInWishlist={isInWishlist}
-            addItem={addItem}
-          />
-        )
+      {categorySections.map((cat) => (
+        <ProductSection 
+          key={cat.id}
+          title={cat.name} 
+          products={categoryProducts[cat.id]} 
+          viewAllLink={`/shop?category=${cat.slug}`}
+          toggleItem={toggleItem}
+          isInWishlist={isInWishlist}
+          addItem={addItem}
+        />
       ))}
 
       <PromoBanner banners={promoBanners} />
@@ -131,4 +142,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

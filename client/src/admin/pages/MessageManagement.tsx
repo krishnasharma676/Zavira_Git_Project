@@ -179,8 +179,55 @@ const MessageManagement = () => {
         rowsPerPage: 10,
         download: false,
         print: false,
-        viewColumns: false
+        viewColumns: false,
+        expandableRows: true,
+        expandableRowsOnClick: true,
+        renderExpandableRow: (rowData: any, rowMeta: any) => {
+            const msg = messages[rowMeta.rowIndex];
+            if (!msg) return null;
+            return (
+                <tr className="bg-gray-50/30">
+                    <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+                            {/* Original Message */}
+                            <div className="space-y-3">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
+                                    <MessageSquare size={12} /> Inquiry Content
+                                </h3>
+                                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm italic relative">
+                                    <div className="absolute -top-2 -left-2 bg-gray-100 text-gray-400 p-1 rounded-full border border-white shadow-sm">
+                                        <User size={10} />
+                                    </div>
+                                    <p className="text-[11px] text-gray-600 leading-relaxed font-black uppercase">{msg.message}</p>
+                                </div>
+                            </div>
+
+                            {/* Reply Context */}
+                            <div className="space-y-3 border-l border-gray-100 pl-6">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600 flex items-center gap-2">
+                                    <Send size={12} /> Communication Log
+                                </h3>
+                                {msg.status === 'REPLIED' ? (
+                                    <div className="bg-green-50/50 border border-green-100/50 rounded-2xl p-4 italic relative">
+                                        <div className="absolute -top-2 -left-2 bg-green-100 text-green-600 p-1 rounded-full border border-white shadow-sm">
+                                            <CheckCircle size={10} />
+                                        </div>
+                                        <p className="text-[11px] text-green-800 leading-relaxed font-black uppercase">{msg.reply || 'SYSTEM_AUTO_REPLIED'}</p>
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-6">
+                                        <Clock size={16} className="text-gray-300 mb-2" />
+                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Awaiting Staff Response</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            );
+        }
     };
+
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">

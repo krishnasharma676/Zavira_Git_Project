@@ -30,9 +30,18 @@ export class ProductRepository {
         where,
         include: {
           images: { where: { isDeleted: false } },
+
           category: true,
           inventory: true,
+          variants: {
+            include: {
+              images: true,
+              sizes: { orderBy: { size: 'asc' } }
+            }
+          }
+
         },
+
         skip,
         take: limit,
         orderBy: sortBy ? { [sortBy]: sortOrder || 'asc' } : { createdAt: 'desc' },

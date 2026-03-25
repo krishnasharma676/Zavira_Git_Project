@@ -26,14 +26,19 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
         <p className="text-[#7A578D] uppercase tracking-[0.4em] text-[10px] mb-2 font-black">{product.category?.name || 'Jewelry'}</p>
         <h1 className="text-2xl lg:text-3xl font-sans font-black uppercase tracking-tight mb-3 leading-tight text-gray-900 dark:text-white">{product.name}</h1>
         
-        <div className="flex items-center space-x-6 mb-4 text-[11px] font-bold uppercase tracking-widest">
-          <div className="flex items-center text-yellow-500">
-            <Star size={13} fill="currentColor" />
-            <span className="ml-2 text-gray-900 dark:text-gray-200 font-semibold">4.8</span>
+        {product.reviews?.length > 0 && (
+          <div className="flex items-center space-x-6 mb-4 text-[11px] font-bold uppercase tracking-widest">
+            <div className="flex items-center text-yellow-500">
+              <Star size={13} fill="currentColor" />
+              <span className="ml-2 text-gray-900 dark:text-gray-200 font-semibold">
+                {(product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / product.reviews.length).toFixed(1)}
+              </span>
+            </div>
+            <span className="text-gray-400 font-light lowercase">|</span>
+            <span className="text-gray-500 font-light lowercase italic tracking-wide">{product.reviews.length} verified reviews</span>
           </div>
-          <span className="text-gray-400 font-light lowercase">|</span>
-          <span className="text-gray-500 font-light lowercase italic tracking-wide">{product.reviews?.length || 0} verified reviews</span>
-        </div>
+        )}
+
 
         <div className="flex items-baseline space-x-4 mb-6">
           {product.discountedPrice ? (
@@ -65,15 +70,16 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
                   }`}
                 >
                   <div 
-                    className={`w-10 h-10 rounded-lg shadow-lg transition-all duration-300 border-2 overflow-hidden flex items-center justify-center ${
+                    className={`w-14 h-8 rounded-md shadow-lg transition-all duration-300 border-2 overflow-hidden flex items-center justify-center ${
                       selectedVariant?.id === variant.id ? 'border-[#7A578D] shadow-purple-500/20' : 'border-white dark:border-white/10 shadow-sm'
                     }`} 
                     style={{ backgroundColor: variant.colorCode || '#eee' }}
                   >
                     {selectedVariant?.id === variant.id && (
-                       <Star size={12} fill="currentColor" className={variant.colorCode?.toUpperCase() === '#FFFFFF' ? 'text-black' : 'text-white'} />
+                       <Star size={10} fill="currentColor" className={variant.colorCode?.toUpperCase() === '#FFFFFF' || variant.colorCode?.toUpperCase() === 'WHITE' ? 'text-black' : 'text-white'} />
                     )}
                   </div>
+
                   <span className={`text-[7px] font-black uppercase tracking-widest ${
                     selectedVariant?.id === variant.id ? 'text-[#7A578D]' : 'text-gray-400'
                   }`}>
@@ -90,8 +96,9 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
           <div className="mb-6">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7A578D] mb-3">Select Size</h4>
             <div className="flex flex-wrap gap-2">
-              {selectedVariant?.sizes ? (
+              {(selectedVariant?.sizes && selectedVariant.sizes.length > 0) ? (
                 selectedVariant.sizes.map((sObj: any) => (
+
                   <button
                     key={sObj.id}
                     disabled={sObj.stock <= 0}

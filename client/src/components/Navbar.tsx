@@ -46,15 +46,35 @@ const Navbar = () => {
     fetchData();
   }, []);
 
+  const expandProductsByVariant = (products: any[]) => {
+    const list: any[] = [];
+    products.forEach(p => {
+      if (p.variants && p.variants.length > 1) {
+        p.variants.forEach((v: any) => {
+          list.push({
+            ...p,
+            id: `${p.id}-${v.id}`,
+            name: p.name,
+            images: v.images && v.images.length > 0 ? v.images : p.images,
+            isVariantCard: true
+          });
+        });
+      } else {
+        list.push(p);
+      }
+    });
+    return list;
+  };
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.trim().length > 1) {
         setIsSearching(true);
         try {
           const { data } = await api.get('/products', {
-            params: { search: searchQuery, limit: 6 }
+            params: { search: searchQuery, limit: 24 }
           });
-          setSearchResults(data.data.products || []);
+          setSearchResults(expandProductsByVariant(data.data.products || []));
         } catch {
         } finally {
           setIsSearching(false);
@@ -66,6 +86,7 @@ const Navbar = () => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
+
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -135,20 +156,25 @@ const Navbar = () => {
           <div className="relative">
             <Link to="/wishlist" className={`hover:text-[#7A578D] transition-colors p-1 block ${isActive('/wishlist') ? 'text-[#7A578D]' : ''}`}>
               <Heart size={22} strokeWidth={1.5} className={isActive('/wishlist') ? 'fill-[#7A578D]' : ''} />
-              <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {wishlistCount}
-              </span>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
           </div>
 
           <div className="relative">
             <button onClick={openDrawer} className="hover:text-[#7A578D] transition-colors p-1 block relative">
               <ShoppingBag size={22} strokeWidth={1.5} />
-              <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {totalItems}
-              </span>
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                  {totalItems}
+                </span>
+              )}
             </button>
           </div>
+
 
           <button onClick={toggleDarkMode} className="hover:text-[#7A578D] transition-colors p-1 block ml-2">
              {isDarkMode ? <Sun size={20} strokeWidth={2} /> : <Moon size={20} strokeWidth={2} />}

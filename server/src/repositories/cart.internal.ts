@@ -8,10 +8,17 @@ export class CartRepository {
         items: {
           include: {
             product: {
-              include: { images: { where: { isPrimary: true } } }
+              include: { 
+                images: { where: { isPrimary: true } },
+                inventory: true 
+              }
+            },
+            variant: {
+              include: { images: true }
             }
           }
         }
+
       }
     });
   }

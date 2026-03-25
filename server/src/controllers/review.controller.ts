@@ -3,12 +3,24 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { reviewService } from "../services/review.service";
 import { ApiResponse } from "../utils/ApiResponse";
 
+import { uploadOnCloudinary } from "../utils/cloudinary";
+
 export const addReview = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const productId = req.params.productId as string;
-  const review = await reviewService.addReview(userId, productId, req.body);
+  
+  const files = req.files as Express.Multer.File[] || [];
+  const imageUrls: string[] = [];
+
+  for (const file of files) {
+    const result: any = await uploadOnCloudinary(file.buffer, "reviews");
+    imageUrls.push(result.secure_url);
+  }
+
+  const review = await reviewService.addReview(userId, productId, { ...req.body, images: imageUrls });
   return res.status(201).json(new ApiResponse(201, review, "Review added successfully"));
 });
+
 
 export const getProductReviews = asyncHandler(async (req: Request, res: Response) => {
   const productId = req.params.productId as string;

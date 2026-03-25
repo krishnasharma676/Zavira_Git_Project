@@ -1,30 +1,18 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, PlusCircle, ArrowRight, Star, TrendingUp } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Star } from 'lucide-react';
 import { useCart } from '../store/useCart';
 import { useCartDrawer } from '../store/useCartDrawer';
 import { useUIStore } from '../store/useUIStore';
 import CartDrawerItem from './cart/CartDrawerItem';
 import CartDrawerFooter from './cart/CartDrawerFooter';
-import api from '../api/axios';
-import { useEffect, useState } from 'react';
-import { formatCurrency } from '../utils/format';
 
 const CartDrawer = () => {
-  const { items, removeItem, updateQuantity, addItem } = useCart();
+  const { items, removeItem, updateQuantity } = useCart();
   const { isOpen, closeDrawer } = useCartDrawer();
   const { openCheckoutModal } = useUIStore();
-  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 0), 0);
   const freeShippingThreshold = 1000;
-
-  useEffect(() => {
-    if (isOpen) {
-      api.get('/products', { params: { limit: 8 } })
-        .then(res => setSuggestions(res.data.data.products))
-        .catch(err => console.error('Failed to fetch cart suggestions:', err));
-    }
-  }, [isOpen]);
   
   const handleCheckout = () => {
     closeDrawer();
@@ -102,47 +90,6 @@ const CartDrawer = () => {
                       updateQuantity={updateQuantity}
                     />
                   ))}
-                </div>
-              )}
-
-              {/* Enhanced Recommendations */}
-              {suggestions.length > 0 && (
-                <div className="pt-4 border-t border-dashed border-gray-200 dark:border-white/10 pb-8">
-                   <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
-                        <TrendingUp size={12} /> Complete The Look
-                      </h3>
-                      <div className="flex-grow mx-4 h-[1px] bg-gradient-to-r from-transparent via-gray-100 to-transparent" />
-                   </div>
-
-                   <div className="grid grid-cols-2 gap-3">
-                      {suggestions.slice(0, 4).map((prod) => (
-                        <div key={prod.id} className="group bg-gray-50/50 dark:bg-white/5 p-2.5 rounded-2xl border border-transparent hover:border-[#7A578D]/20 hover:bg-white dark:hover:bg-[#121212] transition-all duration-500">
-                           <div className="relative aspect-[4/5] bg-white dark:bg-black rounded-xl overflow-hidden mb-2.5 shadow-sm">
-                              <img src={prod.images?.[0]?.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                              <button 
-                                onClick={() => {
-                                  addItem({
-                                    id: prod.id,
-                                    name: prod.name,
-                                    price: prod.discountedPrice || prod.basePrice,
-                                    image: prod.images?.[0]?.imageUrl,
-                                    quantity: 1,
-                                    stock: prod.inventory?.[0]?.quantity || 1
-                                  });
-                                }}
-                                className="absolute bottom-2 right-2 w-8 h-8 bg-white dark:bg-black text-black dark:text-white rounded-lg shadow-lg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 hover:bg-[#7A578D] hover:text-white"
-                              >
-                                <PlusCircle size={14} />
-                              </button>
-                           </div>
-                           <div className="px-1">
-                              <h4 className="text-[8px] font-black uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1 mb-1">{prod.name}</h4>
-                              <p className="text-[9px] font-black text-[#7A578D]">{formatCurrency(prod.discountedPrice || prod.basePrice)}</p>
-                           </div>
-                        </div>
-                      ))}
-                   </div>
                 </div>
               )}
             </div>

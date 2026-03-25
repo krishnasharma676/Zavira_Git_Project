@@ -41,12 +41,11 @@ export const getMuiTheme = () => createTheme({
           fontWeight: '700',
           textTransform: 'uppercase',
           letterSpacing: '0.02em',
-          padding: '2px 10px',
+          padding: '8px 10px',
           borderBottom: '1px solid #f9fafb',
-          lineHeight: '1.2',
-          height: '32px',
-          maxHeight: '32px',
-          overflow: 'hidden',
+          lineHeight: '1.4',
+          whiteSpace: 'nowrap', // USER REQ: Full width, no text cut
+          transition: 'all 0.3s ease',
         },
       },
     },
@@ -54,13 +53,14 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableBodyRow: {
       styleOverrides: {
         root: {
-          height: '32px',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)', // USER REQ: Smooth transition
           '&:hover': {
             backgroundColor: '#fafafa !important',
           },
         },
       },
     },
+
     // @ts-ignore
     MUIDataTableFooter: {
       styleOverrides: {

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Star, Camera, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Star, Camera, X, MessageSquare, BadgeCheck, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -205,8 +205,79 @@ const TestimonialManagement = () => {
     rowsPerPage: 10,
     download: false,
     print: false,
-    viewColumns: false
+    viewColumns: false,
+    expandableRows: true, // USER REQ
+    expandableRowsOnClick: true, // USER REQ
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const item = testimonials[rowMeta.rowIndex];
+      if (!item) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
+                     <MessageSquare size={12} /> Full Narrative
+                  </h3>
+                  <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm italic text-[11px] font-black uppercase text-gray-600 leading-relaxed">
+                     "{item.content}"
+                  </div>
+                  <div className="flex gap-4">
+                     <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm flex-1">
+                        <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Visual Profile</span>
+                        <div className="flex items-center gap-2">
+                           <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-100">
+                              <img src={item.imageUrl || 'https://via.placeholder.com/50'} className="w-full h-full object-cover" />
+                           </div>
+                           <span className="text-[9px] font-black uppercase text-gray-900">{item.name}</span>
+                        </div>
+                     </div>
+                     <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm flex-1">
+                        <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Verified Status</span>
+                        <div className="flex items-center gap-1.5">
+                           <BadgeCheck size={12} className={item.isActive ? "text-green-500" : "text-gray-300"} />
+                           <span className={`text-[9px] font-black uppercase ${item.isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                              {item.isActive ? 'VISIBLE ON SITE' : 'HIDDEN FROM VIEW'}
+                           </span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="space-y-4 border-l border-gray-100 pl-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
+                     <Clock size={12} /> Admin Ledger
+                  </h3>
+                  <div className="space-y-3">
+                     <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                        <span className="text-[8px] font-black text-gray-400 uppercase">Customer Role</span>
+                        <span className="text-[9px] font-black text-[#7A578D] uppercase">{item.role || 'VERIFIED BUYER'}</span>
+                     </div>
+                     <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                        <span className="text-[8px] font-black text-gray-400 uppercase">System Score</span>
+                        <div className="flex gap-0.5">
+                           {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={10} fill={i < item.rating ? "#7A578D" : "transparent"} className={i < item.rating ? "text-[#7A578D]" : "text-gray-200"} />
+                           ))}
+                        </div>
+                     </div>
+                     <div className="flex justify-between items-center py-2">
+                        <span className="text-[8px] font-black text-gray-400 uppercase">Logged At</span>
+                        <span className="text-[9px] font-black text-gray-900 uppercase">{new Date(item.createdAt).toLocaleString()}</span>
+                     </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
+                     <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest leading-none">Record Unique ID</span>
+                     <span className="text-[8px] font-mono text-gray-400 mt-1 uppercase select-all">#{item.id}</span>
+                  </div>
+               </div>
+            </div>
+          </td>
+        </tr>
+      );
+    }
   };
+
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500">

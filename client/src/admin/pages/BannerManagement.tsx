@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MousePointerClick, Search, RefreshCw, Layers } from 'lucide-react';
+import { Plus, Edit2, Trash2, MousePointerClick, Search, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
 import toast from 'react-hot-toast';
@@ -178,7 +178,7 @@ const BannerManagement = () => {
         customBodyRender: (id: string) => (
           <div className="flex items-center gap-1.5" title={id}>
             <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10">
-              {id?.slice(0, 8).toUpperCase()}..
+              {id?.toUpperCase()}
             </span>
           </div>
         )
@@ -259,12 +259,96 @@ const BannerManagement = () => {
     viewColumns: false,
     search: false,
     filter: false,
+    expandableRows: true, // USER REQ
+    expandableRowsOnClick: true, // USER REQ
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const banner = filteredBanners[rowMeta.rowIndex];
+      if (!banner) return null;
+      return (
+        <tr className="bg-gray-50/50">
+          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
+              {/* Asset Preview */}
+              <div className="space-y-4">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
+                    <ImageIcon size={12} /> Asset Preview
+                 </h3>
+                 <div className="bg-white border border-gray-100 rounded-2xl p-2 shadow-sm relative group overflow-hidden">
+                    <img src={banner.imageUrl || 'https://via.placeholder.com/600x300'} className="w-full aspect-[2/1] object-cover rounded-xl border border-gray-50 transition-transform group-hover:scale-105 duration-500" />
+                    <div className="absolute bottom-4 right-4 bg-black/80 text-white px-2 py-1 rounded text-[7px] font-black uppercase tracking-widest backdrop-blur-sm">
+                       {banner.type} Asset
+                    </div>
+                 </div>
+              </div>
+
+              {/* Creative Copy */}
+              <div className="space-y-4 border-l border-gray-100 pl-6">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
+                    <Layers size={12} /> Creative Copy
+                 </h3>
+                 <div className="space-y-3 pl-4">
+                    <div className="flex flex-col">
+                       <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5">Headline Identity</span>
+                       <h4 className="text-[11px] font-black text-gray-900 uppercase leading-tight">{banner.title}</h4>
+                       <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{banner.subtitle}</p>
+                    </div>
+                    <div className="flex flex-col pt-2 border-t border-gray-50">
+                       <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5">Narrative Ledger</span>
+                       <p className="text-[10px] font-bold text-gray-600 uppercase leading-relaxed">{banner.description || 'No descriptive metadata captured.'}</p>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Performance & Audit */}
+              <div className="space-y-4 border-l border-gray-100 pl-6">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
+                    <MousePointerClick size={12} /> Analytics & Registry
+                 </h3>
+                 <div className="space-y-3">
+                    <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                       <div className="flex items-center gap-2">
+                          <LinkIcon size={12} className="text-[#7A578D]" />
+                          <span className="text-[8px] font-black text-gray-400 uppercase">Target Link</span>
+                       </div>
+                       <span className="text-[9px] font-black text-gray-900 truncate max-w-[120px] lowercase">{banner.link || 'DIRECT_LINK_N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
+                          <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Total Clicks</span>
+                          <span className="text-sm font-black text-[#7A578D]">{banner.clickCount || 0}</span>
+                       </div>
+                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center flex flex-col items-center justify-center">
+                          <span className="text-[7px] font-black text-gray-400 uppercase mb-1">Status</span>
+                          <div className={`w-1.5 h-1.5 rounded-full ${banner.isActive ? 'bg-green-500' : 'bg-red-500'} mb-0.5`} />
+                          <span className={`text-[8px] font-black ${banner.isActive ? 'text-green-600' : 'text-red-500'}`}>
+                             {banner.isActive ? 'VISIBLE' : 'HIDDEN'}
+                          </span>
+                       </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-50 space-y-2">
+                       <div className="flex justify-between items-center text-[8px] font-black uppercase text-gray-400">
+                          <span>Registered On</span>
+                          <span className="text-gray-900">{new Date(banner.createdAt).toLocaleDateString()}</span>
+                       </div>
+                       <div className="flex justify-between items-center text-[8px] font-black uppercase text-gray-400">
+                          <span>Last Audit</span>
+                          <span className="text-gray-900">{new Date(banner.updatedAt).toLocaleDateString()}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      );
+    },
     textLabels: {
       body: {
         noMatch: loading ? "Synchronizing..." : "No items found in ledger",
       }
     }
   };
+
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500 max-w-[1400px]">

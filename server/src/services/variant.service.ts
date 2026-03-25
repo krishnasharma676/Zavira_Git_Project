@@ -12,9 +12,12 @@ export class VariantService {
 
     const createdVariants = [];
 
+    console.log(`[VARIANT_DEBUG] Processing ${variantsData.length} variants for product ${productId}`);
+    
     for (let i = 0; i < variantsData.length; i++) {
       const variantData = variantsData[i];
       const { color, colorCode, colorId, sizes } = variantData;
+      console.log(`[VARIANT_DEBUG] Variant ${i}: Color=${color}, ColorId=${colorId}, SizesCount=${sizes?.length}`);
 
       if (!color && !colorId) throw new ApiError(400, `Variant ${i + 1}: color or colorId is required`);
 
@@ -33,8 +36,8 @@ export class VariantService {
         finalColorId = c.id;
       }
 
-      // Upload images for this variant
       const variantImageFiles = files[`variant_${i}_images`] || [];
+      console.log(`[VARIANT_DEBUG] Variant ${i}: Found ${variantImageFiles.length} images for field variant_${i}_images`);
       const uploadedImages: { cloudinaryPublicId: string; imageUrl: string; isPrimary: boolean; sortOrder: number }[] = [];
 
       for (let j = 0; j < variantImageFiles.length; j++) {

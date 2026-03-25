@@ -166,7 +166,7 @@ const AdminDashboard = () => {
               {data?.recentOrders?.map((order: any) => (
                 <div key={order.id} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-gray-50/50 transition-all border border-transparent hover:border-gray-50">
                    <div className="flex items-center gap-3">
-                      <div className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded w-14 text-center">#{order.orderNumber?.slice(-6) || '---'}</div>
+                      <div className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded min-w-[60px] text-center">#{order.orderNumber || '---'}</div>
                       <div className="flex flex-col">
                          <span className="text-[9px] font-black text-gray-800 uppercase tracking-tight line-clamp-1 leading-tight">{order.user?.name}</span>
                          <span className="text-[7px] text-gray-400 italic font-medium uppercase leading-tight">{new Date(order.createdAt).toLocaleDateString()} • {order.payment?.paymentMethod}</span>

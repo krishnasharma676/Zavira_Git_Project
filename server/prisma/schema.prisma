@@ -28,10 +28,10 @@ model User {
   addresses       Address[]
   adminLogs       AdminLog[]
   cart            Cart?
-  orders          Order[]
   reviews         Review[]
   sessions        Session[]
   wishlist        Wishlist?
+  Order           Order[]
 
   @@index([email])
   @@index([publicId])
@@ -82,7 +82,7 @@ model Address {
   updatedAt DateTime @updatedAt
   isDeleted Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders    Order[]
+  Order     Order[]
 
   @@index([userId])
 }
@@ -152,13 +152,13 @@ model Product {
   isDeleted       Boolean          @default(false)
   cartItems       CartItem[]
   inventory       Inventory?
-  orderItems      OrderItem[]
   category        Category         @relation(fields: [categoryId], references: [id])
   subCategory     SubCategory?     @relation(fields: [subCategoryId], references: [id])
   images          ProductImage[]
   variants        ProductVariant[]
   reviews         Review[]
   wishlistItems   WishlistItem[]
+  OrderItem       OrderItem[]
 
   @@index([slug])
   @@index([categoryId])
@@ -195,21 +195,21 @@ model Inventory {
 }
 
 model ProductVariant {
-  id         String                @id @default(uuid())
-  productId  String
-  color      String
-  colorCode  String?
-  stock      Int                   @default(0)
-  sku        String?               @unique
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
-  colorId    String?
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  colorRel   Color?                @relation(fields: [colorId], references: [id])
-  product    Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images     ProductVariantImage[]
-  sizes      ProductVariantSize[]
+  id        String                @id @default(uuid())
+  productId String
+  color     String
+  colorCode String?
+  stock     Int                   @default(0)
+  sku       String?               @unique
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  colorId   String?
+  cartItems CartItem[]
+  colorRel  Color?                @relation(fields: [colorId], references: [id])
+  product   Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images    ProductVariantImage[]
+  sizes     ProductVariantSize[]
+  OrderItem OrderItem[]
 
   @@index([productId])
   @@index([colorId])
@@ -306,6 +306,7 @@ model Order {
   shippingCharges Float       @default(0)
   payableAmount   Float
   status          OrderStatus @default(PENDING)
+  paymentMethod   String?
   shipmentId      String?
   awbNumber       String?
   courierName     String?
@@ -328,18 +329,17 @@ model Order {
 }
 
 model OrderItem {
-  id            String          @id @default(uuid())
-  orderId       String
-  productId     String
-  variantId     String?
-  selectedColor String?
-  selectedSize  String?
-  quantity      Int
-  price         Float
-  createdAt     DateTime        @default(now())
-  order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product       Product         @relation(fields: [productId], references: [id])
-  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+  id           String          @id @default(uuid())
+  orderId      String
+  productId    String
+  variantId    String?
+  selectedSize String?
+  quantity     Int
+  price        Float
+  createdAt    DateTime        @default(now())
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product         @relation(fields: [productId], references: [id])
+  variant      ProductVariant? @relation(fields: [variantId], references: [id])
 }
 
 model Payment {
@@ -371,6 +371,7 @@ model Review {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   isDeleted  Boolean  @default(false)
+  images     String[]
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

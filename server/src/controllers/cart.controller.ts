@@ -18,17 +18,19 @@ export const addItem = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateQuantity = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { productId, quantity, variantId, selectedSize } = req.body;
-  const item = await cartService.updateQuantity(userId, productId, quantity, variantId, selectedSize);
+  const { cartItemId, quantity } = req.body;
+  const item = await cartService.updateQuantity(userId, cartItemId, quantity);
   return res.status(200).json(new ApiResponse(200, item, "Cart updated"));
 });
 
+
 export const removeItem = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const productId = req.params.productId as string;
-  await cartService.removeItem(userId, productId);
+  const cartItemId = req.params.cartItemId as string;
+  await cartService.removeItem(userId, cartItemId);
   return res.status(200).json(new ApiResponse(200, {}, "Item removed from cart"));
 });
+
 
 export const clearCart = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
