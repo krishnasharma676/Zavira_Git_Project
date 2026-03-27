@@ -19,6 +19,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/format';
 import { motion, AnimatePresence } from 'framer-motion';
+import { V, KB, validateAll, inputCls } from '../../utils/validators';
 
 const CheckoutModal = () => {
   const { items, clearCart } = useCart();
@@ -48,7 +49,6 @@ const CheckoutModal = () => {
     phone: ''
   });
 
-  const freeThreshold = Number(settings?.shipping_free_threshold) || 1000;
   const flatRate = Number(settings?.shipping_flat_rate) || 50;
   const codCharge = Number(settings?.cod_charge) || 39;
   const globalTaxRate = Number(settings?.tax_percentage) || 3;
@@ -59,7 +59,8 @@ const CheckoutModal = () => {
     const itemTotal = (item.price || 0) * (item.quantity || 0);
     return acc + (itemTotal * rate) / (100 + rate);
   }, 0);
-  const shipping = subtotal >= freeThreshold ? 0 : flatRate;
+  
+  const shipping = flatRate;
   const codBuffer = selectedPayment === 'COD' ? codCharge : 0;
   const total = subtotal + shipping + codBuffer;
 
@@ -94,13 +95,43 @@ const CheckoutModal = () => {
     fetchSettings();
   }, []);
 
+  // ─── Validation Rules (from central validators) ──────────────────
+  const RULES = {
+    pincode:   V.pincode,
+    phone:     V.phone,
+    firstName: V.firstName,
+    lastName:  V.lastName,
+    address:   V.address,
+    area:      V.area,
+    city:      V.city,
+    state:     V.state,
+  };
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = (name: string, value: string) => {
+    const fn = (RULES as any)[name];
+    return fn ? fn(value) : '';
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'pincode' && (!KB.numericOnly(value) || value.length > 6)) return;
+    if (name === 'phone'   && (!KB.numericOnly(value) || value.length > 10)) return;
+    if ((name === 'firstName' || name === 'lastName' || name === 'city' || name === 'state') && !KB.noDigits(value)) return;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: validate(name, value) }));
+  };
+
+  const isFormValid = () => {
+    return Object.keys(RULES).every(k => !validate(k, (formData as any)[k]));
   };
 
   const handleNextStep = () => {
-    if (!formData.pincode || !formData.address || !formData.firstName || !formData.phone) {
-      toast.error('Please fill in required shipping fields');
+    const errs = validateAll(formData as any, RULES);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      toast.error('Please fix the highlighted fields');
       return;
     }
     setStep(2);
@@ -201,28 +232,43 @@ const CheckoutModal = () => {
     setIsSuccess(true);
     setStep(3);
     clearCart();
+
+    // Redirect to home after 4 seconds (animation is 3.5s)
+    setTimeout(() => {
+      closeCheckoutModal();
+      setIsSuccess(false);
+      setStep(1);
+      navigate('/');
+    }, 4000);
   };
 
-  const PaymentOption = ({ id, label, icon: Icon, note }: any) => (
+  const PaymentOption = ({ id, label, icon: Icon, note, subIcons }: any) => (
     <div 
       onClick={() => setSelectedPayment(id)}
-      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+      className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-center justify-between group ${
         selectedPayment === id 
-          ? 'border-[#7A578D] bg-[#7A578D]/5 shadow-sm' 
-          : 'border-gray-50 hover:border-gray-100 dark:border-white/5'
+          ? 'border-[#7A578D] bg-gradient-to-br from-[#7A578D]/5 to-transparent shadow-md scale-[1.02]' 
+          : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10'
       }`}
     >
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedPayment === id ? 'bg-[#7A578D] text-white' : 'bg-gray-50 text-gray-400'}`}>
-           <Icon size={14} />
+      <div className="flex items-center gap-4 w-full">
+        <div className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center transition-colors ${selectedPayment === id ? 'bg-[#7A578D] text-white shadow-lg shadow-[#7A578D]/20' : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
+           <Icon size={20} className={selectedPayment === id ? 'animate-pulse' : ''} />
         </div>
-        <div>
-           <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">{label}</p>
-           {note && <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter mt-0.5">{note}</p>}
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between pr-4">
+           <div>
+              <p className={`text-[12px] font-black uppercase tracking-widest transition-colors ${selectedPayment === id ? 'text-[#7A578D] dark:text-[#C9A0C8]' : 'text-gray-900 dark:text-white'}`}>{label}</p>
+              {note && <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{note}</p>}
+           </div>
+           {subIcons && (
+             <div className="flex items-center gap-1.5 mt-2 sm:mt-0">
+                {subIcons}
+             </div>
+           )}
         </div>
       </div>
-      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedPayment === id ? 'border-[#7A578D]' : 'border-gray-200'}`}>
-         {selectedPayment === id && <div className="w-2 h-2 bg-[#7A578D] rounded-full" />}
+      <div className={`w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all duration-300 ${selectedPayment === id ? 'border-[#7A578D] bg-white' : 'border-gray-300 dark:border-gray-600'}`}>
+         {selectedPayment === id && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-3 h-3 bg-[#7A578D] rounded-full shadow-sm" />}
       </div>
     </div>
   );
@@ -329,28 +375,96 @@ const CheckoutModal = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                            <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Pincode*</label>
-                           <input name="pincode" value={formData.pincode} onChange={handleInputChange} placeholder="110001" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
+                           <input
+                             name="pincode" value={formData.pincode} onChange={handleInputChange}
+                             placeholder="110001" inputMode="numeric" maxLength={6}
+                             className={`w-full bg-gray-50/50 border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all ${
+                               errors.pincode ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                             }`}
+                           />
+                           {errors.pincode && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.pincode}</p>}
                         </div>
                         <div className="space-y-1">
                            <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Phone Number*</label>
-                           <input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="9876543210" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
+                           <input
+                             name="phone" value={formData.phone} onChange={handleInputChange}
+                             placeholder="9876543210" inputMode="numeric" maxLength={10}
+                             className={`w-full bg-gray-50/50 border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all ${
+                               errors.phone ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                             }`}
+                           />
+                           {errors.phone && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.phone}</p>}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="First name*" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
-                        <input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Last name" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
+                        <div className="space-y-1">
+                          <input
+                            name="firstName" value={formData.firstName} onChange={handleInputChange}
+                            placeholder="First name*"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.firstName ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.firstName && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.firstName}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <input
+                            name="lastName" value={formData.lastName} onChange={handleInputChange}
+                            placeholder="Last name"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.lastName ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.lastName && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.lastName}</p>}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input name="address" value={formData.address} onChange={handleInputChange} placeholder="House no, Floor, Building*" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
-                        <input name="area" value={formData.area} onChange={handleInputChange} placeholder="Area, Street, Sector*" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
+                        <div className="space-y-1">
+                          <input
+                            name="address" value={formData.address} onChange={handleInputChange}
+                            placeholder="House no, Floor, Building*"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.address ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.address && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.address}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <input
+                            name="area" value={formData.area} onChange={handleInputChange}
+                            placeholder="Area, Street, Sector*"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.area ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.area && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.area}</p>}
+                        </div>
                       </div>
                       
                       <div className="grid grid-cols-3 gap-4">
-                        <input name="city" value={formData.city} onChange={handleInputChange} placeholder="City*" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
-                        <input name="state" value={formData.state} onChange={handleInputChange} placeholder="State*" className="w-full bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#7A578D] transition-all" />
-                        <div className="flex gap-1 bg-gray-50/50 p-1 rounded-xl border border-gray-100 h-full">
+                        <div className="space-y-1">
+                          <input
+                            name="city" value={formData.city} onChange={handleInputChange}
+                            placeholder="City*"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.city ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.city && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.city}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <input
+                            name="state" value={formData.state} onChange={handleInputChange}
+                            placeholder="State*"
+                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
+                              errors.state ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
+                            }`}
+                          />
+                          {errors.state && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.state}</p>}
+                        </div>
+                        <div className="flex gap-1 bg-gray-50/50 p-1 rounded-xl border border-gray-100 h-[42px] self-start">
                            {['Home', 'Office'].map(type => (
                              <button 
                                key={type}
@@ -364,7 +478,11 @@ const CheckoutModal = () => {
                         </div>
                       </div>
 
-                      <button onClick={handleNextStep} className="bg-[#7A578D] hover:bg-[#684a77] text-white w-full py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#7A578D]/10 active:scale-[0.99] transition-all group">
+                      <button
+                        onClick={handleNextStep}
+                        disabled={!isFormValid()}
+                        className="bg-[#7A578D] hover:bg-[#684a77] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white w-full py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#7A578D]/10 active:scale-[0.99] transition-all group"
+                      >
                          <span>Go to Payment</span>
                          <ArrowRight size={14} className="inline ml-2 group-hover:translate-x-1 transition-transform" />
                       </button>
@@ -392,12 +510,23 @@ const CheckoutModal = () => {
                             label="Pay Now" 
                             icon={CreditCard} 
                             note="Safe & Secure Payments"
+                            subIcons={
+                              <>
+                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-gray-800 dark:text-gray-200">UPI</div>
+                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-[#EA4335] dark:text-[#F1887F]">GPay</div>
+                                <div className="bg-[#002970] px-2 py-0.5 border border-blue-900/50 rounded-md text-[8px] font-black tracking-widest text-[#00BAF2]">Paytm</div>
+                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-[#1A1F71] dark:text-blue-400 italic">VISA</div>
+                              </>
+                            }
                           />
                           <PaymentOption 
                             id="COD" 
                             label="Cash on Delivery" 
                             icon={Coins} 
-                            note={`+ ${formatCurrency(codCharge)} COD fee`} 
+                            note={`+ ${formatCurrency(codCharge)} COD handling fee`} 
+                            subIcons={
+                              <div className="bg-amber-100/50 dark:bg-amber-500/10 px-2 py-0.5 border border-amber-200/50 dark:border-amber-500/20 rounded-md text-[8px] font-black tracking-widest text-amber-700 dark:text-amber-500">PAY AT DOOR</div>
+                            }
                           />
                        </div>
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Heart, Search, Menu, Sun, Moon, Clock } from 'lucide-react';
 import { useAuth } from '../store/useAuth';
@@ -10,10 +10,13 @@ import api from '../api/axios';
 import zaviraLogo from '../assets/zavira-logo.png';
 import AnnouncementBar from './navbar/AnnouncementBar';
 import UserMenu from './navbar/UserMenu';
-import SearchModal from './navbar/SearchModal';
+import { lazy, Suspense } from 'react';
 import MobileMenu from './navbar/MobileMenu';
 import NavLinks from './navbar/NavLinks';
-import AuthModal from './auth/AuthModal';
+import { useCatalogStore } from '../store/useCatalogStore';
+
+const AuthModal = lazy(() => import('./auth/AuthModal'));
+const SearchModal = lazy(() => import('./navbar/SearchModal'));
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -23,28 +26,14 @@ const Navbar = () => {
   const { items } = useCart();
   const { items: wishlistItems } = useWishlist();
   const location = useLocation();
-
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [bannerRes, categoryRes] = await Promise.all([
-          api.get('/banners'),
-          api.get('/categories')
-        ]);
-        
-        const announcementBanners = bannerRes.data.data.filter((b: any) => b.type === 'ANNOUNCEMENT');
-        setAnnouncements(announcementBanners);
-        setCategories(categoryRes.data.data || []);
-      } catch {
-      }
-    };
-    fetchData();
-  }, []);
+  const { categories, banners } = useCatalogStore();
+  const announcementBanners = useMemo(() => 
+    banners.filter((b: any) => b.type === 'ANNOUNCEMENT'), 
+    [banners]
+  );
 
   const expandProductsByVariant = (products: any[]) => {
     const list: any[] = [];
@@ -185,7 +174,7 @@ const Navbar = () => {
 
       <NavLinks categories={categories} isActive={isActive} />
 
-      <AnnouncementBar announcements={announcements} />
+      <AnnouncementBar announcements={announcementBanners} />
 
       <MobileMenu 
         isOpen={isMobileMenuOpen} 
@@ -194,15 +183,17 @@ const Navbar = () => {
         isActive={isActive} 
       />
 
-      <SearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-        searchQuery={searchQuery} 
-        setSearchQuery={setSearchQuery} 
-        isSearching={isSearching} 
-        searchResults={searchResults} 
-      />
-      <AuthModal />
+      <Suspense fallback={null}>
+        <SearchModal 
+          isOpen={isSearchOpen} 
+          onClose={() => setIsSearchOpen(false)} 
+          searchQuery={searchQuery} 
+          setSearchQuery={setSearchQuery} 
+          isSearching={isSearching} 
+          searchResults={searchResults} 
+        />
+        <AuthModal />
+      </Suspense>
     </nav>
   );
 };

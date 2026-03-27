@@ -6,6 +6,7 @@ interface SettingsState {
   loading: boolean;
   fetchSettings: (force?: boolean) => Promise<void>;
   updateSettings: (newSettings: Record<string, any>) => void;
+  setGlobalData: (data: Record<string, any>) => void;
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -17,15 +18,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
     
     set({ loading: true });
     try {
-      const { data } = await api.get('/settings');
-      set({ settings: data.data || {} });
+      const settingsRes = await api.get('/settings');
+      set({ settings: settingsRes.data.data || {} });
     } catch (e) {
-      console.error('Failed to fetch settings');
+      console.error('Failed to fetch store settings');
     } finally {
       set({ loading: false });
     }
   },
   updateSettings: (newSettings) => {
     set({ settings: newSettings });
+  },
+  setGlobalData: (data) => {
+    set((state) => ({ ...state, ...data }));
   }
 }));

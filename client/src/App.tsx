@@ -3,12 +3,14 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import StickyFooter from './components/StickyFooter';
-import CartDrawer from './components/CartDrawer';
-import ScrollToTop from './components/ScrollToTop';
 import { Toaster } from 'react-hot-toast';
-import CheckoutModal from './components/checkout/CheckoutModal';
 import { useAuth } from './store/useAuth';
 import { useCart } from './store/useCart';
+import { useCatalogStore } from './store/useCatalogStore';
+import ScrollToTop from './components/ScrollToTop';
+
+const CartDrawer = lazy(() => import('./components/CartDrawer'));
+const CheckoutModal = lazy(() => import('./components/checkout/CheckoutModal'));
 
 // Customer Pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -30,7 +32,6 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const ProtectedRoute = lazy(() => import('./admin/components/ProtectedRoute'));
 const AdminLayout = lazy(() => import('./admin/layouts/AdminLayout'));
 const AdminLogin = lazy(() => import('./admin/pages/AdminLogin'));
-const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard'));
 const InventoryManagement = lazy(() => import('./admin/pages/InventoryManagement'));
 const BulkProductManagement = lazy(() => import('./admin/pages/BulkProductManagement'));
 const VariantManager = lazy(() => import('./admin/pages/VariantManager'));
@@ -45,7 +46,6 @@ const ReviewManagement = lazy(() => import('./admin/pages/ReviewManagement'));
 const TestimonialManagement = lazy(() => import('./admin/pages/TestimonialManagement'));
 const MessageManagement = lazy(() => import('./admin/pages/MessageManagement'));
 const StoreSettings = lazy(() => import('./admin/pages/StoreSettings'));
-const Analytics = lazy(() => import('./admin/pages/Analytics'));
 const ShippingManagement = lazy(() => import('./admin/pages/ShippingManagement'));
 
 const AppContent = () => {
@@ -55,12 +55,21 @@ const AppContent = () => {
   const hideLayout = isAdminPath || isTrackPath;
   const isAuthenticated = useAuth((s) => s.isAuthenticated);
 
+  const { loadCatalog } = useCatalogStore();
+
   useEffect(() => {
-    // Only sync cart for customers on public/customer paths
-    if (isAuthenticated && !isAdminPath) {
+    // Only load consumer catalog on public/customer paths
+    if (!isAdminPath) {
+      loadCatalog();
+    }
+    
+    const isAdmin = useAuth.getState().user?.role === 'ADMIN' || useAuth.getState().user?.role === 'SUPER_ADMIN';
+    
+    // Only sync cart for customers on public/customer paths and non-admin users
+    if (isAuthenticated && !isAdminPath && !isAdmin) {
       useCart.getState().syncCart();
     }
-  }, [isAuthenticated, isAdminPath]);
+  }, [isAuthenticated, isAdminPath, loadCatalog]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -92,7 +101,6 @@ const AppContent = () => {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<ProtectedRoute />}>
               <Route element={<AdminLayout />}>
-                <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="inventory" element={<InventoryManagement />} />
                 <Route path="bulk-products" element={<BulkProductManagement />} />
                 <Route path="bulk-products/manage/:id" element={<VariantManager />} />
@@ -108,9 +116,8 @@ const AppContent = () => {
                 <Route path="testimonials" element={<TestimonialManagement />} />
                 <Route path="messages" element={<MessageManagement />} />
                 <Route path="settings" element={<StoreSettings />} />
-                <Route path="analytics" element={<Analytics />} />
                 <Route path="shipping" element={<ShippingManagement />} />
-                <Route index element={<AdminDashboard />} />
+                <Route index element={<InventoryManagement />} />
               </Route>
             </Route>
 
@@ -121,8 +128,10 @@ const AppContent = () => {
       </main>
       {!hideLayout && <Footer />}
       {!hideLayout && <StickyFooter />}
-      {!hideLayout && <CartDrawer />}
-      {!hideLayout && <CheckoutModal />}
+      <Suspense fallback={null}>
+        {!hideLayout && <CartDrawer />}
+        {!hideLayout && <CheckoutModal />}
+      </Suspense>
       <Toaster position="bottom-right" toastOptions={{ style: { marginBottom: '80px' } }} />
     </div>
   );

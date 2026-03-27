@@ -1,12 +1,35 @@
 import { createTheme } from '@mui/material/styles';
 
 export const getMuiTheme = () => createTheme({
+  typography: {
+    fontFamily: '"Times New Roman", Times, serif',
+  },
   components: {
-    // @ts-ignore – mui-datatables components not typed in MUI5
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: '6px 12px',
+          fontSize: '11px',
+          borderBottom: '1px solid #eee',
+          whiteSpace: 'nowrap',
+          width: 'auto',
+          fontFamily: '"Times New Roman", Times, serif',
+        },
+        head: {
+          backgroundColor: '#fff',
+          fontWeight: 'bold',
+          color: '#000',
+          padding: '8px 12px',
+          fontSize: '11px',
+          textTransform: 'uppercase',
+        }
+      }
+    },
+    // @ts-ignore
     MUIDataTableToolbar: {
       styleOverrides: {
         root: {
-          minHeight: '36px',
+          minHeight: '40px',
           padding: '0 8px',
         },
       },
@@ -15,21 +38,16 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableHeadCell: {
       styleOverrides: {
         root: {
-          fontSize: '9px',
-          fontWeight: '900',
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          padding: '4px 10px',
-          whiteSpace: 'nowrap',
-          backgroundColor: '#fafafa',
-          borderBottom: '1px solid #f3f4f6',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          padding: '8px 12px',
+          backgroundColor: '#fff',
+          borderBottom: '2px solid #ddd',
+          color: '#000',
         },
         data: {
-          fontSize: '9px',
-          fontWeight: '900',
-        },
-        sortAction: {
-          fontSize: '9px',
+          fontSize: '11px',
+          fontWeight: 'bold',
         },
       },
     },
@@ -37,15 +55,9 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableBodyCell: {
       styleOverrides: {
         root: {
-          fontSize: '10px',
-          fontWeight: '700',
-          textTransform: 'uppercase',
-          letterSpacing: '0.02em',
-          padding: '8px 10px',
-          borderBottom: '1px solid #f9fafb',
-          lineHeight: '1.4',
-          whiteSpace: 'nowrap', // USER REQ: Full width, no text cut
-          transition: 'all 0.3s ease',
+          fontSize: '11px',
+          padding: '6px 12px',
+          color: '#333',
         },
       },
     },
@@ -53,46 +65,26 @@ export const getMuiTheme = () => createTheme({
     MUIDataTableBodyRow: {
       styleOverrides: {
         root: {
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)', // USER REQ: Smooth transition
           '&:hover': {
-            backgroundColor: '#fafafa !important',
+            backgroundColor: '#f5f5f5 !important',
           },
         },
       },
     },
-
-    // @ts-ignore
-    MUIDataTableFooter: {
-      styleOverrides: {
-        root: {
-          borderTop: '1px solid #f3f4f6',
-        },
-      },
-    },
-    // @ts-ignore
-    MUIDataTablePagination: {
-      styleOverrides: {
-        root: {
-          padding: '0px',
-        },
-        tableCellContainer: {
-          padding: '0 8px',
-        },
-      },
-    },
-    // @ts-ignore
     MuiTablePagination: {
       styleOverrides: {
         root: {
-          fontSize: '10px',
+          fontSize: '11px',
+          minHeight: '36px',
+        },
+        toolbar: {
+          minHeight: '36px',
         },
         selectLabel: {
-          fontSize: '10px',
-          fontWeight: '700',
+          fontSize: '11px',
         },
         displayedRows: {
-          fontSize: '10px',
-          fontWeight: '700',
+          fontSize: '11px',
         },
       },
     },

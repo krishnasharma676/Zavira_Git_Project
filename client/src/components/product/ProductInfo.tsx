@@ -1,7 +1,6 @@
 import { Star } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 import PurchaseActions from './PurchaseActions';
-import LuxuryBadges from './LuxuryBadges';
 
 interface ProductInfoProps {
   product: any;
@@ -144,8 +143,6 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
           primaryPrice={primaryPrice} 
           toast={toast} 
         />
-
-        <LuxuryBadges />
       </div>
     </div>
   );

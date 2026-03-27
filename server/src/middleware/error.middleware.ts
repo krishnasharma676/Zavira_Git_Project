@@ -34,11 +34,20 @@ export const errorHandler = (
           message: 'Invalid reference — related record does not exist.',
           data: null,
         });
+      case 'P2004':
+        return res.status(400).json({
+          success: false,
+          message: 'A database constraint failed. Check data consistency.',
+          data: null,
+        });
       default:
         return res.status(500).json({
           success: false,
-          message: 'Database error. Please try again.',
+          message: process.env.NODE_ENV === 'development' 
+            ? `Database Error (${err.code}): ${err.message}` 
+            : 'Database error. Please try again.',
           data: null,
+          metadata: err.meta 
         });
     }
   }

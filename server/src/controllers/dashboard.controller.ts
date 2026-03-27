@@ -87,25 +87,27 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
     return acc;
   }, {});
 
-  // Fetch top selling product details
-  const topSellingProducts = await Promise.all(
-    topProductsRaw.map(async (item) => {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: {
-          name: true,
-          images: { where: { isPrimary: true }, take: 1, select: { imageUrl: true } }
-        }
-      });
-      return {
-        productId: item.productId,
-        name: product?.name || "Unknown Product",
-        image: product?.images?.[0]?.imageUrl || null,
-        unitsSold: item._sum.quantity || 0,
-        revenue: item._sum.price || 0
-      };
-    })
-  );
+  // Fetch top selling product details in batch
+  const productIds = topProductsRaw.map(item => item.productId);
+  const productsData = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      name: true,
+      images: { where: { isPrimary: true }, take: 1, select: { imageUrl: true } }
+    }
+  });
+
+  const topSellingProducts = topProductsRaw.map(item => {
+    const p = productsData.find(pd => pd.id === item.productId);
+    return {
+      productId: item.productId,
+      name: p?.name || "Unknown Product",
+      image: p?.images?.[0]?.imageUrl || null,
+      unitsSold: item._sum.quantity || 0,
+      revenue: item._sum.price || 0
+    };
+  });
 
   // 7-day sales trend (Dynamic chart data)
   const last7Days = Array.from({ length: 7 }, (_, i) => {

@@ -8,6 +8,9 @@ interface WishlistItem {
   category: string;
   image: string;
   slug: string;
+  discountedPrice?: number;
+  basePrice?: number;
+  images?: any[];
 }
 
 interface WishlistState {

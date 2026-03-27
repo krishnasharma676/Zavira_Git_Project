@@ -98,4 +98,4 @@ const Testimonials = ({ reviews, scrollRef, scrollReviews }: TestimonialsProps) 
   );
 };
 
-export default Testimonials;
+export default React.memo(Testimonials);

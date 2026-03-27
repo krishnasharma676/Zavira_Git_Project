@@ -71,11 +71,10 @@ export class OrderService {
 
     // Get shipping and COD settings
     const settings = await settingService.getAllSettings();
-    const freeThreshold = Number(settings.shipping_free_threshold) || 1000;
     const flatRate = Number(settings.shipping_flat_rate) || 50;
     const codCharge = Number(settings.cod_charge) || 39;
 
-    let shippingCharges = totalAmount >= freeThreshold ? 0 : flatRate;
+    let shippingCharges = flatRate;
     let codAmount = paymentMethod === 'COD' ? codCharge : 0;
     
     const payableAmount = totalAmount + shippingCharges + codAmount;
@@ -111,10 +110,10 @@ export class OrderService {
       return { ...order, razorpay_order_id: razorpayOrder.id };
     }
 
-    // For COD, trigger shipment immediately
-    if (paymentMethod === "COD") {
-      this.triggerShipment(order.id);
-    }
+    // For COD, do NOT trigger shipment immediately; let admin do it manually
+    // if (paymentMethod === "COD") {
+    //   this.triggerShipment(order.id);
+    // }
 
     await cartRepository.clearCart(userId);
     return order;
@@ -142,8 +141,8 @@ export class OrderService {
       razorpay_signature
     });
 
-    // Trigger shipment after successful payment
-    this.triggerShipment(order.id);
+    // Do NOT trigger shipment after successful payment automatically; let admin pack it first
+    // this.triggerShipment(order.id);
 
     return order;
   }

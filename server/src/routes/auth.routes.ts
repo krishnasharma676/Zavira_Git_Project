@@ -6,10 +6,14 @@ const router = Router();
 
 // ── Public Routes ──────────────────────────────────────────────────────────
 router.post('/send-otp', authController.sendOtp);
+router.post('/admin/forgot-password-otp', authController.adminForgotPasswordOtp);
+router.post('/admin/reset-password', authController.adminResetPassword);
 router.post('/verify-otp', authController.verifyOtpAndLogin);
 router.post('/login', authController.login);
 router.post('/verify-email-otp', authController.verifyEmailOtpAndLogin);
+router.post('/verify-email-login', authController.verifyEmailOtpAndLogin);
 router.post('/register', authController.register);
+router.post('/verify-email-register', authController.completeRegistration);
 router.post('/complete-registration', authController.completeRegistration);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authController.logout);

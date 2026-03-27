@@ -220,7 +220,7 @@ export class ProductService {
     const { 
       name, basePrice, discountedPrice, categoryId, description, 
       stock, sku, hotDeals, featured, trending, attributes, sizes,
-      weight, length, width, height, hsnCode, taxRate 
+      weight, length, width, height, hsnCode, taxRate, weightUnit, dimensionUnit, widthUnit, heightUnit 
     } = data;
     const slug = await this.generateUniqueSlug(name);
 
@@ -248,6 +248,10 @@ export class ProductService {
         height: Number(height) || 0,
         hsnCode: hsnCode || null,
         taxRate: Number(taxRate) || 0,
+        weightUnit: weightUnit || 'kg',
+        dimensionUnit: dimensionUnit || 'cm',
+        widthUnit: widthUnit || 'cm',
+        heightUnit: heightUnit || 'cm',
         inventory: {
           create: {
             stock: Number(stock) || 0,
@@ -268,7 +272,7 @@ export class ProductService {
     // sku belongs to Inventory, not Product — extract it separately
     const { 
       name, basePrice, discountedPrice, stock, sku, attributes, sizes,
-      weight, length, width, height, hsnCode, taxRate,
+      weight, length, width, height, hsnCode, taxRate, weightUnit, dimensionUnit, widthUnit, heightUnit,
       ...updateData 
     } = data;
     
@@ -295,6 +299,10 @@ export class ProductService {
     if (height !== undefined) updateData.height = Number(height);
     if (hsnCode !== undefined) updateData.hsnCode = hsnCode || null;
     if (taxRate !== undefined) updateData.taxRate = Number(taxRate);
+    if (weightUnit !== undefined) updateData.weightUnit = weightUnit || 'kg';
+    if (dimensionUnit !== undefined) updateData.dimensionUnit = dimensionUnit || 'cm';
+    if (widthUnit !== undefined) updateData.widthUnit = widthUnit || 'cm';
+    if (heightUnit !== undefined) updateData.heightUnit = heightUnit || 'cm';
     
     // Parse booleans from multipart form
     if (data.hotDeals !== undefined) updateData.hotDeals = data.hotDeals === 'true' || data.hotDeals === true;
@@ -388,6 +396,23 @@ export class ProductService {
     });
     if (!product || product.isDeleted) throw new ApiError(404, 'Product not found');
     return product;
+  }
+
+  async getHomeData() {
+    // 1. Fetch all core data in parallel
+    const [banners, categories, testimonials, allProductsRes] = await Promise.all([
+      prisma.banner.findMany({ where: { isDeleted: false, isActive: true }, orderBy: { createdAt: 'desc' } }),
+      prisma.category.findMany({ where: { isDeleted: false, isActive: true }, orderBy: { name: 'asc' } }),
+      prisma.testimonial.findMany({ where: { isDeleted: false, isActive: true }, take: 16, orderBy: { createdAt: 'desc' } }),
+      this.getAllProducts({ limit: 1000 }) // Fetch full catalog for zero-latency browsing
+    ]);
+
+    return {
+      banners,
+      categories,
+      testimonials,
+      allProducts: allProductsRes.products
+    };
   }
 }
 

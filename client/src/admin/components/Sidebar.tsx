@@ -24,18 +24,18 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       />
 
       <div className={`
-        w-[200px] bg-white h-screen fixed left-0 top-0 border-r border-gray-100 flex flex-col z-[70] transition-transform duration-300
+        w-[220px] bg-white h-screen fixed left-0 top-0 border-r border-gray-100 flex flex-col z-[70] transition-transform duration-300 shadow-sm
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-3 border-b border-gray-50 flex items-center justify-between">
+        <div className="p-3 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-[#7A578D] rounded-lg flex items-center justify-center text-white font-black text-xs shadow-lg">Z</div>
-            <div>
-              <h1 className="text-[9px] font-black uppercase tracking-widest text-gray-900">Admin</h1>
-              <p className="text-[6px] text-gray-400 font-bold uppercase tracking-widest">Manager</p>
+            <div className="w-8 h-8 bg-[#7A578D] rounded flex items-center justify-center text-white font-black text-sm shadow-sm">Z</div>
+            <div className="flex flex-col">
+              <h1 className="text-[11px] font-black uppercase tracking-widest text-gray-900 leading-none">Admin</h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Manager</p>
             </div>
           </div>
-          <button onClick={onClose} className="lg:hidden p-1 text-gray-400 hover:text-gray-900">
+          <button onClick={onClose} className="lg:hidden p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
              <X size={16} />
           </button>
         </div>
@@ -43,15 +43,15 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <div className="px-3 py-2">
           <Link 
             to="/" 
-            className="flex items-center space-x-2 px-2.5 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[7px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-[#7A578D] hover:border-[#7A578D] transition-all group"
+            className="flex items-center justify-center space-x-2 w-full py-1.5 bg-gray-50 border border-gray-200 rounded text-[10px] font-bold uppercase tracking-widest text-gray-600 hover:text-white hover:bg-[#7A578D] hover:border-[#7A578D] transition-all group"
           >
-            <ExternalLink size={9} className="group-hover:scale-110 transition-transform" />
+            <ExternalLink size={12} />
             <span>View Site</span>
           </Link>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto no-scrollbar pt-2">
-          <p className="px-3 text-[7px] font-black text-gray-300 uppercase tracking-widest mb-3">Menu</p>
+        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto no-scrollbar pt-1 pb-4">
+          <p className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Menu</p>
           {ADMIN_MODULES.map((item) => (
             <NavLink
               key={item.path}
@@ -60,21 +60,21 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 if (window.innerWidth < 1024) onClose();
               }}
               className={({ isActive }) => `
-                flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-all group
+                flex items-center justify-between px-3 py-1.5 rounded transition-all group border border-transparent
                 ${isActive 
-                  ? 'bg-[#7A578D]/5 text-[#7A578D] border border-[#7A578D]/10 shadow-sm font-bold' 
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}
+                  ? 'bg-[#7A578D]/5 text-[#7A578D] border-[#7A578D]/10 font-bold' 
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-100 font-bold'}
               `}
             >
               {({ isActive }) => (
                 <>
-                  <div className="flex items-center space-x-2.5">
-                    <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-[#7A578D]' : 'text-gray-400 group-hover:text-gray-600'} />
-                    <span className="text-[10px] uppercase tracking-wider">{item.label}</span>
+                  <div className="flex items-center space-x-2">
+                    <item.icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-[#7A578D]' : 'text-gray-400 group-hover:text-gray-600 transition-colors'} />
+                    <span className="text-[11px] uppercase tracking-wider">{item.label}</span>
                   </div>
                   <ChevronRight 
-                    size={10} 
-                    className={`transition-all ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} 
+                    size={12} 
+                    className={`transition-all ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0'}`} 
                   />
                 </>
               )}
@@ -82,13 +82,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-50 bg-gray-50/30">
+        <div className="p-3 border-t border-gray-100 bg-gray-50/50">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all font-black uppercase tracking-widest text-[8px]"
+            className="w-full flex items-center justify-center space-x-2 py-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border border-transparent transition-all font-bold uppercase tracking-widest text-[10px]"
           >
             <LogOut size={14} />
-            <span>Logout Account</span>
+            <span>Logout</span>
           </button>
         </div>
       </div>

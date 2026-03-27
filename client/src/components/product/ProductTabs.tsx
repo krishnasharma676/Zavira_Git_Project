@@ -34,7 +34,7 @@ const ProductTabs = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-8 border-b border-gray-100 dark:border-white/5">
+      <div className="flex justify-end space-x-8 border-b border-gray-100 dark:border-white/5">
         {['details', 'shipping', 'reviews'].map(tab => (
           <button
             key={tab}

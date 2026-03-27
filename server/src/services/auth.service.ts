@@ -180,6 +180,45 @@ export class AuthService {
     await userRepository.deleteUserSessions(userId);
   }
 
+  async adminForgotPasswordOtp(email: string) {
+    if (!email) throw new ApiError(400, "Email is required");
+    const normalizedEmail = email.toLowerCase();
+    
+    if (process.env.ADMIN_EMAIL && normalizedEmail !== process.env.ADMIN_EMAIL.toLowerCase()) {
+      throw new ApiError(400, "Invalid admin email");
+    }
+
+    const user = await userRepository.findByEmail(normalizedEmail);
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+      throw new ApiError(403, "Not authorized as admin");
+    }
+
+    await otpService.sendEmailOtp(normalizedEmail);
+    return { message: "OTP sent to admin email" };
+  }
+
+  async adminResetPassword(email: string, code: string, newPassword: string) {
+    if (!email || !code || !newPassword) throw new ApiError(400, "Missing required fields");
+    const normalizedEmail = email.toLowerCase();
+    
+    if (process.env.ADMIN_EMAIL && normalizedEmail !== process.env.ADMIN_EMAIL.toLowerCase()) {
+      throw new ApiError(400, "Invalid admin email");
+    }
+
+    const otpVerification = await otpService.verifyOtp(normalizedEmail, code, "EMAIL");
+    if (!otpVerification.success) {
+      throw new ApiError(401, otpVerification.message);
+    }
+
+    const user = await userRepository.findByEmail(normalizedEmail);
+    if (!user) throw new ApiError(404, "User not found");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await userRepository.update(user.id, { password: hashedPassword });
+
+    return { message: "Password updated successfully" };
+  }
+
   async refreshAccessToken(oldRefreshToken: string) {
     const session = await userRepository.findSession(oldRefreshToken);
     if (!session || session.expiresAt < new Date()) {

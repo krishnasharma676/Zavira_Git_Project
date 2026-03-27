@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Palette, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Palette, RefreshCw, Layers } from 'lucide-react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -9,17 +9,24 @@ interface Color {
   hexCode: string;
 }
 
+import { useAdminStore } from '../../store/useAdminStore';
+
+interface Color {
+  id: string;
+  name: string;
+  hexCode: string;
+}
+
 const ColorManagement = () => {
-  const [colors, setColors] = useState<Color[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { colors, fetchColors, refreshColors } = useAdminStore();
+  const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newColor, setNewColor] = useState({ name: '', hexCode: '#000000' });
 
-  const fetchColors = async () => {
+  const handleFetchColors = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/colors');
-      setColors(data.data);
+      await fetchColors();
     } catch (error) {
       toast.error('Failed to fetch colors');
     } finally {
@@ -28,8 +35,8 @@ const ColorManagement = () => {
   };
 
   useEffect(() => {
-    fetchColors();
-  }, []);
+    handleFetchColors();
+  }, [fetchColors]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +47,7 @@ const ColorManagement = () => {
       await api.post('/colors', newColor);
       toast.success('Color saved to repository');
       setNewColor({ name: '', hexCode: '#000000' });
-      fetchColors();
+      await refreshColors();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to save color');
     } finally {
@@ -53,101 +60,123 @@ const ColorManagement = () => {
     try {
       await api.delete(`/colors/${id}`);
       toast.success('Color removed');
-      fetchColors();
+      await refreshColors();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete color');
     }
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto py-4 px-4 font-sans uppercase">
-      <header className="flex justify-between items-end border-b border-gray-100 pb-2">
+    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-gray-900 leading-none">Color Repository</h1>
-          <p className="text-gray-400 text-[8px] font-bold tracking-widest mt-1 flex items-center gap-2">
-            <Palette size={12} className="text-[#7A578D]" /> Centralized Color & Hex Palette Management
-          </p>
+          <h1 className="text-lg font-bold text-gray-900 tracking-tight uppercase">Product Colors</h1>
+          <p className="text-gray-500 text-xs mt-1 font-medium">Add and manage colors for your product variations.</p>
         </div>
-        <button onClick={fetchColors} className="text-xs font-black text-[#7A578D] hover:bg-[#7A578D]/5 p-1.5 rounded-lg transition-all">
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+        <button onClick={refreshColors} className="p-3 bg-white border border-gray-200 rounded-sm text-gray-500 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-500 shadow-sm flex items-center justify-center">
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Creation Form */}
-        <section className="md:col-span-1 bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-fit space-y-3">
-          <h2 className="text-[10px] font-black text-gray-800 tracking-widest border-b border-gray-50 pb-1.5">Add New Spectrum</h2>
-          <form onSubmit={handleCreate} className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
+        {/* Editor */}
+        <section className="lg:col-span-4 bg-white p-2 rounded-sm border border-gray-100 shadow-sm space-y-2">
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+            <div className="w-6 h-6 bg-[#7A578D]/5 rounded-sm flex items-center justify-center text-[#7A578D]">
+              <Palette size={24} />
+            </div>
+            <div>
+               <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider">New Color</h2>
+               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-0.5">Define a new tone</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreate} className="space-y-2">
             <div className="space-y-1">
-              <label className="text-[8px] font-black tracking-widest text-gray-400 ml-1">Color Designation</label>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Color Name</label>
               <input 
                 required 
                 value={newColor.name} 
-                placeholder="e.g. Royal Blue"
-                onChange={(e) => setNewColor({...newColor, name: e.target.value})} 
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" 
+                onChange={(e) => setNewColor({...newColor, name: e.target.value})}
+                placeholder="e.g. Crimson Red"
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-medium transition-all" 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[8px] font-black tracking-widest text-gray-400 ml-1">Hexadecimal Identity</label>
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Hex Code</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-gray-200 shadow-sm overflow-hidden ring-2 ring-white z-10">
+                  <input 
+                    type="color" 
+                    value={newColor.hexCode} 
+                    onChange={(e) => setNewColor({...newColor, hexCode: e.target.value})}
+                    className="absolute inset-0 w-full h-full scale-150 cursor-pointer border-0 p-0" 
+                  />
+                </div>
                 <input 
-                  type="color" 
+                  required 
                   value={newColor.hexCode} 
-                  onChange={(e) => setNewColor({...newColor, hexCode: e.target.value})} 
-                  className="w-7 h-7 rounded cursor-pointer shrink-0 border-0 bg-transparent" 
-                />
-                <input 
-                  type="text"
-                  value={newColor.hexCode}
                   onChange={(e) => setNewColor({...newColor, hexCode: e.target.value})}
-                  className="bg-transparent text-[10px] font-mono font-black outline-none w-full uppercase"
+                  className="w-full bg-white border border-gray-200 rounded-sm py-1.5 pl-14 pr-4 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-mono uppercase font-bold tracking-wider transition-all shadow-sm" 
+                  placeholder="#000000" 
                 />
               </div>
             </div>
-            <div className="pt-1">
-              <button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full bg-[#7A578D] text-white py-2 rounded-lg text-[9px] font-black tracking-widest hover:bg-black transition-all shadow-lg shadow-purple-500/10 flex items-center justify-center gap-2"
-              >
-                <Plus size={12} /> Register Color
-              </button>
-            </div>
+            <button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold uppercase tracking-wider hover:bg-[#7A578D] transition-all shadow-md active:scale-95 disabled:opacity-50 mt-4"
+            >
+              {isSubmitting ? 'WORKING...' : 'REGISTER NEW COLOR'}
+            </button>
           </form>
         </section>
 
-        {/* Color Grid */}
-        <section className="md:col-span-2 space-y-3">
-          <h2 className="text-[10px] font-black text-gray-400 tracking-widest">Saved Spectrums ({colors.length})</h2>
+        {/* Display */}
+        <section className="lg:col-span-8 space-y-2">
+          <div className="flex items-center gap-2 mb-4 ml-1">
+             <Layers size={20} className="text-[#7A578D]" />
+             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] bg-gray-100 px-3 py-1 rounded-sm">Saved Palette ({colors.length})</h3>
+          </div>
+          
           {loading && colors.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[1,2,3,4,5,6].map(i => <div key={i} className="h-20 bg-gray-50 animate-pulse rounded-xl" />)}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-50 rounded-sm animate-pulse border border-gray-100" />
+              ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {colors.map((color) => (
-                <div key={color.id} className="group bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:border-[#7A578D]/30 transition-all space-y-2 relative">
-                  <div className="aspect-[2.5/1] rounded-lg shadow-inner border border-gray-50" style={{ backgroundColor: color.hexCode }} />
-                  <div className="flex justify-between items-start pt-0.5 px-0.5">
-                    <div className="min-w-0">
-                      <p className="text-[8px] font-black text-gray-900 truncate pr-2 leading-tight">{color.name}</p>
-                      <p className="text-[7px] font-mono font-bold text-gray-400 leading-none">{color.hexCode}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {colors.map(color => (
+                <div key={color.id} className="group bg-white p-2 rounded-sm border border-gray-100 hover:border-[#7A578D]/30 hover:shadow-md transition-all animate-in zoom-in-95 cursor-default relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  <div className="w-full h-20 rounded-sm border border-gray-200 shadow-inner group-hover:scale-105 transition-transform duration-500 z-10 relative" style={{ backgroundColor: color.hexCode }} />
+                  <div className="mt-4 flex flex-col gap-1 px-1 z-10 relative">
+                    <div className="flex items-start justify-between gap-2">
+                       <div className="min-w-0">
+                         <p className="text-xs font-bold text-gray-900 uppercase tracking-wider truncate" title={color.name}>{color.name}</p>
+                         <p className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest mt-0.5">{color.hexCode}</p>
+                       </div>
+                       <button 
+                         onClick={() => handleDelete(color.id)} 
+                         className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-sm transition-all border border-transparent hover:border-red-100 shrink-0"
+                         title="Delete Color"
+                       >
+                         <Trash2 size={16} />
+                       </button>
                     </div>
-                    <button 
-                      onClick={() => handleDelete(color.id)}
-                      className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                    >
-                      <Trash2 size={11} />
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
           {colors.length === 0 && !loading && (
-            <div className="bg-gray-50 rounded-xl p-10 text-center border border-dashed border-gray-200">
-              <p className="text-[9px] font-black text-gray-400 tracking-widest">No colors registered in the repository.</p>
+            <div className="bg-white rounded-sm p-24 text-center border-2 border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Palette size={40} className="text-gray-300" />
+               </div>
+               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No colors defined</p>
+               <p className="text-xs text-gray-400 font-medium mt-2">Use the form to add your first color preset.</p>
             </div>
           )}
         </section>

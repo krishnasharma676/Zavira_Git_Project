@@ -10,6 +10,12 @@ const api = axios.create({
 // ── REQUEST INTERCEPTOR ──────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
+    // Show global loader for non-silent requests
+    const isSilent = config.headers?.silent === true;
+    if (!isSilent) {
+      // useLoadingStore.getState().startLoading?.(); // Removed
+    }
+
     // Always inject the up-to-date Bearer token from localStorage
     const token = localStorage.getItem('token');
     if (token) {
@@ -19,6 +25,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    // useLoadingStore.getState().stopLoading?.(); // Removed
     return Promise.reject(error);
   }
 );
@@ -40,9 +47,17 @@ const processQueue = (error: any, token: string | null = null) => {
 
 api.interceptors.response.use(
   (response) => {
+    // Hide global loader
+    const isSilent = response.config.headers?.silent === true;
+    if (!isSilent) {
+      // useLoadingStore.getState().stopLoading?.(); // Removed
+    }
     return response;
   },
   async (error) => {
+    // Hide global loader on error
+    const isSilent = error.config?.headers?.silent === true;
+    
     const originalRequest = error.config;
     
     // Detection to avoid infinite refresh loops

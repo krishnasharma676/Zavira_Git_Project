@@ -20,7 +20,9 @@ export const productSchema = z.object({
     width: z.preprocess((val) => (val ? parseFloat(val as string) : 0), z.number().nonnegative()).optional(),
     height: z.preprocess((val) => (val ? parseFloat(val as string) : 0), z.number().nonnegative()).optional(),
     hsnCode: z.string().optional().nullable(),
-    taxRate: z.preprocess((val) => (val ? parseInt(val as string) : 0), z.number().int().nonnegative()).optional(),
+    taxRate: z.preprocess((val) => (val ? parseFloat(val as string) : 0), z.number().nonnegative()).optional(),
+    weightUnit: z.string().optional().default("kg"),
+    dimensionUnit: z.string().optional().default("cm"),
   })
 });
 

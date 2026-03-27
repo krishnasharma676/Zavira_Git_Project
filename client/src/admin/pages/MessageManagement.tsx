@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, Trash2, CheckCircle, Clock, Send, MessageSquare, User } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
@@ -27,8 +27,13 @@ const MessageManagement = () => {
         }
     };
 
+    const isFirstRender = useRef(true);
+
     useEffect(() => {
-        fetchMessages();
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            fetchMessages();
+        }
     }, []);
 
     const handleMarkAsRead = async (id: string) => {
@@ -86,12 +91,12 @@ const MessageManagement = () => {
                     const msg = messages[tableMeta.rowIndex];
                     return (
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gray-50 flex items-center justify-center rounded-lg border border-gray-100">
-                                <User size={14} className="text-gray-400" />
+                            <div className="w-6 h-6 bg-gray-50 flex items-center justify-center rounded-sm border border-gray-100 shadow-sm">
+                                <User size={16} className="text-[#7A578D]" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase text-gray-900 leading-tight">{val}</span>
-                                <span className="text-[8px] text-gray-400 lowercase font-bold italic">{msg.email}</span>
+                                <span className="text-xs font-bold uppercase text-gray-900 tracking-wider leading-tight">{val}</span>
+                                <span className="text-xs text-gray-500 lowercase font-medium">{msg.email}</span>
                             </div>
                         </div>
                     );
@@ -103,7 +108,7 @@ const MessageManagement = () => {
             label: "SUBJECT",
             options: {
                 customBodyRender: (val: string) => (
-                    <span className="text-[10px] font-bold text-gray-600 truncate max-w-[200px] block">{val}</span>
+                    <span className="text-xs font-bold text-gray-700 truncate max-w-[250px] block" title={val}>{val}</span>
                 )
             }
         },
@@ -113,17 +118,17 @@ const MessageManagement = () => {
             options: {
                 customBodyRender: (val: string) => {
                     const styles = {
-                        PENDING: 'bg-amber-50 text-amber-600 border-amber-100',
-                        READ: 'bg-blue-50 text-blue-600 border-blue-100',
-                        REPLIED: 'bg-green-50 text-green-600 border-green-100'
+                        PENDING: 'bg-amber-50 text-amber-700 border-amber-100',
+                        READ: 'bg-blue-50 text-blue-700 border-blue-100',
+                        REPLIED: 'bg-green-50 text-green-700 border-green-100'
                     };
                     const icons = {
-                        PENDING: <Clock size={10} />,
-                        READ: <MessageSquare size={10} />,
-                        REPLIED: <CheckCircle size={10} />
+                        PENDING: <Clock size={14} />,
+                        READ: <MessageSquare size={14} />,
+                        REPLIED: <CheckCircle size={14} />
                     };
                     return (
-                        <div className={`flex items-center space-x-1 px-2 py-0.5 rounded border text-[8px] font-black uppercase w-fit ${styles[val as keyof typeof styles]}`}>
+                        <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-sm border text-xs font-bold uppercase tracking-widest shadow-sm w-fit ${styles[val as keyof typeof styles]}`}>
                             {icons[val as keyof typeof icons]}
                             <span>{val}</span>
                         </div>
@@ -137,8 +142,8 @@ const MessageManagement = () => {
             options: {
                 customBodyRender: (val: string) => (
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-gray-500">{new Date(val).toLocaleDateString()}</span>
-                        <span className="text-[8px] text-gray-400 font-medium">{new Date(val).toLocaleTimeString()}</span>
+                        <span className="text-xs font-bold text-gray-900">{new Date(val).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-500 font-medium">{new Date(val).toLocaleTimeString()}</span>
                     </div>
                 )
             }
@@ -150,20 +155,20 @@ const MessageManagement = () => {
                 customBodyRender: (id: string, tableMeta: any) => {
                     const msg = messages[tableMeta.rowIndex];
                     return (
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-2">
                             <button 
                                 onClick={() => openReplyModal(msg)}
-                                className="p-1 px-2 hover:bg-[#7A578D]/5 text-[#7A578D] rounded transition-colors"
+                                className="p-2 hover:bg-[#7A578D]/10 text-[#7A578D] rounded-sm transition-colors border border-transparent hover:border-[#7A578D]/20 shadow-sm"
                                 title="Reply/View"
                             >
-                                <Send size={12} />
+                                <Send size={16} />
                             </button>
                             <button 
                                 onClick={() => handleDelete(id)}
-                                className="p-1 px-2 hover:bg-red-50 text-red-500 rounded transition-colors"
+                                className="p-2 hover:bg-red-50 text-red-600 rounded-sm transition-colors border border-transparent hover:border-red-200 shadow-sm"
                                 title="Delete"
                             >
-                                <Trash2 size={12} />
+                                <Trash2 size={16} />
                             </button>
                         </div>
                     );
@@ -186,40 +191,32 @@ const MessageManagement = () => {
             const msg = messages[rowMeta.rowIndex];
             if (!msg) return null;
             return (
-                <tr className="bg-gray-50/30">
-                    <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
-                            {/* Original Message */}
-                            <div className="space-y-3">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
-                                    <MessageSquare size={12} /> Inquiry Content
-                                </h3>
-                                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm italic relative">
-                                    <div className="absolute -top-2 -left-2 bg-gray-100 text-gray-400 p-1 rounded-full border border-white shadow-sm">
-                                        <User size={10} />
-                                    </div>
-                                    <p className="text-[11px] text-gray-600 leading-relaxed font-black uppercase">{msg.message}</p>
-                                </div>
+                <tr style={{ backgroundColor: '#fff' }}>
+                    <td colSpan={columns.length + 1} style={{ padding: '0', borderBottom: '1px solid #eee' }}>
+                        <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontFamily: '"Times New Roman", Times, serif', fontSize: '12px', color: '#333' }}>
+                            <div style={{ gridColumn: 'span 4' }}>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>Inquiry Message:</strong>
+                                <span>{msg.message}</span>
                             </div>
-
-                            {/* Reply Context */}
-                            <div className="space-y-3 border-l border-gray-100 pl-6">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600 flex items-center gap-2">
-                                    <Send size={12} /> Communication Log
-                                </h3>
-                                {msg.status === 'REPLIED' ? (
-                                    <div className="bg-green-50/50 border border-green-100/50 rounded-2xl p-4 italic relative">
-                                        <div className="absolute -top-2 -left-2 bg-green-100 text-green-600 p-1 rounded-full border border-white shadow-sm">
-                                            <CheckCircle size={10} />
-                                        </div>
-                                        <p className="text-[11px] text-green-800 leading-relaxed font-black uppercase">{msg.reply || 'SYSTEM_AUTO_REPLIED'}</p>
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-6">
-                                        <Clock size={16} className="text-gray-300 mb-2" />
-                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Awaiting Staff Response</p>
-                                    </div>
-                                )}
+                            <div style={{ gridColumn: 'span 4' }}>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>Support Reply:</strong>
+                                <span>{msg.reply || 'Pending Staff Response'}</span>
+                            </div>
+                            <div>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>Sender Name:</strong>
+                                <span>{msg.name}</span>
+                            </div>
+                            <div>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>Sender Email:</strong>
+                                <span>{msg.email}</span>
+                            </div>
+                            <div>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>Received On:</strong>
+                                <span>{new Date(msg.createdAt).toLocaleString()}</span>
+                            </div>
+                            <div>
+                                <strong style={{ display: 'block', marginBottom: '4px' }}>System ID:</strong>
+                                <span>{msg.id}</span>
                             </div>
                         </div>
                     </td>
@@ -230,22 +227,22 @@ const MessageManagement = () => {
 
 
     return (
-        <div className="space-y-4 animate-in fade-in duration-500">
-            <header className="flex justify-between items-center border-b border-gray-100 pb-2">
+        <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
                 <div>
-                    <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Messages</h1>
-                    <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">User inquiries & support requests</p>
+                    <h1 className="text-lg font-bold uppercase tracking-tight text-gray-900 leading-none">Messages</h1>
+                    <p className="text-gray-500 text-xs mt-1 font-medium">User inquiries & support requests</p>
                 </div>
-                <div className="flex items-center space-x-2 text-[8px] font-black uppercase text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                    <MessageSquare size={10} />
+                <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#7A578D] bg-[#7A578D]/5 px-2 py-1 rounded-sm border border-[#7A578D]/20 shadow-sm">
+                    <MessageSquare size={16} />
                     <span>Total {messages.length} inquiries</span>
                 </div>
             </header>
 
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm relative min-h-[400px]">
+            <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[200px]">
                 {loading && (
-                    <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="w-8 h-8 border-2 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
+                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                        <div className="w-6 h-6 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
                     </div>
                 )}
                 <ThemeProvider theme={getMuiTheme()}>
@@ -259,48 +256,48 @@ const MessageManagement = () => {
                 title="Message Details"
             >
                 {selectedMessage && (
-                    <div className="space-y-4">
-                        <div className="bg-[#7A578D]/5 border border-[#7A578D]/10 rounded-xl p-3 space-y-3">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <h4 className="text-[11px] font-black uppercase tracking-tight text-gray-900">{selectedMessage.subject}</h4>
-                                    <div className="flex items-center space-x-2 text-[8px] font-bold text-gray-500 italic">
-                                        <User size={9} />
+                    <div className="space-y-2">
+                        <div className="bg-[#7A578D]/5 border border-[#7A578D]/10 rounded-sm p-2 space-y-1">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div className="space-y-1.5">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">{selectedMessage.subject}</h4>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-gray-500">
+                                        <User size={12} />
                                         <span>{selectedMessage.name}</span>
-                                        <span>•</span>
-                                        <Mail size={9} />
+                                        <span className="text-gray-300">•</span>
+                                        <Mail size={12} />
                                         <span className="lowercase">{selectedMessage.email}</span>
                                     </div>
                                 </div>
-                                <span className="text-[7px] font-black text-gray-400">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
+                                <span className="text-xs font-bold text-gray-400 bg-white px-3 py-1 rounded-sm border border-gray-200">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
                             </div>
-                            <div className="bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm italic">
-                                <p className="text-[10px] text-gray-600 leading-relaxed font-medium">"{selectedMessage.message}"</p>
+                            <div className="bg-white border border-gray-200 rounded-sm p-2 shadow-sm italic">
+                                <p className="text-xs text-gray-700 leading-relaxed font-medium">"{selectedMessage.message}"</p>
                             </div>
                         </div>
 
                         {selectedMessage.status === 'REPLIED' ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center space-x-2 text-[8px] font-black uppercase text-green-600">
-                                    <CheckCircle size={10} />
+                            <div className="space-y-1">
+                                <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-green-700 ml-1">
+                                    <CheckCircle size={14} />
                                     <span>Sent Reply:</span>
                                 </div>
-                                <div className="bg-green-50/50 border border-green-100/50 rounded-lg p-2.5 text-[10px] text-gray-600 font-medium italic">
+                                <div className="bg-green-50/50 border border-green-100/50 rounded-sm p-2 text-xs text-green-800 font-medium italic shadow-sm">
                                     {selectedMessage.reply}
                                 </div>
                             </div>
                         ) : (
-                            <form onSubmit={handleReply} className="space-y-3">
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-black uppercase tracking-widest text-[#7A578DR ml-1 flex items-center space-x-1.5">
-                                        <Send size={9} />
+                            <form onSubmit={handleReply} className="space-y-2">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-[#7A578D] ml-1 flex items-center gap-2">
+                                        <Send size={14} />
                                         <span>Your Response</span>
                                     </label>
                                     <textarea
                                         value={replyText}
                                         onChange={(e) => setReplyText(e.target.value)}
-                                        rows={3}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 px-3 outline-none focus:border-[#7A578D] text-[10px] font-bold transition-all resize-none"
+                                        rows={4}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-medium transition-all resize-none shadow-sm"
                                         placeholder="Type your reply here..."
                                         required
                                     />
@@ -308,7 +305,7 @@ const MessageManagement = () => {
                                 <button 
                                     type="submit" 
                                     disabled={isSubmitting || !replyText.trim()}
-                                    className="w-full luxury-button py-2 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] disabled:opacity-50"
+                                    className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 disabled:opacity-50 hover:bg-[#7A578D]"
                                 >
                                     {isSubmitting ? 'SENDING REPLY...' : 'SEND REPLY TO USER'}
                                 </button>

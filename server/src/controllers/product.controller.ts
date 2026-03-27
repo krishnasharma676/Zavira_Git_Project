@@ -40,3 +40,8 @@ export const deleteImage = asyncHandler(async (req: Request, res: Response) => {
   await productService.deleteProductImage(req.params.productId as string, req.params.imageId as string);
   return res.status(200).json(new ApiResponse(200, {}, "Image deleted successfully"));
 });
+
+export const getHomeData = asyncHandler(async (req: Request, res: Response) => {
+  const data = await productService.getHomeData();
+  return res.status(200).json(new ApiResponse(200, data, "Home data fetched successfully"));
+});

@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -52,4 +53,4 @@ const CategoryGrid = ({ categories }: CategoryGridProps) => {
   );
 };
 
-export default CategoryGrid;
+export default React.memo(CategoryGrid);

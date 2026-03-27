@@ -3,19 +3,26 @@ import { OrderStatus, PaymentStatus } from "@prisma/client";
 
 export class OrderRepository {
   async createOrder(orderData: any, items: any[]) {
+    // 1. Data Integrity Check (Prevent Database Errors from NaN/Invalid numbers)
+    if (isNaN(orderData.totalAmount) || isNaN(orderData.payableAmount)) {
+      throw new Error("P:INVALID_AMOUNT"); // Custom marker for internal check
+    }
+
     const { paymentMethod, ...data } = orderData;
+    
     return await prisma.$transaction(async (tx) => {
       // 1. Create order
-      const order = await (tx as any).order.create({
+      const order = await tx.order.create({
         data: {
           ...data,
+          paymentMethod: paymentMethod, // Ensure paymentMethod is stored on Order model too
           items: {
             create: items.map(item => ({
               productId: item.productId,
               quantity: item.quantity,
               price: item.price,
-              selectedSize: item.selectedSize || undefined,
-              variantId: item.variantId || undefined,
+              selectedSize: item.selectedSize || null,
+              variantId: item.variantId || null,
             }))
           },
           payment: {
@@ -32,8 +39,8 @@ export class OrderRepository {
       // 2. Deduct inventory
       for (const item of items) {
         if (item.variantId && item.selectedSize) {
-          // Update variant size stock directly
-          await (tx as any).productVariantSize.updateMany({
+          // Update variant size stock
+          await tx.productVariantSize.updateMany({
             where: { 
               variantId: item.variantId, 
               size: item.selectedSize 
@@ -44,7 +51,9 @@ export class OrderRepository {
           });
         }
         
-        await (tx as any).inventory.update({
+        // Update main inventory record
+        // Note: Using update here as every valid product MUST have an inventory record
+        await tx.inventory.update({
           where: { productId: item.productId },
           data: { stock: { decrement: item.quantity } }
         });
@@ -52,7 +61,7 @@ export class OrderRepository {
 
       return order;
     }, {
-      timeout: 30000 // Increase timeout to 30 seconds for complex orders
+      timeout: 30000 
     });
   }
 

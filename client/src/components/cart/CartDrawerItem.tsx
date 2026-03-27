@@ -38,7 +38,7 @@ const CartDrawerItem = ({ item, removeItem, updateQuantity }: CartDrawerItemProp
                </Link>
                <div className="flex items-center space-x-1.5">
                    <span className="text-[7px] font-black text-gray-400 dark:text-gray-500 bg-gray-100/50 dark:bg-white/5 px-1 py-0.5 rounded uppercase tracking-[0.15em]">
-                     SKU: {String(item.id || '').slice(0,6)}
+                     SKU: {item.sku || String(item.id || '').slice(0,6)}
                    </span>
 
                    {item.selectedSize && (

@@ -28,12 +28,16 @@ export const useAuth = create<AuthState>()(
         localStorage.setItem('token', token);
         set({ user, token, isAuthenticated: true });
         
-        // After auth is active, merge any guest cart items and sync from server
-        const cartItems = useCart.getState().items;
-        if (cartItems.length > 0) {
-          await useCart.getState().bulkSync(cartItems);
-        } else {
-          await useCart.getState().syncCart();
+        const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+        
+        if (!isAdmin) {
+          // After auth is active, merge any guest cart items and sync from server
+          const cartItems = useCart.getState().items;
+          if (cartItems.length > 0) {
+            await useCart.getState().bulkSync(cartItems);
+          } else {
+            await useCart.getState().syncCart();
+          }
         }
       },
       logout: () => {

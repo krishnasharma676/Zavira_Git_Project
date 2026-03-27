@@ -6,7 +6,8 @@ import {
   updateProduct, 
   deleteProduct, 
   uploadImages, 
-  deleteImage 
+  deleteImage,
+  getHomeData
 } from "../controllers/product.controller";
 import { authenticate, isAdmin } from "../middleware/auth.middleware";
 import { upload } from "../middleware/multer.middleware";
@@ -16,6 +17,7 @@ import { productSchema, updateProductSchema, productSlugSchema } from "../valida
 const router = Router();
 
 // Public routes
+router.get("/home-data", getHomeData);
 router.get("/", getProducts);
 router.get("/:slug", validate(productSlugSchema), getProductBySlug);
 

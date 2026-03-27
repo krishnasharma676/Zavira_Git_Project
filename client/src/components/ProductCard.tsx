@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/format';
 import { getPrimaryImage } from '../utils/productHelpers';
+import api from '../api/axios';
+import { performAddToCart } from '../utils/cartHelpers';
+import { performToggleWishlist } from '../utils/wishlistHelpers';
 
 
 interface ProductCardProps {
@@ -32,21 +35,7 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOutOfStock) return;
-    
-    addItem({
-      id: product.id,
-      variantId: product.currentVariantId,
-      name: product.name,
-      price: product.discountedPrice || product.basePrice || 0,
-      quantity: 1,
-      image: primaryImage,
-      selectedSize: defaultSize,
-      slug: product.slug,
-      stock: product.inventory?.stock || 0
-
-    });
-    toast.success(`Small Luxury! Added Size: ${defaultSize || 'Unified'}`);
+    performAddToCart(product, null, defaultSize, 1, addItem);
   };
 
 
@@ -54,15 +43,7 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleItem({
-      id: product.id,
-      name: product.name,
-      price: product.discountedPrice || product.basePrice || 0,
-      image: primaryImage,
-      slug: product.slug,
-      category: product.category?.name || ''
-    });
-    if (!inWishlist) toast.success('Saved to vault');
+    performToggleWishlist(product, 0, toggleItem, isInWishlist);
   };
 
   return (
@@ -101,7 +82,11 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
         </button>
 
         {/* Product Image */}
-        <Link to={`/product/${product.slug}`} className="block w-full h-full relative z-10">
+        <Link 
+          to={`/product/${product.slug}`} 
+          state={{ product }} 
+          className="block w-full h-full relative z-10"
+        >
           <img 
             src={primaryImage} 
             alt={product.name}
@@ -147,7 +132,7 @@ const ProductCard = ({ product, toggleItem, isInWishlist, addItem }: ProductCard
              {product.category?.name || product.category || 'Collection'}
            </span>
            <div className="flex justify-between items-start gap-2">
-              <Link to={`/product/${product.slug}`} className="flex-1">
+              <Link to={`/product/${product.slug}`} state={{ product }} className="flex-1">
                 <h2 className="text-[11px] font-black uppercase tracking-tight text-gray-800 dark:text-white line-clamp-1 leading-tight group-hover:text-[#7A578D] transition-colors">{product.name}</h2>
               </Link>
 

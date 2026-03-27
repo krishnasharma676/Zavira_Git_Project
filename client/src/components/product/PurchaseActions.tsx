@@ -1,4 +1,5 @@
 import { ShoppingBag, Heart } from 'lucide-react';
+import { performToggleWishlist } from '../../utils/wishlistHelpers';
 
 interface PurchaseActionsProps {
   product: any;
@@ -38,22 +39,10 @@ const PurchaseActions = ({ product, quantity, setQuantity, handleAddToCart, togg
         className={`flex-grow luxury-button rounded-xl flex items-center justify-center space-x-3 ${(product.inventory?.stock || 0) <= 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
       >
           <ShoppingBag size={14} className="mr-2" />
-          <span>{(product.inventory?.stock || 0) <= 0 ? 'OUT OF STOCK' : 'ADD TO COLLECTION'}</span>
+          <span>{(product.inventory?.stock || 0) <= 0 ? 'OUT OF STOCK' : 'Add To Cart'}</span>
         </button>
         <button 
-          onClick={() => {
-            toggleItem({
-              id: product.id,
-              name: product.name,
-              price: primaryPrice,
-              category: product.category?.name,
-              image: product.images?.[0]?.imageUrl,
-              slug: product.slug
-            });
-            if (!isInWishlist(product.id)) {
-              toast.success('Added to wishlist!');
-            }
-          }}
+          onClick={() => performToggleWishlist(product, primaryPrice, toggleItem, isInWishlist)}
           className={`p-3.5 border rounded-xl transition-all shadow-sm flex items-center justify-center ${
             isInWishlist(product.id)
               ? 'bg-[#7A578D] border-[#7A578D] text-white'

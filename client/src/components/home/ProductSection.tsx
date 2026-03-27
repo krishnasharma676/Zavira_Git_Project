@@ -1,3 +1,5 @@
+import React from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import ProductCard from '../ProductCard';
@@ -30,13 +32,10 @@ const ProductSection = ({
 
   return (
     <section className="container mx-auto px-4 mb-12 lg:mb-16">
-      <div className="flex flex-col items-center mb-10 text-center relative max-w-4xl mx-auto">
-        <div className="flex items-center gap-6 mb-3 w-full">
-           <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#7A578D] to-[#7A578D] opacity-10" />
-           <span className="text-[11px] md:text-[13px] font-black uppercase tracking-[0.4em] text-[#7A578D]/80 whitespace-nowrap leading-none">{title}</span>
-           <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-[#7A578D] to-[#7A578D] opacity-10" />
-        </div>
-        <div className="w-12 h-0.5 bg-[#7A578D] opacity-10 mt-2 rounded-full" />
+      <div className="flex flex-col items-center mb-12 text-center relative max-w-4xl mx-auto">
+         <h2 className="text-[18px] md:text-[26px] font-black uppercase tracking-[0.3em] text-[#7A578D] leading-none">
+           {title}
+         </h2>
       </div>
 
 
@@ -82,4 +81,4 @@ const ProductSection = ({
   );
 };
 
-export default ProductSection;
+export default React.memo(ProductSection);

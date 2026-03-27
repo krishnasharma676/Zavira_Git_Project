@@ -147,6 +147,10 @@ model Product {
   height          Float?           @default(0)
   hsnCode         String?
   taxRate         Float?           @default(0)
+  weightUnit      String?          @default("kg")
+  dimensionUnit   String?          @default("cm")
+  widthUnit       String?          @default("cm")
+  heightUnit       String?          @default("cm")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   isDeleted       Boolean          @default(false)
@@ -162,6 +166,9 @@ model Product {
 
   @@index([slug])
   @@index([categoryId])
+  @@index([featured])
+  @@index([trending])
+  @@index([hotDeals])
 }
 
 model ProductImage {

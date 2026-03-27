@@ -28,8 +28,10 @@ export function expandProductsByVariant(products: any[]): any[] {
 /**
  * Derive the primary display image for a product or variant card.
  */
-export function getPrimaryImage(product: any, fallback = ''): string {
+export function getPrimaryImage(product: any, fallback = 'https://images.unsplash.com/photo-1560343090-f0409e92791a?q=80&w=1000&auto=format&fit=crop'): string {
+  if (!product) return fallback;
   return (
+    product.image || // Check for pre-formatted single image (Wishlist/Cart)
     product.images?.find((img: any) => img.isPrimary)?.imageUrl ||
     product.images?.[0]?.imageUrl ||
     product.variants?.[0]?.images?.find((img: any) => img.isPrimary)?.imageUrl ||

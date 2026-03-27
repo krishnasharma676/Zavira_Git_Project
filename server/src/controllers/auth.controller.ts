@@ -8,6 +8,18 @@ export const sendOtp = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'OTP sent successfully', data: result });
 });
 
+export const adminForgotPasswordOtp = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const result = await authService.adminForgotPasswordOtp(email);
+  res.status(200).json({ success: true, message: result.message });
+});
+
+export const adminResetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email, code, newPassword } = req.body;
+  const result = await authService.adminResetPassword(email, code, newPassword);
+  res.status(200).json({ success: true, message: result.message });
+});
+
 export const verifyOtpAndLogin = asyncHandler(async (req: Request, res: Response) => {
   const { phone, code } = req.body;
   const ip = req.ip;

@@ -25,22 +25,21 @@ const ManagementModal = ({ isOpen, onClose, title, children }: ManagementModalPr
             initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 10 }}
-            className="bg-white w-full max-w-6xl rounded-2xl border border-gray-100 shadow-[0_30px_60px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white w-full max-w-7xl rounded-sm border border-gray-200 shadow-2xl relative overflow-hidden flex flex-col max-h-[95vh]"
           >
-            <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+            <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div>
-                <h2 className="text-[13px] font-sans font-black uppercase tracking-widest text-gray-900 leading-none">{title}</h2>
-                <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Update information below</p>
+                <h2 className="text-[12px] font-black uppercase tracking-widest text-gray-900 leading-none">{title}</h2>
               </div>
               <button 
                 onClick={onClose} 
-                className="w-7 h-7 flex items-center justify-center hover:bg-white hover:shadow-sm rounded-lg text-gray-400 hover:text-gray-900 transition-all border border-gray-100 bg-gray-50/50"
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-400 hover:text-gray-900 transition-all"
               >
                 <X size={14} />
               </button>
             </div>
             
-            <div className="p-5 overflow-y-auto no-scrollbar bg-white">
+            <div className="p-4 overflow-y-auto no-scrollbar bg-white">
               {children}
             </div>
           </motion.div>

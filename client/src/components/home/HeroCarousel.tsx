@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
@@ -38,31 +39,9 @@ const HeroCarousel = ({ slides, currentSlide, setCurrentSlide }: HeroCarouselPro
             <img 
               src={slides[currentSlide].imageUrl} 
               className="w-full h-full object-cover transition-transform duration-[5000ms] group-hover:scale-110" 
-              alt={slides[currentSlide].title || "Hero banner"} 
+              alt="Hero banner" 
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent group-hover:bg-black/0 transition-all duration-700"></div>
-            
-            {/* Added subtle text overlay animation if title exists */}
-            {(slides[currentSlide].title || slides[currentSlide].subtitle) && (
-              <div className="absolute inset-0 flex flex-col justify-center px-10 md:px-20 z-10 pointer-events-none">
-                 <motion.h2 
-                   initial={{ y: 20, opacity: 0 }}
-                   animate={{ y: 0, opacity: 1 }}
-                   transition={{ delay: 0.3, duration: 0.8 }}
-                   className="text-white text-4xl md:text-6xl font-black uppercase max-w-2xl drop-shadow-2xl"
-                 >
-                   {slides[currentSlide].title}
-                 </motion.h2>
-                 <motion.p 
-                   initial={{ y: 20, opacity: 0 }}
-                   animate={{ y: 0, opacity: 1 }}
-                   transition={{ delay: 0.5, duration: 0.8 }}
-                   className="text-white/80 text-sm md:text-lg mt-4 max-w-lg font-bold tracking-widest uppercase drop-shadow-lg"
-                 >
-                   {slides[currentSlide].subtitle}
-                 </motion.p>
-              </div>
-            )}
+
           </motion.div>
         </AnimatePresence>
 
@@ -88,4 +67,4 @@ const HeroCarousel = ({ slides, currentSlide, setCurrentSlide }: HeroCarouselPro
   );
 };
 
-export default HeroCarousel;
+export default React.memo(HeroCarousel);

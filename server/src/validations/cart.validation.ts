@@ -11,10 +11,8 @@ export const addToCartSchema = z.object({
 
 export const updateCartItemSchema = z.object({
   body: z.object({
-    productId: z.string().uuid(),
+    cartItemId: z.string().uuid(),
     quantity: z.number().int().nonnegative(),
-    variantId: z.string().uuid().optional().nullable(),
-    selectedSize: z.string().optional().nullable(),
   })
 });
 

@@ -434,262 +434,219 @@ const AuthModal = () => {
                 ))}
               </div>
 
-              {/* ── LOGIN ──────────────────────────────────────────────── */}
-              {mode === 'login' && (
-                <motion.div
-                  key="login"
-                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                  className="space-y-4"
-                >
-                  <form onSubmit={handleLogin} className="space-y-3">
-                    <InputGroup icon={<Mail size={13} />} label="Email Address"
-                      placeholder="name@example.com" type="email"
-                      value={loginData.email}
-                      error={loginErrors.email}
-                      onChange={v => { setLoginData({ ...loginData, email: v }); if(loginErrors.email) setLoginErrors({...loginErrors, email: ''}); }} />
-                    <InputGroup icon={<Lock size={13} />} label="Password"
-                      placeholder="••••••••••" type="password"
-                      value={loginData.password}
-                      error={loginErrors.password}
-                      onChange={v => { setLoginData({ ...loginData, password: v }); if(loginErrors.password) setLoginErrors({...loginErrors, password: ''}); }} />
-                    <button type="submit" disabled={loading}
-                      className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                        {loading ? 'Signing in...' : 'Login Now'}
-                      </span>
-                      <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  </form>
+              {/* ── Animated Form Panels ── */}
+              <AnimatePresence mode="wait" initial={false}>
 
-                  <Divider />
-
-                  {/* Social buttons */}
-                  <div className="space-y-2">
-                    <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Continue with Google" />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── REGISTER ───────────────────────────────────────────── */}
-              {mode === 'register' && (
-                <motion.div
-                  key="register"
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-                  className="space-y-4"
-                >
-                  <form onSubmit={handleRegister} className="space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <InputGroup icon={<User size={13} />} label="Name"
-                        placeholder="Your name"
-                        value={registerData.name}
-                        error={registerErrors.name}
-                        onChange={v => { setRegisterData({ ...registerData, name: v }); if(registerErrors.name) setRegisterErrors({...registerErrors, name: ''}); }} />
-                      <InputGroup icon={<Mail size={13} />} label="Email"
-                        placeholder="email@example.com" type="email"
-                        value={registerData.email}
-                        error={registerErrors.email}
-                        onChange={v => { setRegisterData({ ...registerData, email: v }); if(registerErrors.email) setRegisterErrors({...registerErrors, email: ''}); }} />
-                    </div>
-                    <InputGroup icon={<Phone size={13} />} label="Phone"
-                      placeholder="10 digit number"
-                      value={registerData.phone}
-                      error={registerErrors.phone}
-                      onChange={v => { setRegisterData({ ...registerData, phone: v }); if(registerErrors.phone) setRegisterErrors({...registerErrors, phone: ''}); }} />
-                    <div className="grid grid-cols-2 gap-2.5">
+                {/* ── LOGIN ──────────────────────────────────────────────── */}
+                {mode === 'login' && (
+                  <motion.div
+                    key="login"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="space-y-4"
+                  >
+                    <form onSubmit={handleLogin} className="space-y-3">
+                      <InputGroup icon={<Mail size={13} />} label="Email Address"
+                        placeholder="name@example.com" type="email"
+                        value={loginData.email}
+                        error={loginErrors.email}
+                        onChange={v => { setLoginData({ ...loginData, email: v }); if(loginErrors.email) setLoginErrors({...loginErrors, email: ''}); }} />
                       <InputGroup icon={<Lock size={13} />} label="Password"
-                        placeholder="Min 6 chars" type="password"
-                        value={registerData.password}
-                        error={registerErrors.password}
-                        onChange={v => { setRegisterData({ ...registerData, password: v }); if(registerErrors.password) setRegisterErrors({...registerErrors, password: ''}); }} />
-                      <InputGroup icon={<ShieldCheck size={13} />} label="Confirm"
-                        placeholder="Repeat" type="password"
-                        value={registerData.confirmPassword}
-                        error={registerErrors.confirmPassword}
-                        onChange={v => { setRegisterData({ ...registerData, confirmPassword: v }); if(registerErrors.confirmPassword) setRegisterErrors({...registerErrors, confirmPassword: ''}); }} />
-                    </div>
-                    <button type="submit" disabled={loading}
-                      className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                        {loading ? 'Creating...' : 'Create Account'}
-                      </span>
-                      <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  </form>
-
-                  <Divider />
-
-                  <div className="space-y-2">
-                    <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Sign up with Google" />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── EMAIL OTP ───────────────────────────────────────────── */}
-              {mode === 'email_otp' && (
-                <motion.div
-                  key="email_otp"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className="space-y-5"
-                >
-                  <button
-                    onClick={() => switchMode(emailOtpFlow)}
-                    className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
-                  >
-                    <ChevronRight size={10} className="rotate-180" />
-                    <span>Back to {emailOtpFlow === 'login' ? 'Login' : 'Signup'}</span>
-                  </button>
-
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Verify Email</h3>
-                    <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
-                      We've sent a 6-digit code to <span className="text-gray-900 dark:text-white font-black">{emailOtpFlow === 'login' ? loginData.email : registerData.email}</span>
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex space-x-2 justify-between">
-                      {otp.map((digit, i) => (
-                        <input
-                          key={i}
-                          ref={el => { otpRefs.current[i] = el; }}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          onChange={e => handleOtpChange(i, e.target.value)}
-                          onKeyDown={e => handleOtpKeyDown(i, e)}
-                          className="w-10 h-12 text-center bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-black text-gray-900 dark:text-white outline-none focus:border-[#7A578D] transition-colors"
-                        />
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={handleVerifyEmailOtp}
-                      disabled={loading || otp.join('').length < 6}
-                      className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50"
-                    >
-                      <ShieldCheck size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                        {loading ? 'Verifying...' : 'Verify Email'}
-                      </span>
-                    </button>
-
-                    <div className="text-center">
-                      {otpTimer > 0 ? (
-                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                          Resend code in {otpTimer}s
-                        </p>
-                      ) : (
-                        <button
-                          onClick={emailOtpFlow === 'login' ? handleLogin : handleRegister}
-                          className="text-[9px] font-black uppercase tracking-wider text-[#7A578D] hover:underline"
-                        >
-                          Resend Verification Code
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── PHONE OTP ───────────────────────────────────────────── */}
-              {mode === 'phone' && (
-                <motion.div
-                  key="phone"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className="space-y-5"
-                >
-                  <button
-                    onClick={() => switchMode('login')}
-                    className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
-                  >
-                    <ChevronRight size={10} className="rotate-180" />
-                    <span>Back to Login</span>
-                  </button>
-
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Phone Verification</h3>
-                    <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
-                      {phoneStep === 'input' ? 'Enter your mobile number' : 'Enter the 6-digit OTP sent to your phone'}
-                    </p>
-                  </div>
-
-                  {phoneStep === 'input' ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl px-3 py-2.5">
-                          <span className="text-xs font-black text-gray-500 dark:text-gray-400">🇮🇳 +91</span>
-                        </div>
-                        <input
-                          type="tel"
-                          placeholder="10-digit number"
-                          value={phone}
-                          onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-2.5 px-4 outline-none focus:border-[#7A578D]/40 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-300"
-                          maxLength={10}
-                        />
-                      </div>
-                      <button
-                        onClick={handleSendOtp}
-                        disabled={loading || phone.length < 10}
-                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group disabled:opacity-50"
-                      >
-                        <Phone size={12} />
+                        placeholder="••••••••••" type="password"
+                        value={loginData.password}
+                        error={loginErrors.password}
+                        onChange={v => { setLoginData({ ...loginData, password: v }); if(loginErrors.password) setLoginErrors({...loginErrors, password: ''}); }} />
+                      <button type="submit" disabled={loading}
+                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
                         <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                          {loading ? 'Sending OTP...' : 'Send OTP'}
+                          {loading ? 'Signing in...' : 'Login Now'}
                         </span>
+                        <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                       </button>
+                    </form>
+                    <Divider />
+                    <div className="space-y-2">
+                      <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Continue with Google" />
                     </div>
-                  ) : (
+                  </motion.div>
+                )}
+
+                {/* ── REGISTER ───────────────────────────────────────────── */}
+                {mode === 'register' && (
+                  <motion.div
+                    key="register"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="space-y-4"
+                  >
+                    <form onSubmit={handleRegister} className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <InputGroup icon={<User size={13} />} label="Name"
+                          placeholder="Your name"
+                          value={registerData.name}
+                          error={registerErrors.name}
+                          onChange={v => { setRegisterData({ ...registerData, name: v }); if(registerErrors.name) setRegisterErrors({...registerErrors, name: ''}); }} />
+                        <InputGroup icon={<Mail size={13} />} label="Email"
+                          placeholder="email@example.com" type="email"
+                          value={registerData.email}
+                          error={registerErrors.email}
+                          onChange={v => { setRegisterData({ ...registerData, email: v }); if(registerErrors.email) setRegisterErrors({...registerErrors, email: ''}); }} />
+                      </div>
+                      <InputGroup icon={<Phone size={13} />} label="Phone"
+                        placeholder="10 digit number"
+                        value={registerData.phone}
+                        error={registerErrors.phone}
+                        onChange={v => { setRegisterData({ ...registerData, phone: v }); if(registerErrors.phone) setRegisterErrors({...registerErrors, phone: ''}); }} />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <InputGroup icon={<Lock size={13} />} label="Password"
+                          placeholder="Min 6 chars" type="password"
+                          value={registerData.password}
+                          error={registerErrors.password}
+                          onChange={v => { setRegisterData({ ...registerData, password: v }); if(registerErrors.password) setRegisterErrors({...registerErrors, password: ''}); }} />
+                        <InputGroup icon={<ShieldCheck size={13} />} label="Confirm"
+                          placeholder="Repeat" type="password"
+                          value={registerData.confirmPassword}
+                          error={registerErrors.confirmPassword}
+                          onChange={v => { setRegisterData({ ...registerData, confirmPassword: v }); if(registerErrors.confirmPassword) setRegisterErrors({...registerErrors, confirmPassword: ''}); }} />
+                      </div>
+                      <button type="submit" disabled={loading}
+                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">
+                          {loading ? 'Creating...' : 'Create Account'}
+                        </span>
+                        <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    </form>
+                    <Divider />
+                    <div className="space-y-2">
+                      <SocialButton onClick={handleGoogleSignIn} loading={loading} icon={<GoogleIcon />} label="Sign up with Google" />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── EMAIL OTP ───────────────────────────────────────────── */}
+                {mode === 'email_otp' && (
+                  <motion.div
+                    key="email_otp"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="space-y-5"
+                  >
+                    <button
+                      onClick={() => switchMode(emailOtpFlow)}
+                      className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
+                    >
+                      <ChevronRight size={10} className="rotate-180" />
+                      <span>Back to {emailOtpFlow === 'login' ? 'Login' : 'Signup'}</span>
+                    </button>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Verify Email</h3>
+                      <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
+                        We've sent a 6-digit code to <span className="text-gray-900 dark:text-white font-black">{emailOtpFlow === 'login' ? loginData.email : registerData.email}</span>
+                      </p>
+                    </div>
                     <div className="space-y-4">
-                      {/* 6 OTP boxes */}
                       <div className="flex space-x-2 justify-between">
                         {otp.map((digit, i) => (
-                          <input
-                            key={i}
-                            ref={el => { otpRefs.current[i] = el; }}
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={1}
-                            value={digit}
+                          <input key={i} ref={el => { otpRefs.current[i] = el; }}
+                            type="text" inputMode="numeric" maxLength={1} value={digit}
                             onChange={e => handleOtpChange(i, e.target.value)}
                             onKeyDown={e => handleOtpKeyDown(i, e)}
-                            className="w-10 h-12 text-center bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-black text-gray-900 dark:text-white outline-none focus:border-[#7A578D] transition-colors"
-                          />
+                            className="w-10 h-12 text-center bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-black text-gray-900 dark:text-white outline-none focus:border-[#7A578D] transition-colors" />
                         ))}
                       </div>
-
-                      <button
-                        onClick={handleVerifyPhoneOtp}
-                        disabled={loading || otp.join('').length < 6}
-                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50"
-                      >
+                      <button onClick={handleVerifyEmailOtp} disabled={loading || otp.join('').length < 6}
+                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50">
                         <ShieldCheck size={12} />
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                          {loading ? 'Verifying...' : 'Verify OTP'}
-                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">{loading ? 'Verifying...' : 'Verify Email'}</span>
                       </button>
-
                       <div className="text-center">
                         {otpTimer > 0 ? (
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                            Resend in {otpTimer}s
-                          </p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Resend code in {otpTimer}s</p>
                         ) : (
-                          <button
-                            onClick={() => { setPhoneStep('input'); setOtp(['', '', '', '', '', '']); }}
-                            className="text-[9px] font-black uppercase tracking-wider text-[#7A578D] hover:underline"
-                          >
-                            Resend OTP
-                          </button>
+                          <button onClick={emailOtpFlow === 'login' ? handleLogin : handleRegister}
+                            className="text-[9px] font-black uppercase tracking-wider text-[#7A578D] hover:underline">Resend Verification Code</button>
                         )}
                       </div>
                     </div>
-                  )}
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
 
-              {/* Footer */}
+                {/* ── PHONE OTP ───────────────────────────────────────────── */}
+                {mode === 'phone' && (
+                  <motion.div
+                    key="phone"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="space-y-5"
+                  >
+                    <button onClick={() => switchMode('login')}
+                      className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors">
+                      <ChevronRight size={10} className="rotate-180" />
+                      <span>Back to Login</span>
+                    </button>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Phone Verification</h3>
+                      <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
+                        {phoneStep === 'input' ? 'Enter your mobile number' : 'Enter the 6-digit OTP sent to your phone'}
+                      </p>
+                    </div>
+                    {phoneStep === 'input' ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl px-3 py-2.5">
+                            <span className="text-xs font-black text-gray-500 dark:text-gray-400">🇮🇳 +91</span>
+                          </div>
+                          <input type="tel" placeholder="10-digit number" value={phone}
+                            onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-2.5 px-4 outline-none focus:border-[#7A578D]/40 text-xs font-bold text-gray-900 dark:text-white placeholder:text-gray-300"
+                            maxLength={10} />
+                        </div>
+                        <button onClick={handleSendOtp} disabled={loading || phone.length < 10}
+                          className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group disabled:opacity-50">
+                          <Phone size={12} />
+                          <span className="text-[9px] font-black uppercase tracking-[0.3em]">{loading ? 'Sending OTP...' : 'Send OTP'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex space-x-2 justify-between">
+                          {otp.map((digit, i) => (
+                            <input key={i} ref={el => { otpRefs.current[i] = el; }}
+                              type="text" inputMode="numeric" maxLength={1} value={digit}
+                              onChange={e => handleOtpChange(i, e.target.value)}
+                              onKeyDown={e => handleOtpKeyDown(i, e)}
+                              className="w-10 h-12 text-center bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-black text-gray-900 dark:text-white outline-none focus:border-[#7A578D] transition-colors" />
+                          ))}
+                        </div>
+                        <button onClick={handleVerifyPhoneOtp} disabled={loading || otp.join('').length < 6}
+                          className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 disabled:opacity-50">
+                          <ShieldCheck size={12} />
+                          <span className="text-[9px] font-black uppercase tracking-[0.3em]">{loading ? 'Verifying...' : 'Verify OTP'}</span>
+                        </button>
+                        <div className="text-center">
+                          {otpTimer > 0 ? (
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Resend in {otpTimer}s</p>
+                          ) : (
+                            <button onClick={() => { setPhoneStep('input'); setOtp(['', '', '', '', '', '']); }}
+                              className="text-[9px] font-black uppercase tracking-wider text-[#7A578D] hover:underline">Resend OTP</button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
+              {/* ── End Animated Panels ── */}
               <div className="mt-auto pt-4 border-t border-gray-50 dark:border-white/5 text-center">
                 <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center space-x-1.5">
                   <ShieldCheck size={8} className="text-[#C9A0C8]" />

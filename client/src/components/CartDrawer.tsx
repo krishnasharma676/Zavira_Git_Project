@@ -12,7 +12,6 @@ const CartDrawer = () => {
   const { openCheckoutModal } = useUIStore();
 
   const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 0), 0);
-  const freeShippingThreshold = 1000;
   
   const handleCheckout = () => {
     closeDrawer();
@@ -98,7 +97,7 @@ const CartDrawer = () => {
             {items.length > 0 && (
               <CartDrawerFooter 
                 subtotal={subtotal}
-                freeShippingThreshold={freeShippingThreshold}
+                freeShippingThreshold={1000} // Keep as default prop if needed by child
                 handleCheckout={handleCheckout}
                 itemsCount={items.length}
               />

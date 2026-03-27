@@ -44,9 +44,7 @@ const DashboardTab = ({ user, orders, wishlistCount, loading, getStatusIcon, set
           <h2 className="text-[11px] font-black uppercase tracking-widest">Recent Orders</h2>
           <button onClick={() => setActiveTab('orders')} className="text-[10px] font-black text-[#7A578D] uppercase tracking-widest hover:underline">View All</button>
         </div>
-        {loading ? (
-            <div className="h-20 bg-gray-50 dark:bg-white/5 animate-pulse rounded-2xl" />
-        ) : orders.length > 0 ? (
+        {orders.length > 0 ? (
           <div className="bg-white dark:bg-transparent border border-gray-100 dark:border-white/10 rounded-xl overflow-hidden">
             <div className="p-4 flex items-center justify-between">
                <div className="flex items-center space-x-4">

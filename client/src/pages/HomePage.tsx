@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import api from '../api/axios';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useCart } from '../store/useCart';
 import { useWishlist } from '../store/useWishlist';
 import { expandProductsByVariant } from '../utils/productHelpers';
@@ -11,62 +10,36 @@ import ProductSection from '../components/home/ProductSection';
 import PromoBanner from '../components/home/PromoBanner';
 import Testimonials from '../components/home/Testimonials';
 
-const HomePage = () => {
-  const reviewScrollRef = useRef<HTMLDivElement>(null);
-  const [heroSlides, setHeroSlides] = useState<any[]>([]);
-  const [promoBanners, setPromoBanners] = useState<any[]>([]);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [categoryProducts, setCategoryProducts] = useState<any>({});
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+import { useCatalogStore } from '../store/useCatalogStore';
 
+const HomePage = () => {
+  const { allProducts, categories, banners, testimonials: reviews, loading: catalogLoading } = useCatalogStore();
+  const loading = catalogLoading;
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
+  const reviewScrollRef = useRef<HTMLDivElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0); // Keep local state for carousel current slide
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [featRes, catRes, bannerRes, reviewRes] = await Promise.all([
-          api.get('/products', { params: { limit: 12, sortBy: 'createdAt', sortOrder: 'desc' } }),
-          api.get('/categories'),
-          api.get('/banners'),
-          api.get('/testimonials').catch(() => ({ data: { data: [] } }))
-        ]);
-        
-        const cats = catRes.data.data;
-        setFeaturedProducts(expandProductsByVariant(featRes.data.data.products));
-        setCategories(cats);
-        setReviews(reviewRes.data.data);
+  // Derive all data from the global store
+  const heroSlides = useMemo(() => banners.filter((b: any) => b.type === 'HERO'), [banners]);
+  const promoBanners = useMemo(() => banners.filter((b: any) => b.type === 'PROMO'), [banners]);
+  const featuredProducts = useMemo(() =>
+    expandProductsByVariant(allProducts.filter(p => p.featured).slice(0, 12)),
+    [allProducts]
+  );
 
-        const heroBanners = bannerRes.data.data.filter((b: any) => b.type === 'HERO');
-        setHeroSlides(heroBanners);
-        setPromoBanners(bannerRes.data.data.filter((b: any) => b.type === 'PROMO'));
-
-        // Fetch category products — done after hero loads so it doesn't block LCP
-        const catProds: any = {};
-        await Promise.all(cats.map(async (cat: any) => {
-          try {
-            const { data } = await api.get('/products', { 
-              params: { category: cat.id, limit: 8 } 
-            });
-            if (data.data.products.length > 0) {
-              catProds[cat.id] = expandProductsByVariant(data.data.products);
-            }
-          } catch {
-            // Silently skip failed category
-          }
-        }));
-        setCategoryProducts(catProds);
-      } catch {
-        // Silent fail — page still renders
-      } finally {
-        setLoading(false);
+  // Categorize products locally for categories
+  const categoryProducts = useMemo(() => {
+    const res: any = {};
+    // Limit to top 3 categories for display on homepage, adjust as needed
+    categories.slice(0, 3).forEach((cat: any) => {
+      const prods = allProducts.filter(p => p.categoryId === cat.id).slice(0, 8); // Limit products per category
+      if (prods.length > 0) {
+        res[cat.id] = expandProductsByVariant(prods);
       }
-    };
-    fetchData();
-  }, []);
+    });
+    return res;
+  }, [allProducts, categories]);
 
   // Auto-advance hero carousel
   useEffect(() => {

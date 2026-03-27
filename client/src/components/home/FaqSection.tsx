@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Minus, Plus } from 'lucide-react';
 
@@ -93,4 +94,4 @@ const FaqSection = ({ activeFaq, setActiveFaq }: FaqSectionProps) => {
   );
 };
 
-export default FaqSection;
+export default React.memo(FaqSection);

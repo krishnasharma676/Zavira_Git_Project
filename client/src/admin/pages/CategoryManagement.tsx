@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit2, Trash2, Upload, Search, Calendar, RefreshCw, Layers, Package, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
@@ -8,18 +8,19 @@ import MUIDataTable from "mui-datatables";
 import { ThemeProvider } from '@mui/material/styles';
 import { getMuiTheme } from '../utils/muiTableTheme';
 
+import { useAdminStore } from '../../store/useAdminStore';
+
 const CategoryManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
+  const { categories, setCategories, refreshMetadata } = useAdminStore();
   const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
   // Form states
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -28,9 +29,8 @@ const CategoryManagement = () => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/categories');
-      setCategories(data.data);
-      setFilteredCategories(data.data);
+      await refreshMetadata();
+      // Store categories are already updated within refreshMetadata
     } catch (error) {
       toast.error('Failed to load categories');
     } finally {
@@ -40,7 +40,7 @@ const CategoryManagement = () => {
 
   useEffect(() => {
     const term = search.toLowerCase();
-    const filtered = categories.filter(c => 
+    const filtered = (categories || []).filter(c => 
       c.name.toLowerCase().includes(term) || 
       c.id.toLowerCase().includes(term)
     );
@@ -55,14 +55,18 @@ const CategoryManagement = () => {
     toast.success('Sorted by Enrollment');
   };
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    fetchCategories();
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchCategories();
+    }
   }, []);
 
   const handleEdit = (category: any) => {
     setEditingCategory(category);
     setName(category.name);
-    setDescription(category.description || '');
     setIsActive(category.isActive ?? true);
     setImageUrl(category.imageUrl || '');
     setPreviewUrl(category.imageUrl || '');
@@ -73,7 +77,6 @@ const CategoryManagement = () => {
   const handleAddNew = () => {
     setEditingCategory(null);
     setName('');
-    setDescription('');
     setIsActive(true);
     setImageUrl('');
     setPreviewUrl('');
@@ -107,7 +110,6 @@ const CategoryManagement = () => {
     setIsSubmitting(true);
     const data = new FormData();
     data.append('name', name);
-    data.append('description', description);
     data.append('isActive', String(isActive));
     if (imageUrl) data.append('imageUrl', imageUrl);
     if (image) data.append('image', image);
@@ -137,7 +139,7 @@ const CategoryManagement = () => {
       label: "Visuals",
       options: {
         customBodyRender: (val: string) => (
-          <div className="w-8 h-10 bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm transition-transform hover:scale-110">
+          <div className="w-6 h-6 bg-white rounded-sm overflow-hidden border border-gray-100 shadow-sm transition-transform hover:scale-110">
             <img src={val || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" />
           </div>
         )
@@ -158,8 +160,8 @@ const CategoryManagement = () => {
       options: {
         customBodyRender: (id: string) => {
           return (
-            <div className="flex items-center gap-1.5" title={id}>
-              <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10 uppercase">{id}</span>
+            <div className="flex items-center gap-1" title={id}>
+              <span className="text-xs font-mono font-bold text-[#7A578D] bg-[#7A578D]/5 px-2 py-1 rounded-md border border-[#7A578D]/10 uppercase">{id}</span>
             </div>
           )
 
@@ -177,7 +179,7 @@ const CategoryManagement = () => {
               <span className="text-[9px] font-black text-gray-900 uppercase tracking-tight">
                 {date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
               </span>
-              <span className="text-[7px] font-bold text-gray-400">
+              <span className="text-[8px] font-medium text-gray-400 mt-0.5">
                 {date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
               </span>
             </div>
@@ -192,11 +194,11 @@ const CategoryManagement = () => {
         customBodyRender: (val: string) => {
           const date = new Date(val);
           return (
-            <div className="flex flex-col opacity-60">
-              <span className="text-[8px] font-black text-gray-500 uppercase tracking-tight">
+            <div className="flex flex-col opacity-80">
+              <span className="text-xs font-bold text-gray-600 uppercase tracking-tight">
                 {date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
               </span>
-              <span className="text-[7px] font-bold text-gray-400">
+              <span className="text-xs font-medium text-gray-400 mt-0.5">
                 {date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
               </span>
             </div>
@@ -209,9 +211,9 @@ const CategoryManagement = () => {
       label: "Status",
       options: {
         customBodyRender: (val: boolean) => (
-          <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 max-w-fit">
+          <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 max-w-fit">
              <div className={`w-1 h-1 rounded-full ${val ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-             <span className={`text-[7px] font-black uppercase tracking-widest ${val ? 'text-emerald-700' : 'text-red-500'}`}>{val ? 'ACTIVE' : 'HIDDEN'}</span>
+             <span className={`text-[8px] font-black uppercase tracking-widest ${val ? 'text-emerald-700' : 'text-red-600'}`}>{val ? 'ACTIVE' : 'HIDDEN'}</span>
           </div>
         )
       }
@@ -223,18 +225,20 @@ const CategoryManagement = () => {
         customBodyRender: (id: string, tableMeta: any) => {
           const cat = categories[tableMeta.rowIndex];
           return (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={() => handleEdit(cat)} 
-                className="p-1.5 hover:bg-[#7A578D]/5 text-gray-400 hover:text-[#7A578D] rounded-lg transition-all"
+                className="p-2 hover:bg-[#7A578D]/10 text-gray-500 hover:text-[#7A578D] rounded-sm transition-all"
+                title="Edit Category"
               >
-                <Edit2 size={13} />
+                <Edit2 size={16} />
               </button>
               <button 
                 onClick={() => handleDelete(id)} 
-                className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-all"
+                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-sm transition-all"
+                title="Delete Category"
               >
-                <Trash2 size={13} />
+                <Trash2 size={16} />
               </button>
             </div>
           )
@@ -253,68 +257,7 @@ const CategoryManagement = () => {
     viewColumns: false,
     search: false,
     filter: false,
-    expandableRows: true, // USER REQ
-    expandableRowsOnClick: true, // USER REQ
-    renderExpandableRow: (rowData: any, rowMeta: any) => {
-      const cat = filteredCategories[rowMeta.rowIndex];
-      if (!cat) return null;
-      return (
-        <tr className="bg-gray-50/50">
-          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
-               <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
-                     <Layers size={12} /> Collection Dossier
-                  </h3>
-                  <div className="space-y-3 pl-4">
-                     <div className="flex flex-col">
-                        <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Narrative Detail</span>
-                        <p className="text-[10px] font-bold text-gray-600 uppercase leading-relaxed max-w-[400px]">
-                           {cat.description || 'No descriptive metadata provided for this collection.'}
-                        </p>
-                     </div>
-                     <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-4 group">
-                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 group-hover:text-[#7A578D] transition-colors">
-                           <Package size={16} />
-                        </div>
-                        <div className="flex flex-col">
-                           <span className="text-[7px] font-black text-gray-400 uppercase">System Identity</span>
-                           <span className="text-[9px] font-mono font-black text-gray-900 truncate tracking-widest leading-none mt-1">#{cat.id}</span>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="space-y-4 border-l border-gray-100 pl-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
-                     <Clock size={12} /> Registry Timeline
-                  </h3>
-                  <div className="space-y-4">
-                     <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 group">
-                        <Calendar size={14} className="text-gray-400 mt-1" />
-                        <div className="flex flex-col">
-                           <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Enrollment Stamp</span>
-                           <span className="text-[10px] font-black text-gray-900 uppercase mt-0.5">{new Date(cat.createdAt).toLocaleString()}</span>
-                        </div>
-                     </div>
-                     <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 group">
-                        <RefreshCw size={14} className="text-gray-400 mt-1" />
-                        <div className="flex flex-col">
-                           <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Audit Terminal</span>
-                           <span className="text-[10px] font-black text-gray-900 uppercase mt-0.5">{new Date(cat.updatedAt).toLocaleString()}</span>
-                        </div>
-                     </div>
-                     <div className="p-2 border border-[#7A578D]/10 bg-[#7A578D]/5 rounded-lg flex items-center justify-between">
-                        <span className="text-[7px] font-black text-[#7A578D] uppercase tracking-widest">Global Priority</span>
-                        <span className="text-[9px] font-black text-gray-900 uppercase">Tier 01</span>
-                     </div>
-                  </div>
-               </div>
-            </div>
-          </td>
-        </tr>
-      );
-    },
+    expandableRows: false,
     textLabels: {
       body: {
         noMatch: loading ? "Synchronizing..." : "No items found in ledger",
@@ -324,54 +267,42 @@ const CategoryManagement = () => {
 
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-500 max-w-[1400px]">
-      <header className="flex justify-between items-center border-b border-gray-100 pb-1.5">
+    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
         <div>
-          <h1 className="text-base font-sans font-black uppercase tracking-tighter text-gray-900 leading-none">Category Ledger</h1>
-          <p className="text-gray-400 text-[7px] font-black uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5">
-             Manage global collection and grouping
-          </p>
+          <h1 className="text-lg font-bold text-gray-900 tracking-tight">Categories</h1>
+          <p className="text-gray-500 text-xs mt-1">Organize your products into meaningful collections.</p>
         </div>
-        <div className="flex items-center gap-1.5">
-           <div className="relative hidden md:block">
-              <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300" />
+        <div className="flex flex-wrap items-center gap-2">
+           <div className="relative group">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#7A578D] transition-colors" />
               <input 
                 type="text" 
-                placeholder="Lookup Collection / ID..." 
+                placeholder="Search categories..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-50 border border-gray-100 rounded-lg py-1.5 pl-8 pr-3 outline-none focus:border-[#7A578D] text-[8px] font-black uppercase tracking-widest w-[160px] transition-all focus:w-[200px]" 
+                className="bg-gray-50 border border-gray-200 rounded-sm py-1 pl-10 pr-4 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs md:w-[240px] transition-all" 
               />
            </div>
-           <button onClick={fetchCategories} className="p-1.5 bg-white border border-gray-100 rounded-lg text-gray-400 hover:text-[#7A578D] transition-all shadow-sm">
-             <RefreshCw size={13} />
+           <button onClick={fetchCategories} className="p-2.5 bg-white border border-gray-200 rounded-sm text-gray-500 hover:text-[#7A578D] hover:border-[#7A578D] transition-all">
+             <RefreshCw size={18} />
            </button>
            
-           <div className="flex items-center bg-gray-50 border border-gray-100 p-0.5 rounded-lg gap-0.5">
-              <button 
-                 onClick={sortByLatest}
-                 className="px-2 py-1.5 hover:bg-white hover:text-[#7A578D] rounded-md text-[7px] font-black uppercase tracking-widest text-gray-400 transition-all flex items-center gap-1"
-              >
-                 <Calendar size={9} /> Latest
-              </button>
-           </div>
-
            <button 
              onClick={handleAddNew}
-             className="bg-black text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-[#7A578D] transition-all shadow-lg shadow-black/5"
+             className="bg-black text-white px-2 py-1 rounded-sm text-xs font-bold flex items-center gap-2 hover:bg-[#7A578D] transition-all shadow-md active:scale-95"
            >
-             <Plus size={11} />
-             <span>Enroll Collection</span>
+             <Plus size={18} />
+             <span>Add Category</span>
            </button>
         </div>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm relative min-h-[500px]">
+      <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[200px]">
         {loading && (
            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                 <div className="w-8 h-8 border-2 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
-                 <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Accessing Ledger...</span>
+              <div className="flex flex-col items-center gap-2">
+                 <div className="w-6 h-6 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
               </div>
            </div>
         )}
@@ -383,46 +314,65 @@ const CategoryManagement = () => {
       <ManagementModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={editingCategory ? 'Edit Category' : 'Add Category'}
+        title={editingCategory ? 'Edit Category' : 'Add New Category'}
       >
-        <form onSubmit={handleSubmit} className="space-y-3">
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Name</label>
-                <input required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" />
+        <form onSubmit={handleSubmit} className="space-y-2">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Category Name</label>
+                <input required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs" placeholder="e.g. Summer Collection" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Status</label>
-                <select value={String(isActive)} onChange={(e) => setIsActive(e.target.value === 'true')} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase">
-                  <option value="true">ACTIVE</option>
-                  <option value="false">HIDDEN</option>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Visibility</label>
+                <select value={String(isActive)} onChange={(e) => setIsActive(e.target.value === 'true')} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold appearance-none cursor-pointer">
+                  <option value="true">ACTIVE / VISIBLE</option>
+                  <option value="false">HIDDEN / ARCHIVED</option>
                 </select>
               </div>
            </div>
 
-           <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Image URL</label>
-              <input value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setPreviewUrl(e.target.value); }} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[9px] font-black tracking-widest" placeholder="https://..." />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="space-y-2">
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Image Link (optional)</label>
+                    <input value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setPreviewUrl(e.target.value); }} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs" placeholder="https://example.com/image.jpg" />
+                 </div>
+                 
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Upload Local Image</label>
+                    <label className="w-full h-[140px] bg-gray-50 border-2 border-dashed border-gray-200 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-[#7A578D]/40 transition-all group relative overflow-hidden">
+                      <input type="file" className="hidden" onChange={handleImageChange} accept="image/*" />
+                      <div className="flex flex-col items-center gap-2 group-hover:scale-105 transition-transform">
+                         <Upload size={24} className="text-gray-400 group-hover:text-[#7A578D]" />
+                         <span className="text-[10px] font-bold uppercase text-gray-400">Click to upload image</span>
+                      </div>
+                    </label>
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Category Preview</label>
+                 <div className="w-full h-[210px] bg-gray-50 rounded-sm border border-gray-200 overflow-hidden shadow-inner flex items-center justify-center relative group">
+                    {previewUrl ? (
+                       <>
+                          <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                             <span className="text-xs font-bold text-white uppercase tracking-widest px-2 py-1 bg-black/20 backdrop-blur-md rounded-full border border-white/20">Selected Image</span>
+                          </div>
+                       </>
+                    ) : (
+                       <div className="flex flex-col items-center opacity-20">
+                          <Layers size={48} className="text-gray-400" />
+                          <span className="text-xs font-bold uppercase mt-3">No Preview</span>
+                       </div>
+                    )}
+                 </div>
+              </div>
            </div>
 
-           <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Description</label>
-              <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase resize-none" />
-           </div>
-
-           <div className="space-y-1.5">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Or Upload Image</label>
-              <label className="w-full h-20 bg-gray-50 border border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:bg-white transition-all overflow-hidden relative">
-                <input type="file" className="hidden" onChange={handleImageChange} accept="image/*" />
-                {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : <Upload size={14} className="text-gray-300" />}
-              </label>
-           </div>
-
-           <div className="pt-1">
-            <button type="submit" disabled={isSubmitting} className="w-full bg-[#7A578D] text-white py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all">
-              {isSubmitting ? 'SAVING...' : 'SAVE CATEGORY'}
-            </button>
-           </div>
+           <button type="submit" disabled={isSubmitting} className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold hover:bg-[#7A578D] transition-all shadow-xl shadow-black/5 active:scale-95 disabled:opacity-50">
+              {isSubmitting ? 'SAVING CHANGES...' : (editingCategory ? 'UPDATE CATEGORY' : 'SAVE CATEGORY')}
+           </button>
         </form>
       </ManagementModal>
     </div>

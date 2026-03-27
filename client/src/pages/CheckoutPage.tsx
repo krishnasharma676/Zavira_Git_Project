@@ -13,7 +13,6 @@ import {
 import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
 import { useUIStore } from '../store/useUIStore';
-import { useLoading } from '../store/useLoading';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/format';
@@ -24,8 +23,6 @@ const CheckoutPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const openAuthModal = useUIStore((s) => s.openAuthModal);
-  const { startLoading, stopLoading } = useLoading();
-
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
@@ -73,7 +70,6 @@ const CheckoutPage = () => {
 
     try {
       setIsSubmitting(true);
-      startLoading('Securing your transaction...');
       
       // Logic for saving address and then creating order
       const { data: addressRes } = await api.post('/addresses', {
@@ -87,7 +83,6 @@ const CheckoutPage = () => {
         isDefault: true
       });
 
-      startLoading('Crafting your order details...');
       const response = await api.post('/orders/checkout', {
         addressId: addressRes.data.id,
         paymentMethod: 'COD',
@@ -106,7 +101,6 @@ const CheckoutPage = () => {
       toast.error(error.response?.data?.message || 'Failed to place order');
     } finally {
       setIsSubmitting(false);
-      stopLoading();
     }
   };
 

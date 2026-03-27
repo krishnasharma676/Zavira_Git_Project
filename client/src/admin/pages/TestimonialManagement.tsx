@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit2, Trash2, Star, Camera, X, MessageSquare, BadgeCheck, Clock } from 'lucide-react';
 import api from '../../api/axios';
 import ManagementModal from '../components/ManagementModal';
@@ -33,8 +33,13 @@ const TestimonialManagement = () => {
     }
   };
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    fetchData();
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchData();
+    }
   }, []);
 
   const handleEdit = (item: any) => {
@@ -133,11 +138,11 @@ const TestimonialManagement = () => {
       label: "Photo",
       options: {
         customBodyRender: (val: string) => (
-          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center shadow-sm">
             {val ? (
               <img src={val} alt="User" className="w-full h-full object-cover" />
             ) : (
-                <div className="text-[10px] font-black text-gray-300">N/A</div>
+                <div className="text-[7px] font-black text-gray-400 uppercase tracking-widest">N/A</div>
             )}
           </div>
         )
@@ -149,8 +154,8 @@ const TestimonialManagement = () => {
       options: {
         customBodyRender: (val: string, meta: any) => (
           <div className="flex flex-col">
-            <span className="font-black text-[10px] uppercase tracking-wider">{val}</span>
-            <span className="text-[8px] text-gray-400 uppercase">{testimonials[meta.rowIndex].role}</span>
+            <span className="font-black text-[10px] uppercase text-gray-900 tracking-tight truncate max-w-[150px]">{val}</span>
+            <span className="text-[8px] font-black text-[#7A578D] uppercase tracking-widest">{testimonials[meta.rowIndex].role}</span>
           </div>
         )
       }
@@ -162,7 +167,7 @@ const TestimonialManagement = () => {
         customBodyRender: (val: number) => (
           <div className="flex space-x-0.5">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} size={8} fill={i < val ? "#7A578D" : "transparent"} className={i < val ? "text-[#7A578D]" : "text-gray-200"} />
+              <Star key={i} size={10} fill={i < val ? "#7A578D" : "transparent"} className={i < val ? "text-[#7A578D]" : "text-gray-200"} />
             ))}
           </div>
         )
@@ -173,7 +178,7 @@ const TestimonialManagement = () => {
       label: "Testimonial Content",
       options: {
         customBodyRender: (val: string) => (
-          <p className="truncate max-w-[200px] text-gray-500 text-[10px] italic">"{val}"</p>
+          <p className="truncate max-w-[200px] text-gray-500 text-[9px] italic font-black uppercase tracking-tight" title={val}>"{val}"</p>
         )
       }
     },
@@ -184,12 +189,12 @@ const TestimonialManagement = () => {
         customBodyRender: (id: string, tableMeta: any) => {
           const item = testimonials[tableMeta.rowIndex];
           return (
-            <div className="flex space-x-2">
-              <button onClick={() => handleEdit(item)} className="p-1.5 hover:bg-[#7A578D]/10 text-[#7A578D] rounded transition-colors">
-                <Edit2 size={12} />
+            <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => handleEdit(item)} className="p-2 hover:bg-[#7A578D]/10 text-[#7A578D] rounded-sm transition-colors border border-transparent hover:border-[#7A578D]/20 shadow-sm" title="Edit Testimonial">
+                <Edit2 size={16} />
               </button>
-              <button onClick={() => handleDelete(id)} className="p-1.5 hover:bg-red-50 text-red-400 rounded transition-colors">
-                <Trash2 size={12} />
+              <button onClick={() => handleDelete(id)} className="p-2 hover:bg-red-50 text-red-500 rounded-sm transition-colors border border-transparent hover:border-red-200 shadow-sm" title="Delete Testimonial">
+                <Trash2 size={16} />
               </button>
             </div>
           );
@@ -212,65 +217,33 @@ const TestimonialManagement = () => {
       const item = testimonials[rowMeta.rowIndex];
       if (!item) return null;
       return (
-        <tr className="bg-gray-50/50">
-          <td colSpan={columns.length + 1} className="p-0 border-b border-gray-100">
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
-               <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7A578D] flex items-center gap-2">
-                     <MessageSquare size={12} /> Full Narrative
-                  </h3>
-                  <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm italic text-[11px] font-black uppercase text-gray-600 leading-relaxed">
-                     "{item.content}"
-                  </div>
-                  <div className="flex gap-4">
-                     <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm flex-1">
-                        <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Visual Profile</span>
-                        <div className="flex items-center gap-2">
-                           <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-100">
-                              <img src={item.imageUrl || 'https://via.placeholder.com/50'} className="w-full h-full object-cover" />
-                           </div>
-                           <span className="text-[9px] font-black uppercase text-gray-900">{item.name}</span>
-                        </div>
-                     </div>
-                     <div className="p-2 bg-white border border-gray-100 rounded-lg shadow-sm flex-1">
-                        <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Verified Status</span>
-                        <div className="flex items-center gap-1.5">
-                           <BadgeCheck size={12} className={item.isActive ? "text-green-500" : "text-gray-300"} />
-                           <span className={`text-[9px] font-black uppercase ${item.isActive ? 'text-green-600' : 'text-gray-400'}`}>
-                              {item.isActive ? 'VISIBLE ON SITE' : 'HIDDEN FROM VIEW'}
-                           </span>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="space-y-4 border-l border-gray-100 pl-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
-                     <Clock size={12} /> Admin Ledger
-                  </h3>
-                  <div className="space-y-3">
-                     <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-[8px] font-black text-gray-400 uppercase">Customer Role</span>
-                        <span className="text-[9px] font-black text-[#7A578D] uppercase">{item.role || 'VERIFIED BUYER'}</span>
-                     </div>
-                     <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-[8px] font-black text-gray-400 uppercase">System Score</span>
-                        <div className="flex gap-0.5">
-                           {[...Array(5)].map((_, i) => (
-                              <Star key={i} size={10} fill={i < item.rating ? "#7A578D" : "transparent"} className={i < item.rating ? "text-[#7A578D]" : "text-gray-200"} />
-                           ))}
-                        </div>
-                     </div>
-                     <div className="flex justify-between items-center py-2">
-                        <span className="text-[8px] font-black text-gray-400 uppercase">Logged At</span>
-                        <span className="text-[9px] font-black text-gray-900 uppercase">{new Date(item.createdAt).toLocaleString()}</span>
-                     </div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
-                     <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest leading-none">Record Unique ID</span>
-                     <span className="text-[8px] font-mono text-gray-400 mt-1 uppercase select-all">#{item.id}</span>
-                  </div>
-               </div>
+        <tr style={{ backgroundColor: '#fff' }}>
+          <td colSpan={columns.length + 1} style={{ padding: '0', borderBottom: '1px solid #eee' }}>
+            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontFamily: '"Times New Roman", Times, serif', fontSize: '12px', color: '#333' }}>
+              <div style={{ gridColumn: 'span 4' }}>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Full Testimonial:</strong>
+                <span>{item.content}</span>
+              </div>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Customer Role:</strong>
+                <span>{item.role || 'Verified Buyer'}</span>
+              </div>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Status:</strong>
+                <span>{item.isActive ? 'Visible' : 'Hidden'}</span>
+              </div>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Rating:</strong>
+                <span>{item.rating} / 5</span>
+              </div>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Added On:</strong>
+                <span>{new Date(item.createdAt).toLocaleString()}</span>
+              </div>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>Internal ID:</strong>
+                <span>{item.id}</span>
+              </div>
             </div>
           </td>
         </tr>
@@ -280,22 +253,22 @@ const TestimonialManagement = () => {
 
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-500">
-      <header className="flex justify-between items-center border-b border-gray-100 pb-2">
+    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
         <div>
-          <h1 className="text-xl font-sans font-black uppercase tracking-tight text-gray-900 leading-none">Testimonials</h1>
-          <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest mt-1">Manage Customer Feedback & Photos</p>
+          <h1 className="text-lg font-bold text-gray-900 tracking-tight">Reviews</h1>
+          <p className="text-gray-500 text-xs mt-1">Manage customer feedback and testimonials published on the site.</p>
         </div>
         <button 
           onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="bg-[#7A578D] text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center space-x-2 hover:bg-black transition-all shadow-lg"
+          className="bg-black text-white px-2 py-1 rounded-sm text-xs font-bold flex items-center gap-2 hover:bg-[#7A578D] transition-all shadow-md active:scale-95"
         >
-          <Plus size={12} />
+          <Plus size={18} />
           <span>Add Testimonial</span>
         </button>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[200px]">
         <ThemeProvider theme={getMuiTheme()}>
           <MUIDataTable title="" data={testimonials} columns={columns} options={options} />
         </ThemeProvider>
@@ -304,17 +277,20 @@ const TestimonialManagement = () => {
       <ManagementModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={editingItem ? "Edit Testimonial" : "Create New Testimonial"}
+        title={editingItem ? "Edit Testimonial" : "New Testimonial"}
       >
-        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
+        <form onSubmit={handleSubmit} className="space-y-2">
           {/* Profile Photo Upload */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center">
             <div className="relative group">
-              <div className="w-20 h-20 rounded-xl bg-gray-50 border border-dashed border-gray-100 flex items-center justify-center overflow-hidden transition-all group-hover:border-[#7A578D]/30 shadow-inner">
+              <div className="w-24 h-24 rounded-sm bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden transition-all group-hover:border-[#7A578D]/40 shadow-inner p-1">
                 {imagePreview ? (
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-sm" />
                 ) : (
-                  <Camera size={20} className="text-gray-300" />
+                  <div className="flex flex-col items-center gap-1">
+                    <Camera size={24} className="text-gray-400" />
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Photo</span>
+                  </div>
                 )}
                 <input 
                   type="file" 
@@ -323,88 +299,88 @@ const TestimonialManagement = () => {
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-md shadow-lg border border-gray-50 pointer-events-none group-hover:scale-110 transition-transform">
-                <Plus size={9} className="text-[#7A578D]" strokeWidth={3} />
+              <div className="absolute -bottom-2 -right-2 bg-white p-1.5 rounded-sm shadow-lg border border-gray-100 pointer-events-none group-hover:scale-110 transition-transform">
+                <Plus size={12} className="text-[#7A578D]" />
               </div>
               {imagePreview && (
                 <button 
                   type="button"
                   onClick={() => { setImageFile(null); setImagePreview(null); }}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-sm shadow-lg hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
                 >
-                  <X size={8} strokeWidth={3} />
+                  <X size={12} />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Customer Name</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Customer Name</label>
               <input 
                 required 
                 value={formData.name} 
                 onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" 
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs" 
+                placeholder="e.g. John Doe"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Role / Tagline</label>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Customer Role</label>
               <input 
                 value={formData.role} 
                 onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase" 
-                placeholder="e.g., Verified Buyer, Loyal Customer"
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs" 
+                placeholder="e.g. Verified Buyer"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Rating (1-5)</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Star Rating</label>
               <select 
                 value={formData.rating} 
                 onChange={(e) => setFormData({...formData, rating: parseInt(e.target.value)})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase"
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold appearance-none cursor-pointer"
               >
                 {[5, 4, 3, 2, 1].map(num => (
                   <option key={num} value={num}>{num} Stars</option>
                 ))}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Status</label>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Visibility</label>
               <select 
                 value={formData.isActive ? 'true' : 'false'} 
                 onChange={(e) => setFormData({...formData, isActive: e.target.value === 'true'})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase"
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold appearance-none cursor-pointer"
               >
                 <option value="true">VISIBLE ON SITE</option>
-                <option value="false">HIDDEN</option>
+                <option value="false">HIDDEN / DRAFT</option>
               </select>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 ml-1">Review Content</label>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Review Content</label>
             <textarea 
               required
-              rows={2} 
+              rows={4} 
               value={formData.content} 
               onChange={(e) => setFormData({...formData, content: e.target.value})} 
-              className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 px-3 outline-none focus:border-[#7A578D] text-[10px] font-black uppercase resize-none leading-relaxed" 
+              className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-medium transition-all resize-none leading-relaxed italic" 
+              placeholder="Enter customer feedback here..."
             />
           </div>
 
-          <div className="pt-1">
-            <button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="w-full bg-[#7A578D] text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
-            >
-              {isSubmitting ? 'SAVING...' : editingItem ? 'UPDATE TESTIMONIAL' : 'SAVE TESTIMONIAL'}
-            </button>
-          </div>
+          <button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold hover:bg-[#7A578D] transition-all shadow-xl shadow-black/5 active:scale-95 disabled:opacity-50"
+          >
+            {isSubmitting ? 'WORKING...' : (editingItem ? 'UPDATE TESTIMONIAL' : 'SAVE TESTIMONIAL')}
+          </button>
         </form>
       </ManagementModal>
     </div>

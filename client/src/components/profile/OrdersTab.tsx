@@ -15,11 +15,7 @@ const OrdersTab = ({ orders, loading, getStatusIcon, onRequestReturn }: OrdersTa
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
        <h2 className="text-xl font-sans font-black mb-6 uppercase tracking-tighter">My <span className="text-[#7A578D]">Orders_</span></h2>
-       {loading ? (
-          <div className="space-y-3">
-             {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-50 dark:bg-white/5 animate-pulse rounded-2xl" />)}
-          </div>
-       ) : orders.length > 0 ? (
+       {orders.length > 0 ? (
           <div className="space-y-3">
              {orders.map((order) => (
                 <OrderItem 

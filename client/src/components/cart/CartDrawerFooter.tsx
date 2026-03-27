@@ -12,45 +12,10 @@ interface CartDrawerFooterProps {
 const CartDrawerFooter = ({ subtotal, freeShippingThreshold, handleCheckout, itemsCount }: CartDrawerFooterProps) => {
   const shipping = subtotal >= freeShippingThreshold ? 0 : 49;
   const total = subtotal + shipping;
-  const progress = Math.min((subtotal / freeShippingThreshold) * 100, 100);
+  // const progress = Math.min((subtotal / freeShippingThreshold) * 100, 100); // Removed as shipping progress section is removed
 
   return (
     <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0A0A0A] space-y-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.05)]">
-      {/* Shipping Progress */}
-      <div className="bg-gray-50/50 dark:bg-white/5 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-        <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center gap-2">
-               <Truck size={14} className={subtotal >= freeShippingThreshold ? "text-green-500" : "text-[#7A578D]"} />
-               <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                  {subtotal >= freeShippingThreshold ? "Unlocked Free Shipping" : "Shipping Policy"}
-               </span>
-            </div>
-            <span className="text-[9px] font-black uppercase text-[#7A578D]">
-               Threshold: {formatCurrency(freeShippingThreshold)}
-            </span>
-        </div>
-        
-        <div className="relative w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-           <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className={`h-full ${subtotal >= freeShippingThreshold ? 'bg-green-500' : 'bg-[#7A578D]'} relative`}
-           >
-              <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
-           </motion.div>
-        </div>
-        
-        {subtotal < freeShippingThreshold ? (
-          <p className="text-[8px] font-bold uppercase tracking-tight text-gray-500 mt-2 flex items-center justify-center gap-1">
-             Add <span className="text-[#7A578D] font-black">{formatCurrency(freeShippingThreshold - subtotal)}</span> more for <span className="text-green-600 underline">FREE delivery</span>
-          </p>
-        ) : (
-          <p className="text-[8px] font-bold uppercase tracking-tight text-green-600 mt-2 flex items-center justify-center gap-1">
-             <CheckCircle2 size={10} /> Your order qualifies for free premium shipping
-          </p>
-        )}
-      </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-4 px-1">

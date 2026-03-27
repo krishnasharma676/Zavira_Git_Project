@@ -1,5 +1,6 @@
 import axios from "axios";
 import { ApiError } from "../utils/ApiError";
+import { settingService } from "./setting.service";
 
 export class ShiprocketService {
   private static token: string | null = null;
@@ -67,11 +68,17 @@ export class ShiprocketService {
       order_items: shiprocketItems,
       payment_method: order.paymentMethod === 'COD' ? 'Postpaid' : 'Prepaid',
       sub_total: order.totalAmount,
-      length: 10, // Placeholder
-      breadth: 10, // Placeholder
-      height: 10, // Placeholder
-      weight: 0.5, // Placeholder
+      length: 10,
+      breadth: 10,
+      height: 10,
+      weight: 0.5,
     };
+
+    // Fetch store GSTIN from settings and add if available
+    const gstin = await settingService.getSetting('store_gstin');
+    if (gstin) {
+      (payload as any).billing_gstin = gstin;
+    }
 
     try {
       const response = await axios.post(

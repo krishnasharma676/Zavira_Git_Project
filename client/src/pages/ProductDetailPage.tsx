@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import api from '../api/axios';
 import { useCart } from '../store/useCart';
@@ -14,56 +14,88 @@ import ProductTabs from '../components/product/ProductTabs';
 import ProductSection from '../components/home/ProductSection';
 import SEOMeta from '../components/SEOMeta';
 
+import { useCatalogStore } from '../store/useCatalogStore';
+import { performAddToCart } from '../utils/cartHelpers';
+
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { getProductBySlug } = useCatalogStore();
+  
+  // 1. Try Catalog Store first, 2. Try Router State, 3. Null
+  const initialData = getProductBySlug(slug || '') || location.state?.product;
+
   const { addItem } = useCart();
   const { toggleItem, isInWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const openAuthModal = useUIStore((s) => s.openAuthModal);
-  const [product, setProduct] = useState<any>(null);
+  
+  const [product, setProduct] = useState<any>(initialData || null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<any>(null);
-  const [selectedSize, setSelectedSize] = useState<string>('');
+
+  // Initialize variant/size from state if possible
+  const [selectedVariant, setSelectedVariant] = useState<any>(() => {
+    if (initialData?.variants && initialData.variants.length > 0) {
+      return initialData.variants[0];
+    }
+    return null;
+  });
+
+  const [selectedSize, setSelectedSize] = useState<string>(() => {
+    if (initialData) {
+      if (initialData.variants && initialData.variants.length > 0) {
+        const v = initialData.variants[0];
+        return v.sizes?.find((s: any) => s.stock > 0)?.size || v.sizes?.[0]?.size || '';
+      } else if (initialData.sizes) {
+         return initialData.sizes.split(',').map((s: string) => s.trim()).filter(Boolean)[0] || '';
+      }
+    }
+    return '';
+  });
+
   const [activeTab, setActiveTab] = useState('details');
-  
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [reviewImages, setReviewImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
   useEffect(() => {
     const fetchProduct = async () => {
-      setLoading(true);
+      // If we don't have initial data, show full loader
+      if (!initialData) setLoading(true);
+
       try {
         const { data } = await api.get(`/products/${slug}`);
         const p = data.data;
         setProduct(p);
         
-        if (p.variants && p.variants.length > 0) {
+        // Background update state selections if the user hasn't interacted yet
+        if (!selectedVariant && p.variants && p.variants.length > 0) {
           const firstVariant = p.variants[0];
           setSelectedVariant(firstVariant);
           const firstSize = firstVariant.sizes?.find((s: any) => s.stock > 0)?.size || firstVariant.sizes?.[0]?.size;
           if (firstSize) setSelectedSize(firstSize);
-        } else if (p.sizes) {
+        } else if (!selectedSize && p.sizes) {
           const sizes = p.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
           if (sizes.length > 0) setSelectedSize(sizes[0]);
         }
 
-      } catch {
-        toast.error("Product not found");
-        navigate('/shop');
+      } catch (err) {
+        if (!initialData) {
+          toast.error("Product not found");
+          navigate('/shop');
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchProduct();
     window.scrollTo(0, 0);
-  }, [slug, navigate]);
+  }, [slug, navigate, initialData]);
 
   useEffect(() => {
     if (product?.categoryId) {
@@ -84,53 +116,7 @@ const ProductDetailPage = () => {
   }, [product?.id, product?.categoryId]);
 
   const handleAddToCart = () => {
-    const hasVariants = product.variants && product.variants.length > 0;
-    
-    if (hasVariants && !selectedVariant) {
-      toast.error("Please select a color first");
-      return;
-    }
-
-    const stock = hasVariants 
-      ? (selectedVariant.sizes?.find((s: any) => s.size === selectedSize)?.stock || 0)
-      : (product.inventory?.stock || 0);
-
-    if (stock <= 0) {
-      toast.error("This selection is currently out of stock");
-      return;
-    }
-    
-    // Check sizes
-    let availableSizes: string[] = [];
-    if (hasVariants) {
-      availableSizes = selectedVariant.sizes?.map((s: any) => s.size) || [];
-    } else if (product?.sizes) {
-      availableSizes = product.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
-    }
-
-    if (availableSizes.length > 0 && !selectedSize) {
-      toast.error("Please select a size first");
-      return;
-    }
-
-    const primaryImage = hasVariants
-      ? (selectedVariant.images?.find((img: any) => img.isPrimary)?.imageUrl || selectedVariant.images?.[0]?.imageUrl)
-      : (product.images?.find((img: any) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl);
-
-    addItem({
-      id: product.id,
-      variantId: selectedVariant?.id,
-      name: product.name,
-      price: product.discountPrice || product.basePrice,
-      quantity: quantity,
-      image: primaryImage,
-      stock: stock,
-      selectedSize: selectedSize || undefined,
-      slug: product.slug,
-      cartItemId: Date.now().toString()
-
-    });
-    toast.success(`${product.name} Added to Cart`);
+    performAddToCart(product, selectedVariant, selectedSize, quantity, addItem);
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -193,35 +179,16 @@ const ProductDetailPage = () => {
         </div>
 
         <div className="grid lg:grid-cols-[45%_1fr] gap-12 items-start">
-          <div className="flex flex-col">
+          <div className="flex flex-col lg:sticky lg:top-32 h-fit">
             <ProductGallery 
               images={images} 
               selectedImage={selectedImage} 
               setSelectedImage={setSelectedImage} 
               productName={product.name} 
             />
-            
-            {/* Tabs for desktop - positioned under image to utilize space */}
-            <div className="hidden lg:block mt-8">
-              <ProductTabs 
-                product={product} 
-                activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
-                rating={rating} 
-                setRating={setRating} 
-                comment={comment} 
-                setComment={setComment} 
-                images={reviewImages}
-                setImages={setReviewImages}
-                isSubmitting={isSubmitting} 
-                handleReviewSubmit={handleReviewSubmit} 
-              />
-
-            </div>
           </div>
-          
-          <div className="flex flex-col lg:sticky lg:top-32 h-fit">
-
+            
+          <div className="flex flex-col">
             <ProductInfo 
               product={product} 
               quantity={quantity} 
@@ -242,8 +209,7 @@ const ProductDetailPage = () => {
               toast={toast} 
             />
             
-            {/* Tabs for mobile - positioned below info as per standard flow */}
-            <div className="lg:hidden mt-8">
+            <div className="mt-8">
               <ProductTabs 
                 product={product} 
                 activeTab={activeTab} 
@@ -257,14 +223,13 @@ const ProductDetailPage = () => {
                 isSubmitting={isSubmitting} 
                 handleReviewSubmit={handleReviewSubmit} 
               />
-
             </div>
           </div>
         </div>
 
 
         {/* Similar Products Section */}
-        <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-10">
+        <div className="mt-8 pt-10">
           <ProductSection 
             title="SIMILAR PRODUCTS" 
             products={similarProducts} 
@@ -282,4 +247,3 @@ const ProductDetailPage = () => {
 };
 
 export default ProductDetailPage;
-

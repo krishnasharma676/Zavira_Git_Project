@@ -26,16 +26,29 @@ const WishlistPage = () => {
         </div>
 
         {/* Product Grid - Standardized with Home page */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {items.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              toggleItem={toggleItem}
-              isInWishlist={isInWishlist}
-              addItem={addItem}
-            />
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+          {items.map((item) => {
+             // Map WishlistItem to a shape that ProductCard understands
+             const displayProduct = {
+               ...item,
+               // Ensure images is always a non-empty array for ProductCard if possible
+               images: (item.images && item.images.length > 0) 
+                 ? item.images 
+                 : (item.image ? [{ imageUrl: item.image, isPrimary: true }] : []),
+               discountedPrice: item.discountedPrice || item.price || 0,
+               basePrice: item.basePrice || item.price || 0,
+               category: item.category || 'Collection'
+             };
+             return (
+               <ProductCard
+                 key={item.id}
+                 product={displayProduct}
+                 toggleItem={toggleItem}
+                 isInWishlist={isInWishlist}
+                 addItem={addItem}
+               />
+             );
+          })}
         </div>
       </div>
     </div>
