@@ -2,17 +2,32 @@ import { orderRepository } from "../repositories/order.internal";
 import { cartRepository } from "../repositories/cart.internal";
 import { productRepository } from "../repositories/product.internal";
 import { ApiError } from "../utils/ApiError";
-import { razorpay } from "../config/razorpay";
+// import { razorpay } from "../config/razorpay";
 import { shiprocketService } from "./shiprocket.service";
 import crypto from "crypto";
 import { settingService } from "./setting.service";
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 
+import Razorpay from "razorpay";
+
 export class OrderService {
+  private async getRazorpayInstance() {
+    const keyId = await settingService.getSetting('razorpay_key_id') || process.env.RAZORPAY_KEY_ID;
+    const keySecret = await settingService.getSetting('razorpay_key_secret') || process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!keyId || !keySecret) {
+      throw new ApiError(500, "Razorpay configuration missing");
+    }
+
+    return new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+  }
+
   async placeOrder(userId: string, data: any) {
     const { addressId, paymentMethod, items } = data;
     
-    // ... (rest of the logic remains same until order creation)
     let baseItems: any[] = [];
     if (items && Array.isArray(items) && items.length > 0) {
       baseItems = items.map(i => ({ 
@@ -33,17 +48,12 @@ export class OrderService {
          variantId: i.variantId
       }));
     }
-
+    
     let totalAmount = 0;
     let taxAmount = 0;
-    const itemsToOrder = [];
-    
-    console.log("📦 NEW ORDER REQUEST - USER:", userId);
-    console.log("🛒 BASE ITEMS RECEIVED:", JSON.stringify(baseItems, null, 2));
-    
-    console.log('[ORDER_DEBUG] Items to Order Array Building:');
+    const itemsToOrder: any[] = [];
+
     for (const item of baseItems) {
-      console.log(` - Product: ${item.productId}, Qty: ${item.quantity}, VariantId: ${item.variantId}, Size: ${item.selectedSize}`);
       const product = await productRepository.findById(item.productId);
       if (!product || !product.inventory || product.inventory.stock < item.quantity) {
         throw new ApiError(400, `Product ${product?.name || "ID: " + item.productId} is out of stock`);
@@ -52,22 +62,32 @@ export class OrderService {
       const itemTotal = price * item.quantity;
       totalAmount += itemTotal;
       
-      // Calculate tax component assuming price is inclusive of GST
-      // Formula: (Price * TaxRate) / (100 + TaxRate)
       const taxRate = product.taxRate || 0;
       const itemTax = (itemTotal * taxRate) / (100 + taxRate);
       taxAmount += itemTax;
+
+      // Find the most specific SKU
+      let sku = product.inventory?.sku || null;
+      if (item.variantId) {
+        const variant = (product as any).variants?.find((v: any) => v.id === item.variantId);
+        if (variant) {
+          sku = variant.sku || sku;
+          if (item.selectedSize) {
+             const size = variant.sizes?.find((s: any) => s.size === item.selectedSize);
+             if (size) sku = size.sku || sku;
+          }
+        }
+      }
 
       itemsToOrder.push({ 
          productId: item.productId, 
          quantity: item.quantity, 
          price: price,
          selectedSize: item.selectedSize,
-         variantId: item.variantId
+         variantId: item.variantId,
+         sku: sku
       });
     }
-
-    console.log("🚚 ITEMS PREPARED FOR DATABASE:", JSON.stringify(itemsToOrder, null, 2));
 
     // Get shipping and COD settings
     const settings = await settingService.getAllSettings();
@@ -77,8 +97,12 @@ export class OrderService {
     let shippingCharges = flatRate;
     let codAmount = paymentMethod === 'COD' ? codCharge : 0;
     
-    const payableAmount = totalAmount + shippingCharges + codAmount;
-    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const payableAmount = totalAmount + taxAmount + shippingCharges + codAmount;
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
+    const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4 Random Chars
+    const orderNumber = `ZV-${dateStr}-${randomHash}`;
 
     let razorpayOrder = null;
     if (paymentMethod === "ONLINE") {
@@ -87,6 +111,7 @@ export class OrderService {
         currency: "INR",
         receipt: orderNumber,
       };
+      const razorpay = await this.getRazorpayInstance();
       razorpayOrder = await razorpay.orders.create(options);
     }
 
@@ -123,8 +148,12 @@ export class OrderService {
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = paymentData;
     
     const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const secret = await settingService.getSetting('razorpay_key_secret') || process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!secret) throw new ApiError(500, "Razorpay secret missing");
+
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", secret)
       .update(body.toString())
       .digest("hex");
 
@@ -152,7 +181,14 @@ export class OrderService {
     if (!order) throw new ApiError(404, "Order not found");
     
     const shipment = await shiprocketService.createShipment(order);
-    if (!shipment) throw new ApiError(500, "Shiprocket creation failed");
+    if (!shipment) {
+      // Save error note to order so admin sees it
+      await orderRepository.updateAdminNotes(
+        orderId,
+        `[SHIPMENT ERROR ${new Date().toISOString()}]: Shiprocket API returned null. Check pickup_location name, Shiprocket credentials, and order data.`
+      );
+      throw new ApiError(500, "Shiprocket shipment creation failed. Check admin notes on this order.");
+    }
 
     let awbDetails = null;
     try {
@@ -166,6 +202,18 @@ export class OrderService {
       shippingStatus: "AWB Generated",
       trackingUrl: awbDetails?.response?.data?.tracking_url || null
     });
+  }
+
+  async getShipmentLabel(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order || !order.shipmentId) throw new ApiError(404, "Shipment not initialized for this order");
+    
+    const labelData = await shiprocketService.generateLabel(order.shipmentId);
+    if (!labelData || !labelData.label_url) {
+      throw new ApiError(500, "Failed to generate label from Shiprocket");
+    }
+
+    return { labelUrl: labelData.label_url };
   }
 
   private async triggerShipment(orderId: string) {
@@ -206,11 +254,31 @@ export class OrderService {
       throw new ApiError(403, "Access denied");
     }
 
-    return order;
+    // Include live tracking if shipmentId exists
+    let tracking = null;
+    if (order.shipmentId) {
+       try {
+          tracking = await shiprocketService.getTrackingDetails(order.shipmentId);
+       } catch (e) {
+          console.error("Live tracking fetch failed in order details:", e);
+       }
+    }
+
+    return { ...order, tracking };
   }
 
-  async updateOrderStatus(id: string, status: any) {
-    return await orderRepository.updateStatus(id, status);
+  async updateOrderStatus(id: string, status: OrderStatus) {
+    const order = await orderRepository.updateStatus(id, status);
+
+    // If order is delivered, ensure payment is marked as completed (especially for COD)
+    if (status === OrderStatus.DELIVERED) {
+      const orderData = await orderRepository.findById(id);
+      if (orderData && orderData.payment?.status !== PaymentStatus.COMPLETED) {
+        await orderRepository.updatePaymentStatus(id, PaymentStatus.COMPLETED, `MANUAL_DELIVERY_${Date.now()}`);
+      }
+    }
+
+    return order;
   }
 
   async updateAdminNotes(id: string, notes: string) {
@@ -237,6 +305,7 @@ export class OrderService {
     // ONLINE payment - try Razorpay refund if transaction ID exists
     if (payment.paymentMethod === "ONLINE" && payment.transactionId) {
       try {
+        const razorpay = await this.getRazorpayInstance();
         const refund = await razorpay.payments.refund(payment.transactionId, {
           amount: Math.round(payment.amount * 100),
           notes: { admin_reason: notes }
@@ -275,12 +344,33 @@ export class OrderService {
     const order = await orderRepository.findById(orderId);
     if (!order) throw new ApiError(404, "Order not found");
     
-    // Must be in RETURN_REQUESTED originally
-    if (order.status !== OrderStatus.RETURN_REQUESTED) {
-      throw new ApiError(400, "No return request active for this order");
+    // 1. Trigger Shiprocket Reverse Pickup
+    try {
+      const reverseShipment = await shiprocketService.createReverseShipment(order);
+      if (reverseShipment?.shipment_id) {
+        await orderRepository.updateAdminNotes(orderId, `[REVERSE PICKUP]: Shipment created with ID ${reverseShipment.shipment_id}. Tracking will update automatically.`);
+      }
+    } catch (e) {
+      console.error("Reverse Pickup Trigger failed:", e);
     }
 
     return await orderRepository.updateStatus(orderId, OrderStatus.RETURNED);
+  }
+
+  async resetForReshipment(id: string) {
+    const order = await orderRepository.findById(id);
+    if (!order) throw new ApiError(404, "Order not found");
+
+    // Clear old shipment data to allow fresh "SHIP NOW"
+    await orderRepository.updateShipmentDetails(id, {
+      shipmentId: null,
+      awbNumber: null,
+      courierName: null,
+      shippingStatus: 'Ready for Reshipment',
+      trackingUrl: null
+    });
+
+    return await orderRepository.updateStatus(id, OrderStatus.CONFIRMED);
   }
 
   async syncShiprocketStatuses() {
@@ -314,6 +404,45 @@ export class OrderService {
       }
     }
     return { success: true };
+  }
+
+  async getPublicTracking(identifier: string) {
+    // 1. Try to find order by Number or AWB
+    let order = await orderRepository.findByOrderNumber(identifier);
+    if (!order) {
+      order = await orderRepository.findByAwb(identifier);
+    }
+    
+    if (!order) throw new ApiError(404, "No order found with these details");
+
+    // 2. If it has a shipment ID, get live Shiprocket data
+    let tracking: any = null;
+    if (order.shipmentId) {
+      try {
+        tracking = await shiprocketService.getTrackingDetails(order.shipmentId);
+      } catch (e) {
+        console.error("Live tracking fetch failed:", e);
+      }
+    }
+
+    // 3. Return sanitized data for public view
+    return {
+      orderNumber: order.orderNumber,
+      status: order.status,
+      shippingStatus: order.shippingStatus,
+      createdAt: order.createdAt,
+      payableAmount: order.payableAmount,
+      courierName: order.courierName,
+      awbNumber: order.awbNumber,
+      trackingUrl: order.trackingUrl,
+      items: order.items.map((i: any) => ({
+        name: i.product?.name,
+        quantity: i.quantity,
+        sku: i.sku,
+        image: i.product?.images?.[0]?.imageUrl || null
+      })),
+      tracking: tracking // Real-time data from Shiprocket
+    };
   }
 }
 

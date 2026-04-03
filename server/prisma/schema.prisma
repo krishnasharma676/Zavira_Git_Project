@@ -341,6 +341,7 @@ model OrderItem {
   productId    String
   variantId    String?
   selectedSize String?
+  sku          String?
   quantity     Int
   price        Float
   createdAt    DateTime        @default(now())

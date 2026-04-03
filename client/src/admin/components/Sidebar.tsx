@@ -1,6 +1,7 @@
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { LogOut, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { ADMIN_MODULES } from '../utils/modules';
+import zaviraLogo from '../../assets/zavira-logo.png';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,13 +29,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-[#7A578D] rounded flex items-center justify-center text-white font-black text-sm shadow-sm">Z</div>
-            <div className="flex flex-col">
-              <h1 className="text-[11px] font-black uppercase tracking-widest text-gray-900 leading-none">Admin</h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Manager</p>
+            <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded border border-gray-100 hover:bg-white transition-all cursor-pointer group">
+                 <img src={zaviraLogo} alt="Admin" className="w-6 h-6 object-contain" />
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-gray-900 leading-none">System Admin</span>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Manager</p>
+                 </div>
             </div>
-          </div>
           <button onClick={onClose} className="lg:hidden p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
              <X size={16} />
           </button>

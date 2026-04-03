@@ -35,7 +35,7 @@ const ReviewForm = ({
                 key={star}
                 type="button"
                 onClick={() => setRating(star)}
-                className={`transition-transform hover:scale-125 ${rating >= star ? 'text-yellow-500' : 'text-gray-200'}`}
+                className={`transition-transform hover:scale-125 ${rating >= star ? 'text-[#7A578D]' : 'text-gray-200'}`}
               >
                 <Star size={18} fill={rating >= star ? 'currentColor' : 'none'} />
               </button>
@@ -98,7 +98,7 @@ const ReviewForm = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="luxury-button w-full rounded-xl flex items-center justify-center space-x-2"
+          className="w-full bg-[#7A578D] hover:bg-[#6a4a7b] text-white py-4 rounded-xl flex items-center justify-center space-x-2 transition-all font-bold uppercase tracking-widest text-[11px]"
         >
           {isSubmitting ? (
             <span className="animate-pulse">PUBLISHING...</span>

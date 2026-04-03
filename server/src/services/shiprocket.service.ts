@@ -43,21 +43,56 @@ export class ShiprocketService {
     // Transform order items for Shiprocket
     const shiprocketItems = order.items.map((item: any) => ({
       name: item.product.name,
-      sku: item.product.sku || item.productId,
+      sku: item.sku || item.product.sku || item.productId,
       units: item.quantity,
       selling_price: item.price,
       discount: 0,
       tax: 0,
     }));
 
+    // Calculate dynamic weight and dimensions
+    let totalWeight = 0;
+    let maxLength = 0;
+    let maxBreadth = 0;
+    let maxHeight = 0;
+
+    for (const item of (order.items || [])) {
+      const p = item.product || {};
+      const qty = item.quantity || 1;
+      
+      // Weight (converted to kg if necessary, Shiprocket expects kg)
+      let w = Number(p.weight) || 0.1; // fallback to 100g
+      if (p.weightUnit?.toLowerCase() === 'g' || p.weightUnit?.toLowerCase() === 'grams') w = w / 1000;
+      totalWeight += (w * qty);
+
+      // Dimensions (Shiprocket expects cm)
+      const l = Number(p.length) || 10;
+      const b = Number(p.width)  || 10;
+      const h = Number(p.height) || 10;
+
+      // Simple heuristic: max length/breadth, and summed height for stacked items
+      maxLength = Math.max(maxLength, l);
+      maxBreadth = Math.max(maxBreadth, b);
+      maxHeight += (h * qty);
+    }
+
+    // Constraints check (min values for Shiprocket)
+    totalWeight = Math.max(totalWeight, 0.05); // min 50g
+    maxLength = Math.max(maxLength, 1);
+    maxBreadth = Math.max(maxBreadth, 1);
+    maxHeight = Math.max(maxHeight, 1);
+
+    // Fetch pickup location from admin settings (set this in Admin → Settings)
+    const pickupLocation = await settingService.getSetting('shiprocket_pickup_location') || process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
+
     const payload = {
-      order_id: order.orderNumber,
+      order_id: order.shippingStatus === 'Ready for Reshipment' ? `${order.orderNumber}-RE` : order.orderNumber,
       order_date: new Date(order.createdAt).toISOString().split('T')[0],
-      pickup_location: "Primary", // Adjust based on common Shiprocket settings
+      pickup_location: pickupLocation,
       billing_customer_name: order.address.name.split(' ')[0],
-      billing_last_name: order.address.name.split(' ')[1] || "",
+      billing_last_name: order.address.name.split(' ').slice(1).join(' ') || "Customer",
       billing_address: order.address.street,
-      billing_address_2: "",
+      billing_address_2: `${order.address.area}${order.address.landmark ? `, Landmark: ${order.address.landmark}` : ''}`,
       billing_city: order.address.city,
       billing_pincode: order.address.pincode,
       billing_state: order.address.state,
@@ -68,10 +103,10 @@ export class ShiprocketService {
       order_items: shiprocketItems,
       payment_method: order.paymentMethod === 'COD' ? 'Postpaid' : 'Prepaid',
       sub_total: order.totalAmount,
-      length: 10,
-      breadth: 10,
-      height: 10,
-      weight: 0.5,
+      length: maxLength,
+      breadth: maxBreadth,
+      height: maxHeight,
+      weight: totalWeight,
     };
 
     // Fetch store GSTIN from settings and add if available
@@ -140,6 +175,12 @@ export class ShiprocketService {
   }
 
   async generateLabel(shipmentId: string) {
+    if (ShiprocketService.isTestMode) {
+      return { 
+        label_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" 
+      };
+    }
+
     const token = await ShiprocketService.authenticate();
     try {
       const response = await axios.post(
@@ -163,6 +204,71 @@ export class ShiprocketService {
       );
       return response.data;
     } catch (error: any) {
+      return null;
+    }
+  }
+
+  async createReverseShipment(order: any) {
+    if (ShiprocketService.isTestMode) {
+      console.log("✔ [SHIPROCKET] Test Mode: Generating mock REVERSE shipment");
+      return { 
+        order_id: `MOCK_REV_${Date.now()}`, 
+        shipment_id: `MOCK_REV_SHIP_${Math.floor(Math.random() * 1000000)}` 
+      };
+    }
+
+    const token = await ShiprocketService.authenticate();
+    
+    // Get store return address from settings
+    const returnAddress = await settingService.getSetting('store_address') || "Zavira Store, Building 1, Main Street, Delhi - 110001";
+    
+    const payload = {
+      order_id: `${order.orderNumber}-REV`,
+      order_date: new Date().toISOString().split('T')[0],
+      pickup_customer_name: order.address.name,
+      pickup_last_name: "Customer",
+      pickup_address: order.address.street,
+      pickup_address_2: order.address.area,
+      pickup_city: order.address.city,
+      pickup_state: order.address.state,
+      pickup_country: "India",
+      pickup_pincode: order.address.pincode,
+      pickup_email: order.user?.email || "customer@example.com",
+      pickup_phone: order.address.phone,
+      shipping_customer_name: "Zavira Repairs/Returns",
+      shipping_address: returnAddress,
+      shipping_city: "Delhi", // Should ideally be part of returnAddress setting
+      shipping_state: "Delhi",
+      shipping_country: "India",
+      shipping_pincode: "110001",
+      shipping_phone: "9876543210",
+      order_items: order.items.map((i: any) => ({
+        name: i.product.name,
+        sku: i.sku || i.product.sku || i.productId,
+        units: i.quantity,
+        selling_price: 1, // Usually nominal for returns
+        discount: 0,
+        tax: 0,
+      })),
+      payment_method: "Prepaid",
+      total_discount: 0,
+      sub_total: 1,
+      length: 10,
+      breadth: 10,
+      height: 10,
+      weight: 0.5,
+    };
+
+    try {
+      const response = await axios.post(
+        "https://apiv2.shiprocket.in/v1/external/orders/create/return",
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      console.error("Shiprocket Reverse Order Error:", error.response?.data || error.message);
       return null;
     }
   }

@@ -19,7 +19,7 @@ const ProductGrid = ({
   setSearchParams
 }: ProductGridProps) => {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
       {loading ? (
         Array(8).fill(0).map((_, i) => (
           <div key={i} className="animate-pulse flex flex-col items-center">

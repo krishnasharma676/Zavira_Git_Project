@@ -10,7 +10,8 @@ import {
   X,
   Truck,
   CreditCard,
-  Coins
+  Coins,
+  MapPin
 } from 'lucide-react';
 import { useCart } from '../../store/useCart';
 import { useAuth } from '../../store/useAuth';
@@ -42,12 +43,15 @@ const CheckoutModal = () => {
     lastName: '',
     address: '',
     area: '',
+    landmark: '',
     city: '',
     state: '',
     email: user?.email || '',
     type: 'Home',
     phone: ''
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const flatRate = Number(settings?.shipping_flat_rate) || 50;
   const codCharge = Number(settings?.cod_charge) || 39;
@@ -60,9 +64,32 @@ const CheckoutModal = () => {
     return acc + (itemTotal * rate) / (100 + rate);
   }, 0);
   
-  const shipping = flatRate;
+  const shipping = subtotal >= (Number(settings?.free_shipping_threshold) || 1000) ? 0 : flatRate;
   const codBuffer = selectedPayment === 'COD' ? codCharge : 0;
   const total = subtotal + shipping + codBuffer;
+
+  // ─── Pincode Auto-lookup Effect ──────────────────────────────────────────
+  useEffect(() => {
+    if (formData.pincode.length === 6) {
+      const lookupPincode = async () => {
+        try {
+          const res = await fetch(`https://api.postalpincode.in/pincode/${formData.pincode}`);
+          const data = await res.json();
+          if (data[0].Status === 'Success') {
+            const info = data[0].PostOffice[0];
+            setFormData(prev => ({
+              ...prev,
+              city: info.District,
+              state: info.State
+            }));
+            setErrors(prev => ({ ...prev, city: '', state: '' }));
+            toast.success(`Location detected: ${info.District}`, { icon: '📍', duration: 2000 });
+          }
+        } catch (e) {}
+      };
+      lookupPincode();
+    }
+  }, [formData.pincode]);
 
   useEffect(() => {
     if (isCheckoutModalOpen) {
@@ -71,15 +98,12 @@ const CheckoutModal = () => {
         openAuthModal('login');
         return;
       }
-      
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
-      // Reset state when closed
       if (!isSuccess) {
         setStep(1);
         setLoading(false);
-        setPaymentError(null);
       }
     }
     return () => { document.body.style.overflow = 'unset'; };
@@ -95,7 +119,6 @@ const CheckoutModal = () => {
     fetchSettings();
   }, []);
 
-  // ─── Validation Rules (from central validators) ──────────────────
   const RULES = {
     pincode:   V.pincode,
     phone:     V.phone,
@@ -105,9 +128,8 @@ const CheckoutModal = () => {
     area:      V.area,
     city:      V.city,
     state:     V.state,
+    landmark:  (v: string) => v ? '' : 'Landmark is recommended'
   };
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = (name: string, value: string) => {
     const fn = (RULES as any)[name];
@@ -124,11 +146,14 @@ const CheckoutModal = () => {
   };
 
   const isFormValid = () => {
-    return Object.keys(RULES).every(k => !validate(k, (formData as any)[k]));
+    const essential = ['pincode', 'phone', 'firstName', 'address', 'area', 'city', 'state'];
+    return essential.every(k => (formData as any)[k] && !validate(k, (formData as any)[k]));
   };
 
   const handleNextStep = () => {
     const errs = validateAll(formData as any, RULES);
+    delete errs.landmark; 
+    
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       toast.error('Please fix the highlighted fields');
@@ -140,13 +165,11 @@ const CheckoutModal = () => {
   const handleCompleteOrder = async () => {
     if (loading) return;
     setLoading(true);
-    setPaymentError(null);
     try {
-      // 1. Save/Update Address
       const { data: addressRes } = await api.post('/addresses', {
         name: `${formData.firstName} ${formData.lastName}`,
         type: formData.type.toUpperCase(),
-        street: formData.address,
+        street: `${formData.address}${formData.landmark ? `, Landmark: ${formData.landmark}` : ''}`,
         area: formData.area,
         city: formData.city,
         state: formData.state,
@@ -157,7 +180,6 @@ const CheckoutModal = () => {
 
       const paymentMethod = selectedPayment === 'COD' ? 'COD' : 'ONLINE';
 
-      // 2. Create Order
       const { data: orderRes } = await api.post('/orders/checkout', {
         addressId: addressRes.data.id,
         paymentMethod,
@@ -173,7 +195,7 @@ const CheckoutModal = () => {
 
       if (paymentMethod === 'ONLINE' && order.razorpay_order_id) {
         const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SNoSdJkfqQc34y',
+          key: settings?.razorpay_key_id || 'rzp_test_SNoSdJkfqQc34y',
           amount: Math.round(total * 100),
           currency: "INR",
           name: "ZAVIRAA",
@@ -181,22 +203,17 @@ const CheckoutModal = () => {
           image: "/zavira-logo.png",
           order_id: order.razorpay_order_id,
           handler: async (response: any) => {
+            setLoading(true);
             try {
-              setLoading(true);
               const { data: verifyRes } = await api.post(`/orders/verify-payment/${order.id}`, {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature
               });
-              
-              if (verifyRes.success) {
-                onSuccess(order);
-              }
+              if (verifyRes.success) onSuccess(order);
             } catch (err: any) {
               setPaymentError(err.response?.data?.message || 'Verification Failed');
-            } finally {
-              setLoading(false);
-            }
+            } finally { setLoading(false); }
           },
           prefill: {
             name: `${formData.firstName} ${formData.lastName}`,
@@ -204,21 +221,11 @@ const CheckoutModal = () => {
             contact: formData.phone
           },
           theme: { color: "#7A578D" },
-          modal: {
-            ondismiss: () => {
-              setLoading(false);
-              toast.error('Payment cancelled');
-            }
-          }
+          modal: { ondismiss: () => { setLoading(false); toast.error('Payment cancelled'); } }
         };
-
         const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (resp: any) {
-          setPaymentError(resp.error.description || 'Payment Failed');
-        });
         rzp.open();
       } else {
-        // COD path
         onSuccess(order);
       }
     } catch (error: any) {
@@ -232,8 +239,6 @@ const CheckoutModal = () => {
     setIsSuccess(true);
     setStep(3);
     clearCart();
-
-    // Redirect to home after 4 seconds (animation is 3.5s)
     setTimeout(() => {
       closeCheckoutModal();
       setIsSuccess(false);
@@ -245,30 +250,26 @@ const CheckoutModal = () => {
   const PaymentOption = ({ id, label, icon: Icon, note, subIcons }: any) => (
     <div 
       onClick={() => setSelectedPayment(id)}
-      className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-center justify-between group ${
+      className={`p-4 rounded-none border-2 transition-all duration-300 cursor-pointer flex items-center justify-between group ${
         selectedPayment === id 
-          ? 'border-[#7A578D] bg-gradient-to-br from-[#7A578D]/5 to-transparent shadow-md scale-[1.02]' 
-          : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 dark:border-white/5 dark:bg-white/[0.02] dark:hover:border-white/10'
+          ? 'border-[#7A578D] bg-gray-50' 
+          : 'border-gray-100 bg-white hover:border-gray-200'
       }`}
     >
       <div className="flex items-center gap-4 w-full">
-        <div className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center transition-colors ${selectedPayment === id ? 'bg-[#7A578D] text-white shadow-lg shadow-[#7A578D]/20' : 'bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
-           <Icon size={20} className={selectedPayment === id ? 'animate-pulse' : ''} />
+        <div className={`w-12 h-12 rounded-none shrink-0 flex items-center justify-center transition-colors ${selectedPayment === id ? 'bg-[#7A578D] text-white' : 'bg-gray-50 text-gray-400'}`}>
+           <Icon size={20} />
         </div>
         <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between pr-4">
            <div>
-              <p className={`text-[12px] font-black uppercase tracking-widest transition-colors ${selectedPayment === id ? 'text-[#7A578D] dark:text-[#C9A0C8]' : 'text-gray-900 dark:text-white'}`}>{label}</p>
-              {note && <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{note}</p>}
+              <p className={`text-[12px] font-black uppercase tracking-widest ${selectedPayment === id ? 'text-[#7A578D]' : 'text-gray-900'}`}>{label}</p>
+              {note && <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{note}</p>}
            </div>
-           {subIcons && (
-             <div className="flex items-center gap-1.5 mt-2 sm:mt-0">
-                {subIcons}
-             </div>
-           )}
+           {subIcons && <div className="flex items-center gap-1.5 mt-2 sm:mt-0">{subIcons}</div>}
         </div>
       </div>
-      <div className={`w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all duration-300 ${selectedPayment === id ? 'border-[#7A578D] bg-white' : 'border-gray-300 dark:border-gray-600'}`}>
-         {selectedPayment === id && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-3 h-3 bg-[#7A578D] rounded-full shadow-sm" />}
+      <div className={`w-5 h-5 rounded-none border-2 shrink-0 flex items-center justify-center transition-all ${selectedPayment === id ? 'border-[#7A578D] bg-[#7A578D]' : 'border-gray-200'}`}>
+         {selectedPayment === id && <div className="w-2 h-2 bg-white" />}
       </div>
     </div>
   );
@@ -277,372 +278,269 @@ const CheckoutModal = () => {
     <AnimatePresence>
       {isCheckoutModalOpen && (
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 font-sans text-gray-900"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 font-sans"
           onClick={closeCheckoutModal}
         >
           <motion.div 
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-[1000px] max-h-[90vh] rounded-[2rem] overflow-hidden flex flex-col shadow-2xl relative"
+            className="bg-white w-full max-w-[1000px] max-h-[92vh] rounded-none overflow-hidden flex flex-col shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] relative"
           >
-          {/* Success Overlay */}
-          <AnimatePresence>
-            {isSuccess && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="fixed inset-0 bg-white z-[300] flex flex-col items-center justify-center text-center p-6"
-              >
-                <motion.div 
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2, type: 'spring' }}
-                  className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-8"
-                >
-                  <CheckCircle2 size={48} />
-                </motion.div>
-                <h2 className="text-3xl font-sans font-black uppercase tracking-tight mb-2">Order Confirmed!</h2>
-                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-8">Your luxury pieces are being prepared</p>
-                <div className="w-64 h-1 bg-gray-100 rounded-full overflow-hidden">
-                   <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: '100%' }}
-                      transition={{ duration: 3.5, ease: 'linear' }}
-                      className="h-full bg-[#7A578D]"
-                   />
-                </div>
-                <p className="mt-8 text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">Setting up your delivery...</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Loader Overlay */}
-          <AnimatePresence>
-            {loading && !isSuccess && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[250] flex flex-col items-center justify-center"
-              >
-                <Loader2 size={40} className="text-[#7A578D] animate-spin mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#7A578D]">Processing...</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+          
           {/* Header */}
-          <header className={`bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-5 py-2.5 sticky top-0 z-[210] transition-opacity ${isSuccess ? 'opacity-0' : 'opacity-100'}`}>
-            <button onClick={() => step === 2 ? setStep(1) : closeCheckoutModal()} className="p-1.5 -ml-1 text-gray-400 hover:text-black transition-colors">
-              <ArrowLeft size={16} />
-            </button>
+          <header className={`bg-white border-b border-gray-100 flex items-center justify-between px-6 py-4 sticky top-0 z-[210] ${isSuccess ? 'opacity-0' : 'opacity-100'}`}>
+            <button onClick={() => step === 2 ? setStep(1) : closeCheckoutModal()} className="p-2 -ml-2 text-gray-400 hover:text-black transition-colors"><ArrowLeft size={18} /></button>
             <div className="flex flex-col items-center">
-                <span className="text-xl font-serif tracking-tighter font-black text-[#7A578D]">ZAVIRAA</span>
-                <div className="flex gap-1 mt-1">
+                <span className="text-2xl font-serif tracking-tighter font-black text-[#7A578D] uppercase">ZAVIRAA</span>
+                <div className="flex gap-1.5 mt-1.5">
                    {[1, 2, 3].map(s => (
-                     <div key={s} className={`h-1 rounded-full transition-all duration-500 ${step >= s ? 'w-4 bg-[#7A578D]' : 'w-1.5 bg-gray-100'}`} />
+                     <div key={s} className={`h-1.5 rounded-none transition-all duration-500 ${step >= s ? 'w-6 bg-[#7A578D]' : 'w-2 bg-gray-100'}`} />
                    ))}
                 </div>
             </div>
-            <button onClick={closeCheckoutModal} className="p-2 text-gray-400 hover:text-black transition-colors">
-              <X size={20} />
-            </button>
+            <button onClick={closeCheckoutModal} className="p-2 -mr-2 text-gray-400 hover:text-black transition-colors"><X size={20} /></button>
           </header>
 
-          <div className="flex-grow overflow-y-auto no-scrollbar px-6 lg:px-10 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div className="flex-grow overflow-y-auto no-scrollbar px-6 lg:px-12 py-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
               
-              <div className="lg:col-span-8 space-y-6">
-                {/* Step Banner */}
-                <div className="bg-[#7A578D] text-white py-2 px-6 rounded-xl flex justify-between items-center shadow-lg shadow-[#7A578D]/20">
-                   <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center font-black text-[10px]">{step}</div>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{step === 1 ? 'Shipping Address' : 'Payment Method'}</span>
+              <div className="lg:col-span-8 space-y-8">
+                <div className="bg-[#7A578D] text-white py-3 px-6 rounded-none flex justify-between items-center shadow-none border border-[#7A578D]">
+                   <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-none bg-white text-[#7A578D] flex items-center justify-center font-black text-[12px]">{step}</div>
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">{step === 1 ? 'Shipping Destination' : 'Secure Payment'}</span>
                    </div>
-                   <div className="flex items-center gap-1 opacity-60">
-                      <ShieldCheck size={12}/>
-                      <span className="text-[9px] font-bold uppercase tracking-widest">SECURE</span>
+                   <div className="flex items-center gap-2">
+                      <ShieldCheck size={14}/>
+                      <span className="text-[10px] font-black uppercase tracking-widest italic opacity-80">Encrypted</span>
                    </div>
                 </div>
 
                 {step === 1 ? (
-                  <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
+                  <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                           <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Pincode*</label>
+                        <div className="space-y-1.5 relative">
+                           <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Pincode *</label>
                            <input
                              name="pincode" value={formData.pincode} onChange={handleInputChange}
-                             placeholder="110001" inputMode="numeric" maxLength={6}
-                             className={`w-full bg-gray-50/50 border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all ${
-                               errors.pincode ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                             }`}
+                             placeholder="Enter Pincode *" inputMode="numeric" maxLength={6}
+                             className={inputCls(errors.pincode)}
                            />
-                           {errors.pincode && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.pincode}</p>}
+                           <MapPin size={14} className="absolute right-4 bottom-3.5 text-[#7A578D] opacity-30" />
+                           {errors.pincode && <p className="text-[9px] text-red-500 font-bold mt-1">{errors.pincode}</p>}
                         </div>
-                        <div className="space-y-1">
-                           <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Phone Number*</label>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Phone *</label>
                            <input
                              name="phone" value={formData.phone} onChange={handleInputChange}
-                             placeholder="9876543210" inputMode="numeric" maxLength={10}
-                             className={`w-full bg-gray-50/50 border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all ${
-                               errors.phone ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                             }`}
+                             placeholder="Enter Phone Number *" inputMode="numeric" maxLength={10}
+                             className={inputCls(errors.phone)}
                            />
-                           {errors.phone && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.phone}</p>}
+                           {errors.phone && <p className="text-[9px] text-red-500 font-bold mt-1">{errors.phone}</p>}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <input
-                            name="firstName" value={formData.firstName} onChange={handleInputChange}
-                            placeholder="First name*"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.firstName ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.firstName && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.firstName}</p>}
-                        </div>
-                        <div className="space-y-1">
-                          <input
-                            name="lastName" value={formData.lastName} onChange={handleInputChange}
-                            placeholder="Last name"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.lastName ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.lastName && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.lastName}</p>}
-                        </div>
+                        <input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="Enter First Name *" className={inputCls(errors.firstName)} />
+                        <input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Enter Last Name" className={inputCls(errors.lastName)} />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <input
-                            name="address" value={formData.address} onChange={handleInputChange}
-                            placeholder="House no, Floor, Building*"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.address ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.address && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.address}</p>}
-                        </div>
-                        <div className="space-y-1">
-                          <input
-                            name="area" value={formData.area} onChange={handleInputChange}
-                            placeholder="Area, Street, Sector*"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.area ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.area && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.area}</p>}
+                      <div className="space-y-4">
+                        <input name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter House No, Floor, Building *" className={inputCls(errors.address)} />
+                        <div className="grid grid-cols-2 gap-4">
+                           <input name="area" value={formData.area} onChange={handleInputChange} placeholder="Enter Area, Colony, Street *" className={inputCls(errors.area)} />
+                           <input name="landmark" value={formData.landmark} onChange={handleInputChange} placeholder="Enter Landmark (Optional)" className={inputCls(errors.landmark)} />
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                          <input
-                            name="city" value={formData.city} onChange={handleInputChange}
-                            placeholder="City*"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.city ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.city && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.city}</p>}
-                        </div>
-                        <div className="space-y-1">
-                          <input
-                            name="state" value={formData.state} onChange={handleInputChange}
-                            placeholder="State*"
-                            className={`w-full bg-gray-50/50 border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all ${
-                              errors.state ? 'border-red-400 bg-red-50 focus:border-red-500' : 'border-gray-100 focus:border-[#7A578D]'
-                            }`}
-                          />
-                          {errors.state && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.state}</p>}
-                        </div>
-                        <div className="flex gap-1 bg-gray-50/50 p-1 rounded-xl border border-gray-100 h-[42px] self-start">
+                        <input name="city" value={formData.city} onChange={handleInputChange} placeholder="Enter City *" className={inputCls(errors.city)} />
+                        <input name="state" value={formData.state} onChange={handleInputChange} placeholder="Enter State *" className={inputCls(errors.state)} />
+                        <div className="flex gap-1 bg-gray-50 p-1 rounded-none border border-gray-100">
                            {['Home', 'Office'].map(type => (
-                             <button 
-                               key={type}
-                               type="button"
-                               onClick={() => setFormData({...formData, type})}
-                               className={`flex-1 py-1 px-2 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all ${formData.type === type ? 'bg-[#7A578D] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                             >
+                             <button key={type} type="button" onClick={() => setFormData({...formData, type})} className={`flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-wider transition-all ${formData.type === type ? 'bg-black text-white' : 'text-gray-400'}`}>
                                {type}
                              </button>
                            ))}
                         </div>
                       </div>
 
-                      <button
-                        onClick={handleNextStep}
-                        disabled={!isFormValid()}
-                        className="bg-[#7A578D] hover:bg-[#684a77] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white w-full py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#7A578D]/10 active:scale-[0.99] transition-all group"
-                      >
+                      <button onClick={handleNextStep} disabled={!isFormValid()} className="bg-black hover:bg-[#7A578D] disabled:bg-gray-100 disabled:text-gray-400 text-white w-full py-5 rounded-none text-[12px] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4">
                          <span>Go to Payment</span>
-                         <ArrowRight size={14} className="inline ml-2 group-hover:translate-x-1 transition-transform" />
+                         <ArrowRight size={16} />
                       </button>
                   </div>
                 ) : step === 2 ? (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-                    {/* Delivery Summary */}
-                    <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3">
-                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
-                          <span>Ship To</span>
-                          <button onClick={() => setStep(1)} className="text-[#7A578D]">Change</button>
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                    <div className="bg-gray-50 rounded-none p-5 border border-gray-100 flex justify-between items-start">
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase text-[#7A578D] tracking-widest mb-2">Delivery Summary</p>
+                          <p className="text-[13px] font-black text-gray-900 uppercase">{formData.firstName} {formData.lastName}</p>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase leading-relaxed max-w-[300px]">
+                            {formData.address}, {formData.area}, {formData.city}, {formData.state} - {formData.pincode}
+                            {formData.landmark && <span className="block italic text-gray-400 mt-1">Landmark: {formData.landmark}</span>}
+                          </p>
                        </div>
-                       <div className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">
-                          {formData.firstName} {formData.lastName} • {formData.phone}
-                          <br />
-                          {formData.address}, {formData.city}, {formData.state} - {formData.pincode}
-                       </div>
+                       <button onClick={() => setStep(1)} className="text-[10px] font-black uppercase text-[#7A578D] border-b-2 border-[#7A578D]/20 hover:border-[#7A578D] transition-all">Edit</button>
                     </div>
 
-                    <div className="space-y-3">
-                       <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900 ml-1">Payment Options</h3>
-                       <div className="grid grid-cols-1 gap-2.5">
-                          <PaymentOption 
-                            id="ONLINE" 
-                            label="Pay Now" 
-                            icon={CreditCard} 
-                            note="Safe & Secure Payments"
-                            subIcons={
-                              <>
-                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-gray-800 dark:text-gray-200">UPI</div>
-                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-[#EA4335] dark:text-[#F1887F]">GPay</div>
-                                <div className="bg-[#002970] px-2 py-0.5 border border-blue-900/50 rounded-md text-[8px] font-black tracking-widest text-[#00BAF2]">Paytm</div>
-                                <div className="bg-white/80 dark:bg-black/20 px-2 py-0.5 border border-gray-200/50 dark:border-white/10 rounded-md text-[8px] font-black tracking-widest text-[#1A1F71] dark:text-blue-400 italic">VISA</div>
-                              </>
-                            }
-                          />
-                          <PaymentOption 
-                            id="COD" 
-                            label="Cash on Delivery" 
-                            icon={Coins} 
-                            note={`+ ${formatCurrency(codCharge)} COD handling fee`} 
-                            subIcons={
-                              <div className="bg-amber-100/50 dark:bg-amber-500/10 px-2 py-0.5 border border-amber-200/50 dark:border-amber-500/20 rounded-md text-[8px] font-black tracking-widest text-amber-700 dark:text-amber-500">PAY AT DOOR</div>
-                            }
-                          />
+                    <div className="space-y-4">
+                       <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-900 border-l-4 border-[#7A578D] pl-3">Payment Methods</h3>
+                       <div className="grid grid-cols-1 gap-3">
+                          <PaymentOption id="ONLINE" label="Pay Securely Now" icon={CreditCard} note="Cards, UPI, Netbanking" />
+                          <PaymentOption id="COD" label="Cash on Delivery" icon={Coins} note={`Extra ${formatCurrency(codCharge)} handling fee`} />
                        </div>
                     </div>
-
-                    <div className="bg-[#7A578D]/5 border border-[#7A578D]/10 p-4 rounded-2xl flex items-center gap-3">
-                        <ShieldCheck size={20} className="text-[#7A578D]" />
-                        <div>
-                           <p className="text-[9px] font-black uppercase tracking-tight leading-none mb-0.5">Secure Transaction</p>
-                           <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Your payment details are never stored</p>
-                        </div>
-                    </div>
                   </motion.div>
-                ) : (
-                  <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-10 space-y-6">
-                      <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                         <CheckCircle2 size={40} />
-                      </div>
-                      <div className="space-y-2">
-                         <h2 className="text-3xl font-black uppercase tracking-tight">Thank You!</h2>
-                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#7A578D]">Order #{orderInfo?.orderNumber?.split('-').pop()}</p>
-                      </div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs mx-auto leading-relaxed">
-                         Your order is confirmed and will be delivered within 3-5 business days.
-                      </p>
-                      
-                      <div className="grid grid-cols-2 gap-4 pt-4 max-w-md mx-auto text-left">
-                         <button onClick={closeCheckoutModal} className="w-full bg-black text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-gray-900 transition-all">
-                            Keep Shopping
-                         </button>
-                         <button onClick={() => { closeCheckoutModal(); navigate('/profile'); }} className="w-full border-2 border-gray-100 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:bg-gray-50">
-                            Check Status
-                         </button>
-                      </div>
-                  </motion.div>
-                )}
+                ) : null}
               </div>
 
-              {/* Sidebar */}
-              <div className="lg:col-span-4 space-y-6">
-                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden sticky top-24">
-                  <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
-                    <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900">Order Summary</h3>
-                    <div className="px-3 py-1 bg-[#7A578D]/5 text-[#7A578D] rounded-full text-[9px] font-black">{items.length}</div>
+              <div className="lg:col-span-4">
+                <div className="bg-white border border-gray-100 p-8 rounded-none shadow-none sticky top-24">
+                  <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+                    <h3 className="text-[14px] font-black uppercase tracking-widest text-gray-900">Summary</h3>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{items.length} Items</div>
                   </div>
                   
-                  <div className="px-8 py-6 space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
+                  <div className="space-y-6 max-h-[300px] overflow-y-auto no-scrollbar mb-8 pr-2">
                     {items.map(item => (
-                      <div key={item.id} className="flex gap-4 group">
-                        <div className="w-16 h-20 bg-gray-50 rounded-2xl overflow-hidden shrink-0 border border-gray-100 transition-transform group-hover:scale-105">
+                      <div key={item.id} className="flex gap-4">
+                        <div className="w-16 h-20 bg-gray-50 rounded-none overflow-hidden shrink-0 border border-gray-100">
                           <img src={item.image} className="w-full h-full object-cover" alt="" />
                         </div>
-                        <div className="flex-grow pt-2">
+                        <div className="flex-grow py-1 flex flex-col justify-between">
                           <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-2 leading-relaxed">{item.name}</h4>
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
-                             <span className="text-[9px] text-gray-300 font-bold uppercase">QTY: {item.quantity}</span>
-                             <span className="text-xs font-black text-[#7A578D]">{formatCurrency(item.price)}</span>
+                          <div className="flex justify-between items-center">
+                             <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
+                             <span className="text-[11px] font-black text-gray-900">{formatCurrency(item.price)}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="px-6 py-5 bg-gray-50/50 space-y-2.5">
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                  <div className="space-y-3 pt-6 border-t border-gray-100">
+                    <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
                       <span>Subtotal</span>
                       <span className="text-gray-900">{formatCurrency(subtotal)}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                      <span>GST (Included)</span>
-                      <span className="text-gray-900">{formatCurrency(tax)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                      <span>Delivery Info</span>
-                      <span className={shipping === 0 ? 'text-green-600 font-black' : 'text-gray-900'}>{shipping === 0 ? 'FREE' : formatCurrency(shipping)}</span>
+                    <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                       <span>Shipping</span>
+                       <span className={shipping === 0 ? 'text-green-600 font-black' : 'text-gray-900'}>{shipping === 0 ? 'FREE' : formatCurrency(shipping)}</span>
                     </div>
                     {selectedPayment === 'COD' && (
-                       <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                        <span>COD Charges</span>
+                       <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                        <span>COD Fee</span>
                         <span className="text-gray-900">{formatCurrency(codCharge)}</span>
                       </div>
                     )}
-                    <div className="pt-3 border-t border-dashed border-gray-200 flex justify-between items-center text-gray-900">
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Total</span>
-                      <span className="text-lg font-black">{formatCurrency(total)}</span>
+                    <div className="pt-4 border-t-2 border-black flex justify-between items-center">
+                      <span className="text-[12px] font-black uppercase tracking-[0.2em] text-gray-900">Total</span>
+                      <span className="text-2xl font-black text-[#7A578D] tracking-tighter">{formatCurrency(total)}</span>
                     </div>
+                    <p className="text-[8px] font-black text-gray-300 uppercase tracking-[0.3em] text-right">Includes all taxes</p>
                   </div>
+
+                  {step < 3 && (
+                    <button 
+                      onClick={step === 1 ? handleNextStep : handleCompleteOrder}
+                      disabled={loading}
+                      className="w-full mt-8 bg-[#7A578D] text-white py-5 rounded-none text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:bg-black disabled:opacity-50 flex items-center justify-center gap-3 border border-[#7A578D] hover:border-black"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={16} /> : <span>{step === 1 ? 'Next: Shipping' : 'Confirm & Pay'}</span>}
+                    </button>
+                  )}
                 </div>
               </div>
 
             </div>
           </div>
 
-          <div className="p-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="p-6 bg-white flex items-center justify-between border-t border-gray-100">
              <div className="hidden sm:block">
-                <p className="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Total Amount</p>
-                <p className="text-xl font-black">{formatCurrency(total)}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 mb-1">Payable Now</p>
+                <p className="text-2xl font-black text-gray-900">{formatCurrency(total)}</p>
              </div>
-             <div className="flex-grow sm:flex-grow-0 flex gap-4">
-                {step < 3 && (
-                  <button 
-                    onClick={step === 1 ? handleNextStep : handleCompleteOrder}
-                    disabled={loading}
-                    className="bg-[#7A578D] text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#7A578D]/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 disabled:opacity-50"
-                  >
-                     {loading ? (
-                        <Loader2 className="animate-spin" size={16} />
-                     ) : (
-                        <>
-                           <span>{step === 1 ? 'Go to Payment' : 'Complete Purchase'}</span>
-                           <ArrowRight size={16} />
-                        </>
-                     )}
-                  </button>
-                )}
+             <div className="flex gap-4">
+                <div className="flex flex-col items-end opacity-20 px-4 border-r border-gray-200">
+                   <ShieldCheck size={18} />
+                   <p className="text-[7px] font-black uppercase tracking-widest mt-1">256-bit SSL</p>
+                </div>
+                <div className="pt-1">
+                   <p className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-300">Luxury Collection</p>
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-200">Zaviraa Heritage</p>
+                </div>
              </div>
           </div>
+          
+          <AnimatePresence>
+            {isSuccess && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-[#FDFBF9] z-[300] flex flex-col items-center justify-center text-center p-6">
+                {/* Background Pattern / Decoration */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                  <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#7A578D] rounded-full mix-blend-multiply filter blur-[120px] opacity-40"></div>
+                  <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-[120px] opacity-30"></div>
+                  <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#7A578D] rounded-full mix-blend-multiply filter blur-[120px] opacity-40"></div>
+                </div>
+
+                <motion.div 
+                  initial={{ scale: 0.85, opacity: 0, y: 30 }} 
+                  animate={{ scale: 1, opacity: 1, y: 0 }} 
+                  transition={{ type: 'spring', damping: 20, stiffness: 100, duration: 0.8 }}
+                  className="bg-white/80 backdrop-blur-xl p-10 md:p-14 rounded-[2.5rem] shadow-2xl shadow-[#7A578D]/15 max-w-lg w-full flex flex-col items-center relative z-10 border border-white/60"
+                >
+                  <img src="/zavira-logo.png" alt="Zaviraa Logo" className="h-10 mb-10 object-contain drop-shadow-sm mix-blend-multiply" />
+                  
+                  <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-8 border-[6px] border-white shadow-[0_0_0_1px_rgba(34,197,94,0.1)] relative">
+                    <motion.div
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: 'spring', damping: 10 }}
+                    >
+                      <CheckCircle2 size={48} className="fill-green-100" strokeWidth={1.5} />
+                    </motion.div>
+                    
+                    {/* Ripple animation */}
+                    <motion.div
+                      initial={{ opacity: 0.7, scale: 1 }} animate={{ opacity: 0, scale: 1.6 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                      className="absolute inset-0 rounded-full border-2 border-green-400"
+                    />
+                  </div>
+                  
+                  <h2 className="text-3xl font-serif font-black tracking-tight mb-3 text-gray-900 drop-shadow-sm">Order Confirmed</h2>
+                  <p className="text-gray-500 text-sm font-medium leading-relaxed mb-6">
+                    {orderInfo?.orderNumber ? (
+                      <>Your luxury order <span className="font-black text-gray-900 border-b border-gray-300 pb-0.5">#{orderInfo.orderNumber}</span> is securely placed.</>
+                    ) : (
+                      'Your luxury order has been securely placed.'
+                    )}
+                  </p>
+                  
+                  <div className="inline-flex items-center gap-2 text-[#7A578D] text-[10px] font-black uppercase tracking-[0.2em] mb-12 py-2 px-5 bg-[#7A578D]/5 rounded-full border border-[#7A578D]/10">
+                    <ShieldCheck size={14} /> Thank you for choosing Zaviraa
+                  </div>
+
+                  <div className="w-full relative">
+                    <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
+                       <span>Redirecting to details</span>
+                       <span className="text-[#7A578D]">Hold tight...</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                       <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 3.5, ease: 'linear' }} className="h-full bg-gradient-to-r from-gray-300 via-[#7A578D] to-[#513661] rounded-full" />
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {loading && !isSuccess && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-white/90 backdrop-blur-sm z-[250] flex flex-col items-center justify-center">
+                <Loader2 size={32} className="text-[#7A578D] animate-spin mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#7A578D]">Securely Processing...</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           </motion.div>
         </motion.div>

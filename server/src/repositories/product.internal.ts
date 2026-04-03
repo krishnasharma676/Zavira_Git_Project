@@ -73,6 +73,11 @@ export class ProductRepository {
       include: {
         images: { where: { isDeleted: false } },
         inventory: true,
+        variants: {
+          include: {
+            sizes: true
+          }
+        }
       },
     });
   }

@@ -4,16 +4,16 @@ import { Link } from 'react-router-dom';
 import WishlistCard from './WishlistCard';
 
 interface WishlistTabProps {
-  wishlistItems: any[];
+  items: any[];
 }
 
-const WishlistTab = ({ wishlistItems }: WishlistTabProps) => {
+const WishlistTab = ({ items }: WishlistTabProps) => {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
        <h2 className="text-2xl font-sans font-black mb-8 italic uppercase tracking-tighter">Desired Masterpieces</h2>
-       {wishlistItems.length > 0 ? (
+       {items.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {wishlistItems.map((item: any) => (
+             {items.map((item: any) => (
                 <WishlistCard key={item.id} item={item} />
              ))}
           </div>
@@ -25,7 +25,7 @@ const WishlistTab = ({ wishlistItems }: WishlistTabProps) => {
           </div>
        )}
     </motion.div>
-  );
+  );   
 };
 
 export default WishlistTab;

@@ -1,17 +1,12 @@
 import { Sparkles } from 'lucide-react';
-import { useCart } from '../store/useCart';
 
 import EmptyCart from '../components/cart/EmptyCart';
 import CartItem from '../components/cart/CartItem';
 import CartSummary from '../components/cart/CartSummary';
+import { useCartPage } from '../hooks/useCartPage';
 
 const CartPage = () => {
-  const { items, removeItem, updateQuantity } = useCart();
-
-  const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 0), 0);
-  const tax = subtotal * 0.03; // Luxury tax or GST
-  const shipping = subtotal >= 1000 ? 0 : 49;
-  const total = subtotal + tax + shipping;
+  const { items, removeItem, updateQuantity, subtotal, tax, shipping, total } = useCartPage();
 
   if (items.length === 0) {
     return <EmptyCart />;

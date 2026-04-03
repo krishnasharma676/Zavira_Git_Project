@@ -14,7 +14,7 @@ export class CartRepository {
               }
             },
             variant: {
-              include: { images: true }
+              include: { images: true, colorRel: true }
             }
           }
         }

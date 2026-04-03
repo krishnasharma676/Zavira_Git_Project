@@ -17,6 +17,7 @@ interface CartItem {
   variantId?: string;
   taxRate?: number;
   slug?: string;
+  colorCode?: string;
 }
 
 
@@ -76,7 +77,11 @@ export const useCart = create<CartState>()(
             ),
           });
         } else {
-          set({ items: [...state.items, { ...item, cartItemId: item.cartItemId || Date.now().toString() }] });
+          set({ items: [...state.items, { 
+             ...item, 
+             cartItemId: item.cartItemId || Date.now().toString(),
+             colorCode: item.colorCode 
+          }] });
         }
       },
       removeItem: async (cartItemId) => {
@@ -157,6 +162,7 @@ export const useCart = create<CartState>()(
                   variantId: si.variantId,
                   slug: si.product.slug,
                   taxRate: si.product.taxRate,
+                  colorCode: si.variant?.colorCode || si.variant?.colorRel?.hexCode || null,
                }));
 
                set({ items: parsedItems });
@@ -193,6 +199,7 @@ export const useCart = create<CartState>()(
                   variantId: si.variantId,
                   slug: si.product.slug,
                   taxRate: si.product.taxRate,
+                  colorCode: si.variant?.colorCode || si.variant?.colorRel?.hexCode || null,
                }));
 
                set({ items: parsedItems });

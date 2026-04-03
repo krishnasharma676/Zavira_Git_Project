@@ -139,7 +139,8 @@ export class ProductService {
           variants: {
             include: {
               images: { orderBy: { sortOrder: 'asc' } },
-              sizes: { orderBy: { size: 'asc' } }
+              sizes: { orderBy: { size: 'asc' } },
+              colorRel: true
             }
           },
 
@@ -181,7 +182,8 @@ export class ProductService {
         variants: {
           include: {
             images: { orderBy: { sortOrder: 'asc' } },
-            sizes: { orderBy: { size: 'asc' } }
+            sizes: { orderBy: { size: 'asc' } },
+            colorRel: true
           }
         },
         reviews: {
@@ -400,19 +402,85 @@ export class ProductService {
 
   async getHomeData() {
     // 1. Fetch all core data in parallel
-    const [banners, categories, testimonials, allProductsRes] = await Promise.all([
+    const [banners, categories, testimonials, allProductsRes, settings] = await Promise.all([
       prisma.banner.findMany({ where: { isDeleted: false, isActive: true }, orderBy: { createdAt: 'desc' } }),
       prisma.category.findMany({ where: { isDeleted: false, isActive: true }, orderBy: { name: 'asc' } }),
       prisma.testimonial.findMany({ where: { isDeleted: false, isActive: true }, take: 16, orderBy: { createdAt: 'desc' } }),
-      this.getAllProducts({ limit: 1000 }) // Fetch full catalog for zero-latency browsing
+      this.getAllProducts({ limit: 1000 }), // Fetch full catalog for zero-latency browsing
+      prisma.setting.findMany()
     ]);
 
     return {
       banners,
       categories,
       testimonials,
-      allProducts: allProductsRes.products
+      allProducts: allProductsRes.products,
+      settings: settings.reduce((acc: any, s: any) => ({ ...acc, [s.key]: s.value }), {})
     };
+  }
+
+  async findProductBySku(sku: string) {
+    // 1. Check main inventory SKUs
+    let product = await prisma.product.findFirst({
+      where: {
+        isDeleted: false,
+        inventory: { sku: sku }
+      },
+      include: {
+        inventory: true,
+        images: true,
+        category: true,
+        variants: {
+          include: {
+            images: true,
+            sizes: true,
+            colorRel: true
+          }
+        }
+      }
+    });
+
+    if (product) return { product, matchType: 'Main Product' };
+
+    // 2. Check variant SKUs
+    const variant = await (prisma as any).productVariant.findFirst({
+      where: { sku: sku, product: { isDeleted: false } },
+      include: {
+        product: {
+          include: {
+             inventory: true,
+             images: true,
+             category: true,
+             variants: { include: { images: true, sizes: true, colorRel: true } }
+          }
+        }
+      }
+    });
+
+    if (variant) return { product: (variant as any).product, matchType: 'Variant Color', variantId: (variant as any).id };
+
+    // 3. Check size SKUs
+    const size = await (prisma as any).productVariantSize.findFirst({
+      where: { sku: sku, variant: { product: { isDeleted: false } } },
+      include: {
+        variant: {
+          include: {
+            product: {
+              include: {
+                 inventory: true,
+                 images: true,
+                 category: true,
+                 variants: { include: { images: true, sizes: true, colorRel: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (size) return { product: (size as any).variant.product, matchType: 'Specific Size', variantId: (size as any).variantId, size: (size as any).size };
+
+    throw new ApiError(404, 'No product found with this SKU');
   }
 }
 

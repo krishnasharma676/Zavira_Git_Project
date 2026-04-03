@@ -103,78 +103,77 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 w-full z-50 bg-white dark:bg-[#121212] font-sans transition-colors duration-300">
-      {/* Top Bar: Logo & Icons */}
-      <div className="container mx-auto px-4 lg:px-8 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
-        
-        {/* Left: Mobile Toggle */}
-        <div className="flex-1 flex items-center justify-start shrink-0">
-          <button
-            className="lg:hidden text-gray-800 dark:text-gray-200"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-        </div>
-
-        {/* Center: Logo */}
-        <div className="flex-1 flex justify-center text-center">
-          <Link to="/" className="flex items-center">
-            <img src={zaviraLogo} alt="Zavira Logo" className="h-9 md:h-12 lg:h-13 w-auto object-contain" />
-          </Link>
-        </div>
-
-        {/* Right: Icons */}
-        <div className="flex-1 flex items-center justify-end space-x-4 lg:space-x-5 text-gray-800 dark:text-gray-200 shrink-0">
+    <nav className="sticky top-0 w-full z-50 transition-colors duration-300 font-sans">      
+      <div className="bg-white dark:bg-[#121212] border-b border-gray-100 dark:border-gray-800">
+        <div className="container mx-auto px-4 lg:px-8 py-3 flex items-center justify-between">
           
-          <button onClick={() => setIsSearchOpen(true)} className="hover:text-[#7A578D] transition-colors p-1 hidden lg:block">
-            <Search size={22} strokeWidth={1.5} />
-          </button>
-
-          <UserMenu 
-            user={user} 
-            isAuthenticated={isAuthenticated} 
-            logout={logout} 
-            isActive={isActive} 
-          />
-
-          <Link to="/track-order" className={`hover:text-[#7A578D] transition-colors p-1 hidden lg:block ${isActive('/track-order') ? 'text-[#7A578D]' : ''}`}>
-             <Clock size={22} strokeWidth={1.5} className={isActive('/track-order') ? 'text-[#7A578D]' : ''} />
-          </Link>
-
-          <div className="relative">
-            <Link to="/wishlist" className={`hover:text-[#7A578D] transition-colors p-1 block ${isActive('/wishlist') ? 'text-[#7A578D]' : ''}`}>
-              <Heart size={22} strokeWidth={1.5} className={isActive('/wishlist') ? 'fill-[#7A578D]' : ''} />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-          </div>
-
-          <div className="relative">
-            <button onClick={openDrawer} className="hover:text-[#7A578D] transition-colors p-1 block relative">
-              <ShoppingBag size={22} strokeWidth={1.5} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {totalItems}
-                </span>
-              )}
+          {/* Left: Mobile Toggle */}
+          <div className="flex-1 flex items-center justify-start shrink-0">
+            <button
+              className="lg:hidden text-gray-800 dark:text-gray-200"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={24} />
             </button>
           </div>
 
+          {/* Center: Logo */}
+          <div className="flex-1 flex justify-center text-center">
+            <Link to="/" className="flex items-center">
+              <img src={zaviraLogo} alt="Zavira Logo" className="h-9 md:h-12 lg:h-13 w-auto object-contain" />
+            </Link>
+          </div>
 
-          <button onClick={toggleDarkMode} className="hover:text-[#7A578D] transition-colors p-1 block ml-2">
-             {isDarkMode ? <Sun size={20} strokeWidth={2} /> : <Moon size={20} strokeWidth={2} />}
-          </button>
+          {/* Right: Icons */}
+          <div className="flex-1 flex items-center justify-end space-x-4 lg:space-x-5 text-gray-800 dark:text-gray-200 shrink-0">
+            
+            <button onClick={() => setIsSearchOpen(true)} className="hover:text-[#7A578D] transition-colors p-1 hidden lg:block">
+              <Search size={22} strokeWidth={1.5} />
+            </button>
 
+            <UserMenu 
+              user={user} 
+              isAuthenticated={isAuthenticated} 
+              logout={logout} 
+              isActive={isActive} 
+            />
+
+            <Link to="/track-order" className={`hover:text-[#7A578D] transition-colors p-1 hidden lg:block ${isActive('/track-order') ? 'text-[#7A578D]' : ''}`}>
+               <Clock size={22} strokeWidth={1.5} className={isActive('/track-order') ? 'text-[#7A578D]' : ''} />
+            </Link>
+
+            <div className="relative">
+              <Link to="/wishlist" className={`hover:text-[#7A578D] transition-colors p-1 block ${isActive('/wishlist') ? 'text-[#7A578D]' : ''}`}>
+                <Heart size={22} strokeWidth={1.5} className={isActive('/wishlist') ? 'fill-[#7A578D]' : ''} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+            </div>
+
+            <div className="relative">
+              <button onClick={openDrawer} className="hover:text-[#7A578D] transition-colors p-1 block relative">
+                <ShoppingBag size={22} strokeWidth={1.5} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#C9A0C8] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <button onClick={toggleDarkMode} className="hover:text-[#7A578D] transition-colors p-1 block ml-2">
+               {isDarkMode ? <Sun size={20} strokeWidth={2} /> : <Moon size={20} strokeWidth={2} />}
+            </button>
+
+          </div>
         </div>
+
+        <NavLinks categories={categories} isActive={isActive} />
+        <AnnouncementBar announcements={announcementBanners} />
       </div>
-
-      <NavLinks categories={categories} isActive={isActive} />
-
-      <AnnouncementBar announcements={announcementBanners} />
 
       <MobileMenu 
         isOpen={isMobileMenuOpen} 

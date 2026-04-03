@@ -48,6 +48,32 @@ export const authenticate = asyncHandler(
   }
 );
 
+export const optionalAuthenticate = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    let token = req.cookies?.accessToken;
+    const authHeader = req.header("Authorization") || req.header("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decodedToken: any = verifyToken(token, process.env.ACCESS_TOKEN_SECRET!);
+      if (decodedToken) {
+        const user = await userRepository.findById(decodedToken.id);
+        if (user && user.status !== "BLOCKED") {
+          (req as any).user = user;
+        }
+      }
+    } catch (err: any) {}
+
+    next();
+  }
+);
+
 /**
  * Validates if the user has at least one of the required roles.
  */

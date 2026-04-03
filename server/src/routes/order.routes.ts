@@ -7,11 +7,14 @@ import {
   getAllOrders, 
   updateOrderStatus,
   triggerShipment,
+  generateLabel,
   updateOrderNotes,
   refundOrder,
   requestReturn,
   approveReturn,
   uploadReturnImages,
+  resetForReshipment,
+  getPublicTrackingDetails,
   syncShiprocketStatuses
 } from "../controllers/order.controller";
 import { authenticate } from "../middleware/auth.middleware";
@@ -21,6 +24,8 @@ import { checkoutSchema, orderIdSchema, updateOrderStatusSchema } from "../valid
 import { upload } from "../middleware/multer.middleware";
 
 const router = Router();
+
+router.get("/public/track/:id", getPublicTrackingDetails);
 
 router.use(authenticate);
 
@@ -38,8 +43,10 @@ router.get("/admin/all", isAdmin, getAllOrders);
 router.patch("/admin/:id/status", isAdmin, validate(updateOrderStatusSchema), updateOrderStatus);
 router.patch("/admin/:id/notes", isAdmin, updateOrderNotes);
 router.post("/admin/:id/trigger-shipment", isAdmin, triggerShipment);
+router.post("/admin/:id/generate-label", isAdmin, generateLabel);
 router.post("/admin/:id/refund", isAdmin, refundOrder);
 router.post("/admin/:id/approve-return", isAdmin, approveReturn);
+router.post("/admin/:id/reset-reship", isAdmin, resetForReshipment);
 router.post("/admin/sync-shiprocket", isAdmin, syncShiprocketStatuses);
 
 export default router;

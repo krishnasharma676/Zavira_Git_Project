@@ -29,6 +29,7 @@ export const formatCartItem = (product: any, selectedVariant: any, selectedSize:
     selectedSize: selectedSize || undefined,
     slug: product.slug,
     sku: sku,
+    colorCode: selectedVariant?.colorCode || selectedVariant?.colorRel?.hexCode || null,
     cartItemId: `${product.id}-${selectedVariant?.id || 'base'}-${selectedSize || 'none'}`
   };
 };

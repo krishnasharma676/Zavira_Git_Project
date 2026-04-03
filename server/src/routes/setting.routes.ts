@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { getSettings, updateSettings } from "../controllers/setting.controller";
-import { authenticate, isAdmin } from "../middleware/auth.middleware";
+import { authenticate, isAdmin, optionalAuthenticate } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.get("/", getSettings);
+router.get("/", optionalAuthenticate, getSettings);
 router.patch("/", authenticate, isAdmin, updateSettings);
 
 export default router;

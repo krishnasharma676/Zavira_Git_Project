@@ -22,107 +22,124 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
   return (
     <div>
       <div className="mb-6">
-        <p className="text-[#7A578D] uppercase tracking-[0.4em] text-[10px] mb-2 font-black">{product.category?.name || 'Jewelry'}</p>
-        <h1 className="text-2xl lg:text-3xl font-sans font-black uppercase tracking-tight mb-3 leading-tight text-gray-900 dark:text-white">{product.name}</h1>
+        {/* Brand / Category & Name */}
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
+          {product.category?.name || 'ZAVIRAA'}
+        </h1>
+        <p className="text-[18px] text-gray-500 mb-3">{product.name}</p>
         
-        {product.reviews?.length > 0 && (
-          <div className="flex items-center space-x-6 mb-4 text-[11px] font-bold uppercase tracking-widest">
-            <div className="flex items-center text-yellow-500">
-              <Star size={13} fill="currentColor" />
-              <span className="ml-2 text-gray-900 dark:text-gray-200 font-semibold">
-                {(product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / product.reviews.length).toFixed(1)}
-              </span>
-            </div>
-            <span className="text-gray-400 font-light lowercase">|</span>
-            <span className="text-gray-500 font-light lowercase italic tracking-wide">{product.reviews.length} verified reviews</span>
-          </div>
-        )}
+        {/* Rating Badge - DYNAMIC */}
+        <div className="inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 px-3 py-1.5 mb-4 rounded-[3px] text-sm font-bold text-gray-800 dark:text-gray-200 hover:border-black transition-colors cursor-pointer">
+          <span className="flex items-center gap-1">
+            {product.reviews?.length > 0 
+              ? (product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / product.reviews.length).toFixed(1) 
+              : "0.0"}
+            <Star size={14} className="text-[#7A578D] fill-[#7A578D] -mt-[0.5px]" />
+          </span>
+          <span className="text-gray-300 font-light mx-1">|</span>
+          <span className="text-[#7A578D] font-normal">
+            {product.reviews?.length >= 1000 
+              ? `${(product.reviews.length / 1000).toFixed(1)}k` 
+              : (product.reviews?.length || 0)} Ratings
+          </span>
+        </div>
 
+        <hr className="border-gray-200 dark:border-white/10 mb-5" />
 
-        <div className="flex items-baseline space-x-4 mb-6">
-          {product.discountedPrice ? (
+        {/* Pricing - DYNAMIC */}
+        <div className="flex items-baseline space-x-3 mb-1">
+          <span className="text-2xl text-gray-900 dark:text-white font-bold">
+            {formatCurrency(product.discountedPrice || product.basePrice || 0).replace('₹', '₹ ')}
+          </span>
+          {product.discountedPrice && product.basePrice > product.discountedPrice && (
             <>
-              <span className="text-2xl text-gray-900 dark:text-white font-black">{formatCurrency(product.discountedPrice)}</span>
-              <span className="text-sm text-gray-400 dark:text-gray-500 line-through">{formatCurrency(product.basePrice || 0)}</span>
-              <div className="bg-[#7A578D] text-white text-[10px] font-black px-2 py-0.5 rounded tracking-widest uppercase ml-2">Sale</div>
+              <span className="text-lg text-gray-500 line-through">
+                MRP {formatCurrency(product.basePrice || 0).replace('₹', '₹ ')}
+              </span>
+              <span className="text-lg font-bold text-[#FF905A]">
+                ({Math.round(((product.basePrice - product.discountedPrice) / product.basePrice) * 100)}% OFF)
+              </span>
             </>
-          ) : (
-            <span className="text-2xl text-gray-900 dark:text-white font-black">{formatCurrency(product.basePrice || 0)}</span>
           )}
         </div>
+        <p className="text-[#7A578D] text-[13px] font-bold mb-5">inclusive of all taxes</p>
 
         <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-6 text-xs max-w-lg">
           {product.description}
         </p>
 
-        {/* Color Variants */}
+        {/* Color Variants - DYNAMIC */}
         {product.variants && product.variants.length > 0 && (
-          <div className="mb-4">
-            <h4 className="text-[9px] font-black uppercase tracking-widest text-[#7A578D] mb-3">Choice of Color</h4>
-            <div className="flex flex-wrap gap-2.5">
+          <div className="mb-8">
+            <h4 className="text-[14px] font-bold uppercase tracking-wide text-gray-900 dark:text-white mb-4">MORE COLOR</h4>
+            <div className="flex flex-wrap gap-3">
               {product.variants.map((variant: any) => (
                 <button
                   key={variant.id}
                   onClick={() => setSelectedVariant && setSelectedVariant(variant)}
-                  className={`group relative flex flex-col items-center gap-1.5 transition-all ${
-                    selectedVariant?.id === variant.id ? 'scale-105' : 'hover:scale-105'
-                  }`}
+                  className={`relative flex items-center justify-center transition-all duration-300 rounded-full group outline-none`}
+                  title={variant.color}
                 >
                   <div 
-                    className={`w-14 h-8 rounded-md shadow-lg transition-all duration-300 border-2 overflow-hidden flex items-center justify-center ${
-                      selectedVariant?.id === variant.id ? 'border-[#7A578D] shadow-purple-500/20' : 'border-white dark:border-white/10 shadow-sm'
+                    className={`rounded-full p-0.5 transition-all duration-300 border ${
+                      selectedVariant?.id === variant.id ? 'border-[#7A578D] scale-110 shadow-sm' : 'border-transparent hover:border-gray-300'
                     }`} 
-                    style={{ backgroundColor: variant.colorCode || '#eee' }}
                   >
-                    {selectedVariant?.id === variant.id && (
-                       <Star size={10} fill="currentColor" className={variant.colorCode?.toUpperCase() === '#FFFFFF' || variant.colorCode?.toUpperCase() === 'WHITE' ? 'text-black' : 'text-white'} />
-                    )}
+                    <div 
+                      className="w-8 h-8 rounded-full border border-gray-100 shadow-inner transition-transform group-hover:scale-105"
+                      style={{ backgroundColor: variant.colorCode || '#E5E7EB' }}
+                    />
                   </div>
-
-                  <span className={`text-[7px] font-black uppercase tracking-widest ${
-                    selectedVariant?.id === variant.id ? 'text-[#7A578D]' : 'text-gray-400'
-                  }`}>
-                    {variant.color}
-                  </span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Sizes */}
+        {/* Sizes - DYNAMIC */}
         {(selectedVariant?.sizes?.length > 0 || product.sizes) && (
-          <div className="mb-6">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7A578D] mb-3">Select Size</h4>
-            <div className="flex flex-wrap gap-2">
+          <div className="mb-8">
+            <div className="flex items-center gap-6 mb-4">
+              <div className="flex items-center gap-2">
+                <h4 className="text-[14px] font-bold uppercase tracking-wide text-gray-900 dark:text-white">SELECT SIZE</h4>
+                {selectedVariant?.colorCode && (
+                   <div 
+                      className="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm"
+                      style={{ backgroundColor: selectedVariant.colorCode }}
+                   />
+                )}
+              </div>
+              <span className="text-[#7A578D] text-[13px] font-bold cursor-pointer uppercase tracking-wide flex items-center">
+                SIZE CHART <span className="ml-1 text-[10px] opacity-70"> &gt;</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-3">
               {(selectedVariant?.sizes && selectedVariant.sizes.length > 0) ? (
                 selectedVariant.sizes.map((sObj: any) => (
-
                   <button
                     key={sObj.id}
                     disabled={sObj.stock <= 0}
                     onClick={() => setSelectedSize && setSelectedSize(sObj.size)}
-                    className={`min-w-[44px] h-11 px-3 flex flex-col items-center justify-center border font-black text-xs uppercase tracking-widest transition-all rounded-lg ${
+                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${
                       selectedSize === sObj.size 
-                        ? 'border-[#7A578D] bg-[#7A578D] text-white' 
+                        ? 'border-[#7A578D] text-[#7A578D] border-2' 
                         : sObj.stock > 0 
-                          ? 'border-gray-100 text-gray-900 hover:border-[#7A578D] dark:border-gray-800 dark:text-gray-300'
-                          : 'border-gray-50 text-gray-300 cursor-not-allowed bg-gray-50/50'
+                          ? 'border-gray-200 text-gray-700 hover:border-[#7A578D] dark:border-gray-700 dark:text-gray-300'
+                          : 'border-gray-200 text-gray-300 cursor-not-allowed border-dashed bg-gray-50'
                     }`}
                   >
                     <span>{sObj.size}</span>
-                    <span className="text-[7px] opacity-70 mt-0.5">{sObj.stock > 0 ? `${sObj.stock} IN STOCK` : 'OUT'}</span>
                   </button>
                 ))
               ) : (
-                product.sizes.split(',').map((s: string) => s.trim()).filter(Boolean).map((size: string) => (
+                String(product.sizes || '').split(',').map((s: string) => s.trim()).filter(Boolean).map((size: string) => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize && setSelectedSize(size)}
-                    className={`min-w-[40px] h-10 px-3 flex items-center justify-center border font-black text-xs uppercase tracking-widest transition-all rounded-lg ${
+                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${
                       selectedSize === size 
-                        ? 'border-[#7A578D] bg-[#7A578D] text-white' 
-                        : 'border-gray-100 text-gray-900 hover:border-[#7A578D] dark:border-gray-800 dark:text-gray-300'
+                        ? 'border-[#7A578D] text-[#7A578D] border-2' 
+                        : 'border-gray-200 text-gray-700 hover:border-[#7A578D] dark:border-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {size}

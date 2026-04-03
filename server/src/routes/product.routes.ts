@@ -7,7 +7,8 @@ import {
   deleteProduct, 
   uploadImages, 
   deleteImage,
-  getHomeData
+  getHomeData,
+  getProductBySku
 } from "../controllers/product.controller";
 import { authenticate, isAdmin } from "../middleware/auth.middleware";
 import { upload } from "../middleware/multer.middleware";
@@ -23,6 +24,7 @@ router.get("/:slug", validate(productSlugSchema), getProductBySlug);
 
 // Admin only routes
 router.post("/", authenticate, isAdmin, upload.array("images", 5), validate(productSchema), createProduct);
+router.get("/admin/sku/:sku", authenticate, isAdmin, getProductBySku);
 router.patch("/:id", authenticate, isAdmin, upload.array("images", 5), validate(updateProductSchema), updateProduct);
 router.delete("/:id", authenticate, isAdmin, deleteProduct);
 

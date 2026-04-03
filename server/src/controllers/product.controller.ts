@@ -45,3 +45,8 @@ export const getHomeData = asyncHandler(async (req: Request, res: Response) => {
   const data = await productService.getHomeData();
   return res.status(200).json(new ApiResponse(200, data, "Home data fetched successfully"));
 });
+
+export const getProductBySku = asyncHandler(async (req: Request, res: Response) => {
+  const result = await productService.findProductBySku(req.params.sku as string);
+  return res.status(200).json(new ApiResponse(200, result, "Product found"));
+});

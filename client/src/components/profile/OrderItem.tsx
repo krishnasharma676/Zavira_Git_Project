@@ -1,6 +1,7 @@
 import { Package, ChevronRight, ExternalLink, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCurrency, formatDate } from '../../utils/format';
+import { getPrimaryImage } from '../../utils/productHelpers';
 
 interface OrderItemProps {
   order: any;
@@ -43,7 +44,7 @@ const OrderItem = ({ order, getStatusIcon, onRequestReturn }: OrderItemProps) =>
 
         <div className="flex flex-col sm:items-end gap-1.5">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
-            #{order.orderNumber?.split('-').pop()}
+            ID: {order.orderNumber}
           </span>
           <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-sm ${
             isReturnRequested
@@ -74,14 +75,14 @@ const OrderItem = ({ order, getStatusIcon, onRequestReturn }: OrderItemProps) =>
           <div key={item.id} className="flex gap-3 items-start sm:items-center">
             <Link to={`/product/${item.product?.id}`} className="shrink-0 group/img">
               <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-100 dark:bg-white/5 rounded-xl overflow-hidden border border-gray-100 dark:border-white/10 relative">
-                {item.product?.images?.[0]?.url ? (
+                {item.product?.images?.[0]?.imageUrl ? (
                   <img
-                    src={item.product.images[0].url}
+                    src={item.product.images[0].imageUrl}
                     alt={item.product?.name}
                     className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-[9px] font-black uppercase">No Image</div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-[10px] bg-gray-50 font-black uppercase">No Image</div>
                 )}
                 <div className="absolute inset-0 group-hover/img:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100">
                   <ExternalLink size={14} className="text-white bg-black/50 p-1 rounded-full h-6 w-6" />

@@ -1,5 +1,6 @@
 import { Mail, Phone, MapPin, ShieldCheck } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
+import zaviraLogo from '../../assets/zavira-logo.png';
 
 interface InvoiceProps {
   order: any;
@@ -25,7 +26,7 @@ const OrderInvoice = ({ order, settings }: InvoiceProps) => {
       <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
         <div>
            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-black rounded shrink-0 flex items-center justify-center text-white italic font-black text-xl">Z</div>
+              <img src={zaviraLogo} alt="ZAVIRAA" className="h-8 w-auto object-contain" />
               <h1 className="text-2xl font-black uppercase tracking-tighter">ZAVIRAA</h1>
            </div>
            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Curated Elegance & Accessories</p>
@@ -63,6 +64,7 @@ const OrderInvoice = ({ order, settings }: InvoiceProps) => {
               <p className="text-[9px] font-bold text-gray-600 uppercase leading-relaxed max-w-[200px]">
                  {order.address?.street}, {order.address?.area}<br />
                  {order.address?.city}, {order.address?.state} - {order.address?.pincode}
+                 {order.address?.landmark && <><br /><span className="text-[#7A578D] italic font-black">Landmark: {order.address.landmark}</span></>}
               </p>
               <p className="text-[10px] font-black text-[#7A578D] mt-1">{order.address?.phone}</p>
            </div>

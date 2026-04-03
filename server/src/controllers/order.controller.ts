@@ -59,6 +59,13 @@ export const triggerShipment = asyncHandler(async (req: Request, res: Response) 
   return res.status(200).json(new ApiResponse(200, result, "Shipment triggered successfully"));
 });
 
+export const generateLabel = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (typeof id !== 'string') throw new ApiError(400, "Invalid order ID");
+  const result = await orderService.getShipmentLabel(id);
+  return res.status(200).json(new ApiResponse(200, result, "Label generated successfully"));
+});
+
 export const refundOrder = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { notes } = req.body;
@@ -108,8 +115,22 @@ export const approveReturn = asyncHandler(async (req: Request, res: Response) =>
   const { id } = req.params;
   if (typeof id !== 'string') throw new ApiError(400, "Invalid order ID");
   const order = await orderService.approveReturn(id);
-  return res.status(200).json(new ApiResponse(200, order, "Return approved successfully"));
+  return res.status(200).json(new ApiResponse(200, order, "Return approved and reverse pickup initiated"));
 });
+
+export const resetForReshipment = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (typeof id !== 'string') throw new ApiError(400, "Invalid order ID");
+  const order = await orderService.resetForReshipment(id);
+  return res.status(200).json(new ApiResponse(200, order, "Order reset for reshipment. You can now use SHIP NOW again."));
+});
+export const getPublicTrackingDetails = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!id) throw new ApiError(400, "Tracking ID is required");
+  const result = await orderService.getPublicTracking(id as string);
+  return res.status(200).json(new ApiResponse(200, result, "Tracking details fetched successfully"));
+});
+
 export const syncShiprocketStatuses = asyncHandler(async (req: Request, res: Response) => {
   const result = await orderService.syncShiprocketStatuses();
   return res.status(200).json(new ApiResponse(200, result, "Shiprocket statuses synced successfully"));

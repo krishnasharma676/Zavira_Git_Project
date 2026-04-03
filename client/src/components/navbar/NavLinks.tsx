@@ -29,9 +29,6 @@ const NavLinks = ({ categories, isActive }: NavLinksProps) => {
             <Link to="/track-order" className={`hover:text-[#7A578D] transition-colors ${isActive('/track-order') ? 'text-[#7A578D]' : ''}`}>TRACK ORDER</Link>
           </li>
           <li className="flex items-center">
-            <Link to="/returns" className={`hover:text-[#7A578D] transition-colors ${isActive('/returns') ? 'text-[#7A578D]' : ''}`}>RETURNS / EXCHANGE</Link>
-          </li>
-          <li className="flex items-center">
             <Link to="/contact" className={`hover:text-[#7A578D] transition-colors ${isActive('/contact') ? 'text-[#7A578D]' : ''}`}>CONTACT US</Link>
           </li>
         </ul>

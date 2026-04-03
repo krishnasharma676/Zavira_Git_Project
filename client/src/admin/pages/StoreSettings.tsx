@@ -12,7 +12,9 @@ const StoreSettings = () => {
     store_email: '',
     store_phone: '',
     shipping_flat_rate: '50',
-    tax_percentage: '3',
+    free_shipping_threshold: '1000',
+    cod_charge: '39',
+    shiprocket_pickup_location: 'Primary',
     razorpay_key_id: '',
     shiprocket_email: '',
     social_instagram: '',
@@ -143,16 +145,30 @@ const StoreSettings = () => {
                 <h3 className="text-base font-bold text-gray-900">Shipping & Legal</h3>
              </div>
              
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Flat Rate (₹)</label>
+                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Flat Shipping Rate (₹)</label>
                    <input type="number" value={settings.shipping_flat_rate} onChange={(e) => handleChange('shipping_flat_rate', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold" />
                 </div>
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Tax / VAT (%)</label>
-                   <input type="number" value={settings.tax_percentage} onChange={(e) => handleChange('tax_percentage', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold" />
+                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Free Shipping Above (₹)</label>
+                   <input type="number" value={settings.free_shipping_threshold} onChange={(e) => handleChange('free_shipping_threshold', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold text-[#7A578D]" placeholder="e.g. 1000" />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">COD Charge (₹)</label>
+                   <input type="number" value={settings.cod_charge} onChange={(e) => handleChange('cod_charge', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold" placeholder="39" />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-[#7A578D] uppercase tracking-wider ml-1">Shiprocket Pickup Location Name ⚠️</label>
+                   <input
+                     value={settings.shiprocket_pickup_location}
+                     onChange={(e) => handleChange('shiprocket_pickup_location', e.target.value)}
+                     className="w-full bg-orange-50 border border-orange-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 text-xs font-bold"
+                     placeholder="e.g. Primary"
+                   />
+                   <p className="text-[10px] text-orange-500 font-bold ml-1">Must exactly match the pickup address name in your Shiprocket dashboard</p>
+                </div>
+                <div className="space-y-2">
                     <label className="text-xs font-bold text-[#7A578D] uppercase tracking-wider ml-1">GSTIN Number</label>
                     <input
                       value={settings.store_gstin}

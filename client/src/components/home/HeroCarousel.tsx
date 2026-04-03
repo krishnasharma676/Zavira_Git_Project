@@ -41,10 +41,8 @@ const HeroCarousel = ({ slides, currentSlide, setCurrentSlide }: HeroCarouselPro
               className="w-full h-full object-cover transition-transform duration-[5000ms] group-hover:scale-110" 
               alt="Hero banner" 
             />
-
           </motion.div>
         </AnimatePresence>
-
       </Link>
       
       {/* Navigation Dots */}

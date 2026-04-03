@@ -1,9 +1,7 @@
 import { motion } from 'framer-motion';
-import { Trash2, Minus, Plus, ShieldCheck } from 'lucide-react';
-
+import { Trash2, Link as LinkIcon, ChevronDown, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../../utils/format';
-
 
 interface CartDrawerItemProps {
   item: any;
@@ -12,82 +10,86 @@ interface CartDrawerItemProps {
 }
 
 const CartDrawerItem = ({ item, removeItem, updateQuantity }: CartDrawerItemProps) => {
+  // Use a fallback for brand/sold by since we might not have it in the cart object yet
+  const soldBy = "ZAVIRAA INDUSTRIES";
+  const brand = "ZAVIRAA";
+  const returnDays = "14 days";
+
+  // Calculate discount if possible (this assumes price in cart is already discounted)
+  // If we don't have basePrice in the item object, we'll just show the single price.
+  const basePrice = item.basePrice || item.price;
+  const discount = basePrice > item.price ? Math.round(((basePrice - item.price) / basePrice) * 100) : 0;
+
   return (
-    <div 
-      className="group relative bg-white dark:bg-[#1A1A1A] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.1)] transition-all duration-500 flex items-center space-x-3 gap-1 animate-in fade-in slide-in-from-bottom-2"
-    >
+    <div className="relative bg-white dark:bg-[#1A1A1A] p-4 rounded-sm border border-gray-100 dark:border-white/5 flex gap-5 mb-4 group transition-shadow hover:shadow-md">
+      {/* Checkbox (Myntra Style) */}
+      <div className="absolute top-4 left-4 z-10 w-4 h-4 bg-[#7A578D] rounded-sm flex items-center justify-center cursor-pointer">
+        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+      </div>
 
       {/* Product Image */}
-      <Link to={`/product/${item.slug}`} className="relative w-14 h-14 bg-gray-50 dark:bg-black rounded-lg overflow-hidden shrink-0 border border-gray-50 dark:border-white/5">
+      <Link to={`/product/${item.slug}`} className="w-[110px] h-[145px] bg-gray-50 dark:bg-black rounded-sm overflow-hidden shrink-0 border border-gray-100 dark:border-white/5">
         <img 
           src={item.image} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+          className="w-full h-full object-cover transition-transform duration-700" 
           alt={item.name} 
         />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
       </Link>
  
-      {/* Content */}
-      <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
-         <div className="flex justify-between items-start gap-2">
-            <div className="min-w-0">
-               <Link to={`/product/${item.slug}`}>
-                  <h3 className="text-[9px] font-black uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1 leading-tight mb-0.5 decoration-[#7A578D]/20 group-hover:underline underline-offset-2">
-                     {item.name}
-                  </h3>
-               </Link>
-               <div className="flex items-center space-x-1.5">
-                   <span className="text-[7px] font-black text-gray-400 dark:text-gray-500 bg-gray-100/50 dark:bg-white/5 px-1 py-0.5 rounded uppercase tracking-[0.15em]">
-                     SKU: {item.sku || String(item.id || '').slice(0,6)}
-                   </span>
+      {/* Content Area */}
+      <div className="flex-grow flex flex-col justify-between py-0.5">
+         <div className="flex justify-between items-start">
+            <div className="space-y-0.5">
+               <h4 className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight uppercase tracking-tight">{brand}</h4>
+               <p className="text-[13px] text-gray-500 dark:text-gray-400 line-clamp-1">{item.name}</p>
+               <p className="text-[11px] text-gray-400">Sold by: <span className="uppercase">{soldBy}</span></p>
 
-                   {item.selectedSize && (
-                     <span className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded uppercase">Size: {item.selectedSize}</span>
-                   )}
-                </div>
-                {item.variantId && (
-                   <div className="mt-1 flex items-center gap-1.5 opacity-80">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#7A578D]" />
-                      <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">Color Variant Selected</span>
-                   </div>
-                )}
-             </div>
-             <button 
-               onClick={() => removeItem(item.cartItemId || item.id)} 
-               className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all duration-300"
-             >
-               <Trash2 size={11}/>
-             </button>
-          </div>
-          
-          <div className="flex items-center justify-between mt-1.5">
-             {/* Quantity Selector */}
-             <div className="flex items-center bg-gray-50 dark:bg-white/5 p-0.5 rounded-lg border border-gray-100/80 dark:border-white/5">
-               <button 
-                 onClick={() => updateQuantity(item.cartItemId || item.id, Math.max(1, item.quantity - 1))}
-                 className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-[#7A578D] hover:bg-white dark:hover:bg-black rounded-md transition-all shadow-sm active:scale-90"
-               >
-                 <Minus size={8} />
-               </button>
-               <span className="w-6 text-center text-[9px] font-black text-gray-900 dark:text-white font-sans">{item.quantity}</span>
-               <button 
-                 onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity + 1)}
-                 className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-[#7A578D] hover:bg-white dark:hover:bg-black rounded-md transition-all shadow-sm active:scale-90"
-               >
-                 <Plus size={8} />
-               </button>
-             </div>
+               {/* Size and Qty Selectors */}
+               <div className="flex items-center gap-3 mt-3">
+                  <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 px-2.5 py-1 rounded-sm border border-gray-100 dark:border-white/10 text-[12px] font-bold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 transition-colors">
+                    Size: {item.selectedSize || 'N/A'} <ChevronDown size={12} />
+                  </div>
+                  {item.colorCode && (
+                     <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 px-1.5 py-1 rounded-sm border border-gray-100 dark:border-white/10 shadow-sm">
+                        <div 
+                           style={{ backgroundColor: item.colorCode }} 
+                           className="w-3.5 h-3.5 rounded-full border border-gray-200" 
+                        />
+                     </div>
+                  )}
+                  <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 px-2.5 py-1 rounded-sm border border-gray-100 dark:border-white/10 text-[12px] font-bold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 transition-colors">
+                    Qty: {item.quantity} <ChevronDown size={12} />
+                  </div>
+               </div>
 
-            {/* Price */}
-            <div className="text-right">
-               <p className="text-[10px] font-black text-[#7A578D] bg-[#7A578D]/5 px-2 py-0.5 rounded-full">
-                {formatCurrency((item.price || 0) * (item.quantity || 0))}
-               </p>
+               {/* Price Block */}
+               <div className="flex items-center gap-2 mt-4">
+                  <span className="text-[14px] font-bold text-gray-900 dark:text-white">{formatCurrency(item.price)}</span>
+                  {basePrice > item.price && (
+                    <>
+                      <span className="text-[12px] text-gray-400 line-through">{formatCurrency(basePrice)}</span>
+                      <span className="text-[12px] font-bold text-[#FF3F6C]">{discount}% OFF</span>
+                    </>
+                  )}
+               </div>
+
+               {/* Return Policy Line */}
+               <div className="flex items-center gap-1.5 mt-2.5 text-[#03A685] dark:text-[#2ECAAB] font-bold text-[11px]">
+                  <RotateCcw size={12} strokeWidth={3} />
+                  <span className="uppercase tracking-wide">{returnDays} return available</span>
+               </div>
             </div>
+
+            {/* Remove X */}
+            <button 
+              onClick={() => removeItem(item.cartItemId || item.id)} 
+              className="text-gray-400 hover:text-[#7A578D] p-1 transition-colors"
+            >
+              <Trash2 size={18} strokeWidth={1.5} />
+            </button>
          </div>
       </div>
     </div>
-
   );
 };
 

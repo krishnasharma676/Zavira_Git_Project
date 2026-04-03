@@ -25,6 +25,8 @@ import reportRoutes from './routes/report.routes';
 import shiprocketRoutes from './routes/shiprocket.routes';
 import variantRoutes from './routes/variant.routes';
 import colorRoutes from './routes/color.routes';
+import webhookRoutes from './routes/payment.webhook.routes';
+import seedRoutes from './routes/seed.routes';
 
 const app = express();
 
@@ -45,16 +47,31 @@ app.use(cors({
   credentials: true
 }));
 
+// Security Headers — must be after cors
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Cloudinary images
+  contentSecurityPolicy: false, // managed by frontend build
+}));
 
+// Global rate limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, 
+  max: 1000,
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 app.use('/api', limiter);
 
+// Strict rate limiter for auth routes — prevents brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // max 20 login attempts per 15 minutes per IP
+  message: 'Too many login attempts. Please wait 15 minutes and try again.',
+  skipSuccessfulRequests: true, // don't count successful logins
+});
+app.use('/api/v1/auth', authLimiter);
+
 // Standard Middlewares
-app.use(morgan('dev'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(cookieParser());
@@ -82,8 +99,10 @@ app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shiprocket', shiprocketRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/variants', variantRoutes);
 app.use('/api/v1/colors', colorRoutes);
+app.use('/api/v1/seed', seedRoutes);
 
 // Error Handling
 app.use(errorHandler);

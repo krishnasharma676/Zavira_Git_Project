@@ -105,65 +105,65 @@ const AdminLogin = () => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-[#7A578D]/5 blur-[100px] rounded-full" />
       </div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[400px] relative z-10">
-        <div className="bg-white/[0.02] border border-white/10 backdrop-blur-xl rounded-[2rem] p-7 shadow-2xl">
-          <header className="mb-6 text-center">
+        <div className="bg-white/[0.02] border border-white/10 backdrop-blur-xl rounded-[2rem] p-8 shadow-2xl">
+          <header className="mb-8 text-center">
             <div className="flex justify-center mb-6">
-              <img src={zaviraLogo} alt="Zavira" className="h-6 w-auto object-contain" />
+              <img src={zaviraLogo} alt="Zavira" className="h-9 w-auto object-contain drop-shadow-md" />
             </div>
-            <div className="h-[1px] w-6 bg-[#7A578D] mx-auto mb-2" />
-            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em] px-2">Admin Login</p>
+            <div className="h-[1px] w-6 bg-[#7A578D] mx-auto mb-3" />
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] px-2">Admin Login</p>
           </header>
           {mode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-1">
-              <div className="space-y-1">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-3">
                 <div className="group transition-all">
-                  <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1.5 block ml-1 group-focus-within:text-[#7A578D]">Email Address</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">Email Address</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#7A578D] transition-colors" size={12} />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#7A578D] transition-colors" size={14} />
                     <input type="email" placeholder="admin@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setErrors(p => ({ ...p, email: V.email(e.target.value) })); }} disabled={isSubmitting}
-                      className={`w-full border rounded-sm py-1 pl-10 pr-4 outline-none transition-all text-[10px] font-bold text-white placeholder:text-white/30 bg-white/[0.03] ${errors.email ? 'border-red-500/50 bg-red-500/5' : 'border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5'}`} />
+                      className={`w-full border rounded-md py-2.5 pl-11 pr-4 outline-none transition-all text-sm font-bold text-white placeholder:text-white/30 bg-white/[0.03] ${errors.email ? 'border-red-500/50 bg-red-500/5' : 'border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5'}`} />
                   </div>
-                  {errors.email && <p className="text-[9px] text-red-400 font-bold ml-1 mt-0.5">{errors.email}</p>}
+                  {errors.email && <p className="text-[10px] text-red-400 font-bold ml-1 mt-1">{errors.email}</p>}
                 </div>
                 <div className="group transition-all">
-                  <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1.5 block ml-1 group-focus-within:text-[#7A578D]">Password</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#7A578D] transition-colors" size={12} />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#7A578D] transition-colors" size={14} />
                     <input type="password" placeholder="••••••••••••" value={password} onChange={(e) => { setPassword(e.target.value); setErrors(p => ({ ...p, password: V.password(e.target.value) })); }} disabled={isSubmitting}
-                      className={`w-full border rounded-sm py-1 pl-10 pr-4 outline-none transition-all text-[10px] font-bold text-white placeholder:text-white/30 bg-white/[0.03] ${errors.password ? 'border-red-500/50 bg-red-500/5' : 'border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5'}`} />
+                      className={`w-full border rounded-md py-2.5 pl-11 pr-4 outline-none transition-all text-sm font-bold text-white placeholder:text-white/30 bg-white/[0.03] ${errors.password ? 'border-red-500/50 bg-red-500/5' : 'border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5'}`} />
                   </div>
-                  {errors.password && <p className="text-[9px] text-red-400 font-bold ml-1 mt-0.5">{errors.password}</p>}
+                  {errors.password && <p className="text-[10px] text-red-400 font-bold ml-1 mt-1">{errors.password}</p>}
                 </div>
                 <div className="flex justify-end pt-1 pb-2 pr-1">
-                  <button type="button" onClick={() => { setMode('forgot_password'); setErrors({}); }} className="text-[7px] font-black uppercase tracking-widest text-white/50 hover:text-[#7A578D] transition-colors focus:outline-none">
+                  <button type="button" onClick={() => { setMode('forgot_password'); setErrors({}); }} className="text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-[#7A578D] transition-colors focus:outline-none">
                     Forgot Password?
                   </button>
                 </div>
               </div>
               <button type="submit" disabled={isSubmitting}
-                className={`w-full ${isSubmitting ? 'bg-[#7A578D]/50 cursor-not-allowed' : 'bg-[#7A578D] hover:bg-white hover:text-black'} text-white py-1 rounded-sm font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all shadow-[0_10px_30px_rgba(122,87,141,0.2)] group`}>
+                className={`w-full ${isSubmitting ? 'bg-[#7A578D]/50 cursor-not-allowed' : 'bg-[#7A578D] hover:bg-white hover:text-black'} text-white py-2.5 rounded-md font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all shadow-[0_10px_30px_rgba(122,87,141,0.2)] group`}>
                 <span>{isSubmitting ? 'Verifying...' : 'Login'}</span>
-                <ChevronRight size={12} className={isSubmitting ? '' : 'group-hover:translate-x-1 transition-transform'} />
+                <ChevronRight size={14} className={isSubmitting ? '' : 'group-hover:translate-x-1 transition-transform'} />
               </button>
             </form>
           )}
 
           {mode === 'forgot_password' && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={handleSendOtp} className="space-y-5">
               <div className="group transition-all">
-                <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1.5 block ml-1 group-focus-within:text-[#7A578D]">Confirm Admin Email</label>
+                <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">Confirm Admin Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#7A578D] transition-colors" size={12} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#7A578D] transition-colors" size={14} />
                   <input type="email" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting}
-                    className="w-full border rounded-sm py-1.5 pl-10 pr-4 outline-none transition-all text-[10px] font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
+                    className="w-full border rounded-md py-2.5 pl-11 pr-4 outline-none transition-all text-sm font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
                 </div>
               </div>
               <button type="submit" disabled={isSubmitting}
-                className={`w-full ${isSubmitting ? 'bg-[#7A578D]/50 cursor-not-allowed' : 'bg-[#7A578D] hover:bg-white hover:text-black'} text-white py-1.5 rounded-sm font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all`}>
+                className={`w-full ${isSubmitting ? 'bg-[#7A578D]/50 cursor-not-allowed' : 'bg-[#7A578D] hover:bg-white hover:text-black'} text-white py-2.5 rounded-md font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all`}>
                 <span>{isSubmitting ? 'Sending...' : 'Send Recovery OTP'}</span>
               </button>
-              <div className="text-center pt-2">
-                <button type="button" onClick={() => setMode('login')} className="text-[7px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+              <div className="text-center pt-3">
+                <button type="button" onClick={() => setMode('login')} className="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
                   Back to Login
                 </button>
               </div>
@@ -171,39 +171,39 @@ const AdminLogin = () => {
           )}
 
           {mode === 'reset_password' && (
-            <form onSubmit={handleResetPassword} className="space-y-2">
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="group transition-all">
-                <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1 block ml-1 group-focus-within:text-[#7A578D]">6-Digit OTP</label>
-                <input type="text" placeholder="------" value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isSubmitting} className="w-full border rounded-sm py-1 px-3 outline-none transition-all text-[10px] font-bold text-white tracking-[0.4em] text-center placeholder:text-white/30 bg-white/[0.03] border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" maxLength={6} />
+                <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">6-Digit OTP</label>
+                <input type="text" placeholder="------" value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isSubmitting} className="w-full border rounded-md py-2.5 px-4 outline-none transition-all text-sm font-bold text-white tracking-[0.4em] text-center placeholder:text-white/30 bg-white/[0.03] border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" maxLength={6} />
               </div>
               <div className="group transition-all">
-                <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1 block ml-1 group-focus-within:text-[#7A578D]">New Password</label>
+                <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">New Password</label>
                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#7A578D] transition-colors" size={12} />
-                  <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isSubmitting} className="w-full border rounded-sm py-1 pl-8 pr-3 outline-none transition-all text-[10px] font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#7A578D] transition-colors" size={14} />
+                  <input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isSubmitting} className="w-full border rounded-md py-2.5 pl-11 pr-4 outline-none transition-all text-sm font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
                 </div>
               </div>
               <div className="group transition-all pb-2">
-                <label className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em] mb-1 block ml-1 group-focus-within:text-[#7A578D]">Confirm Password</label>
+                <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-2 block ml-1 group-focus-within:text-[#7A578D]">Confirm Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#7A578D] transition-colors" size={12} />
-                  <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isSubmitting} className="w-full border rounded-sm py-1 pl-8 pr-3 outline-none transition-all text-[10px] font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/5 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#7A578D] transition-colors" size={14} />
+                  <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isSubmitting} className="w-full border rounded-md py-2.5 pl-11 pr-4 outline-none transition-all text-sm font-bold text-white placeholder:text-white/30 bg-white/[0.03] border-white/10 focus:border-[#7A578D]/50 focus:bg-[#7A578D]/5" />
                 </div>
               </div>
               <button type="submit" disabled={isSubmitting}
-                className={`w-full ${isSubmitting ? 'bg-green-600/50 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500'} text-white py-1 rounded-sm font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all`}>
+                className={`w-full ${isSubmitting ? 'bg-green-600/50 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500'} text-white py-2.5 rounded-md font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center space-x-2 transition-all`}>
                 <span>{isSubmitting ? 'Updating...' : 'Change Password'}</span>
               </button>
-              <div className="text-center pt-2">
-                <button type="button" onClick={() => setMode('login')} className="text-[7px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+              <div className="text-center pt-3">
+                <button type="button" onClick={() => setMode('login')} className="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
                   Cancel
                 </button>
               </div>
             </form>
           )}
-          <footer className="mt-6 pt-5 border-t border-white/5 flex flex-col items-center space-y-1 text-center">
-            <div className="flex items-center space-x-2 text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">
-              <CornerDownRight size={8} />
+          <footer className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center space-y-1 text-center">
+            <div className="flex items-center space-x-2 text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">
+              <CornerDownRight size={10} />
               <span>Secure Login</span>
             </div>
           </footer>

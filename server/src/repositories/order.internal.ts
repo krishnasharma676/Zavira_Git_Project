@@ -19,6 +19,7 @@ export class OrderRepository {
           items: {
             create: items.map(item => ({
               productId: item.productId,
+              sku: item.sku || null,
               quantity: item.quantity,
               price: item.price,
               selectedSize: item.selectedSize || null,
@@ -83,8 +84,8 @@ export class OrderRepository {
       include: {
         items: { 
           include: { 
-            product: { include: { images: true } }, 
-            variant: { include: { images: true, sizes: true } } 
+            product: { include: { images: true, inventory: true } }, 
+            variant: { include: { images: true, sizes: true, colorRel: true } } 
           } 
         },
         payment: true,
@@ -94,10 +95,52 @@ export class OrderRepository {
     });
   }
 
+  async findByRazorpayOrderId(razorpayOrderId: string) {
+    // Search inside the gatewayResponse JSON field of the Payment model
+    const payment = await prisma.payment.findFirst({
+      where: {
+        gatewayResponse: {
+          path: ['razorpay_order_id'],
+          equals: razorpayOrderId
+        }
+      },
+      include: { order: true }
+    });
+    return payment?.order || null;
+  }
+
   async findByShipmentId(shipmentId: string) {
     return await prisma.order.findFirst({
       where: { shipmentId, isDeleted: false },
       include: { payment: true }
+    });
+  }
+
+  async findByOrderNumber(orderNumber: string) {
+    return await prisma.order.findFirst({
+      where: { 
+        OR: [
+          { orderNumber: orderNumber },
+          { orderNumber: { contains: orderNumber } }
+        ],
+        isDeleted: false 
+      },
+      include: {
+        items: { include: { product: { include: { images: true } }, variant: { include: { colorRel: true } } } },
+        payment: true,
+        address: true
+      }
+    });
+  }
+
+  async findByAwb(awbNumber: string) {
+    return await prisma.order.findFirst({
+      where: { awbNumber, isDeleted: false },
+      include: {
+        items: { include: { product: { include: { images: true } }, variant: { include: { colorRel: true } } } },
+        payment: true,
+        address: true
+      }
     });
   }
 
@@ -163,8 +206,8 @@ export class OrderRepository {
            address: true,
            items: { 
              include: { 
-               product: { include: { images: true } }, 
-               variant: { include: { images: true, sizes: true } } 
+               product: { include: { images: true, inventory: true } }, 
+               variant: { include: { images: true, sizes: true, colorRel: true } } 
              } 
            }
         },

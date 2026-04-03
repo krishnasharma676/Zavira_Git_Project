@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAdminStore } from '../../store/useAdminStore';
 
 interface VariantForm {
-  id?: string; // NEW: Track existing variants
+  id?: string; 
   color: string;
   colorCode: string;
   colorId?: string;
@@ -45,18 +45,38 @@ const BulkProductCreate = () => {
   });
 
   const [variants, setVariants] = useState<VariantForm[]>([
-    { color: '', colorCode: '#000000', sizes: [{ size: '', stock: '', sku: '' }], images: [], previewUrls: [] }
+    { 
+      color: '', 
+      colorCode: '#000000', 
+      sizes: [{ size: '', stock: '', sku: '' }], 
+      images: [], 
+      previewUrls: [] 
+    }
   ]);
+
+  const generateSKU = (name: string = "") => {
+    const prefix = "ZV";
+    const namePart = (name || "VAR").substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${prefix}-${namePart}-${randomPart}`;
+  };
+
+  useEffect(() => {
+    if (!id && variants[0].sizes[0].sku === '') {
+       const initialSku = generateSKU("");
+       const newVariants = [...variants];
+       newVariants[0].sizes[0].sku = initialSku;
+       setVariants(newVariants);
+    }
+  }, [id]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        fetchColors(); // Fetch colors lazily for this page
+        fetchColors(); 
         if (id) {
-          console.log('Fetching Product ID:', id);
           const { data: pRes } = await api.get(`/products/${id}`);
           const p = pRes.data;
-          console.log('Fetched Product:', p);
           
           if (p) {
             setFormData({
@@ -80,10 +100,8 @@ const BulkProductCreate = () => {
               heightUnit: (p.heightUnit as string) || 'cm',
             });
 
-            // Fetch variants
             const { data: vRes } = await api.get(`/variants/product/${id}`);
             const vData = vRes.data;
-            console.log('Fetched Variants:', vData);
             
             if (vData && Array.isArray(vData)) {
               const fetchedVariants = vData.map((v: any) => ({
@@ -113,7 +131,7 @@ const BulkProductCreate = () => {
   }, [id, fetchColors]);
 
   const handleAddVariant = () => {
-    setVariants([...variants, { color: '', colorCode: '#000000', sizes: [{ size: '', stock: '', sku: '' }], images: [], previewUrls: [] }]);
+    setVariants([...variants, { color: '', colorCode: '#000000', sizes: [{ size: '', stock: '', sku: generateSKU(formData.name) }], images: [], previewUrls: [] }]);
   };
 
   const handleRemoveVariant = (index: number) => {
@@ -123,7 +141,7 @@ const BulkProductCreate = () => {
 
   const handleAddSize = (variantIndex: number) => {
     const newVariants = [...variants];
-    newVariants[variantIndex].sizes.push({ size: '', stock: '', sku: '' });
+    newVariants[variantIndex].sizes.push({ size: '', stock: '', sku: generateSKU(formData.name || variants[variantIndex].color) });
     setVariants(newVariants);
   };
 
@@ -195,9 +213,6 @@ const BulkProductCreate = () => {
         productId = data.data.id;
       }
 
-      // Handle variants creation for new ones or added images
-      // NOTE: Simplification for now - we only send new variants or variants with new images to the bulk endpoint
-      // A more robust implementation would have a specific sync endpoint
       const newOrModifiedVariants = variants.filter(v => !v.id || v.images.length > 0);
       
       if (newOrModifiedVariants.length > 0) {
@@ -207,7 +222,7 @@ const BulkProductCreate = () => {
             variantFormData.append(`variant_${i}_images`, img);
           });
           return {
-            id: v.id, // If ID exists, backend should ideally update
+            id: v.id, 
             color: v.color,
             colorCode: v.colorCode,
             colorId: v.colorId,
@@ -243,7 +258,6 @@ const BulkProductCreate = () => {
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-2">
-        {/* Core Product Details */}
         <section className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm space-y-2">
           <h2 className="text-xs font-bold text-[#7A578D] uppercase tracking-wider border-b border-gray-100 pb-4">Core Product Identity</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -281,7 +295,6 @@ const BulkProductCreate = () => {
                 <div className="h-px bg-gray-100 flex-1" />
              </div>
              
-             {/* Weight & Unit */}
              <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block ml-1">Weight</label>
                 <div className="flex bg-gray-50 border border-gray-200 rounded-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#7A578D]/10 focus-within:border-[#7A578D] transition-all shadow-sm">
@@ -293,7 +306,6 @@ const BulkProductCreate = () => {
                 </div>
              </div>
 
-             {/* Dimensions */}
              {[
                 { label: `Length`, key: 'length', placeholder: 'Length', unitKey: 'dimensionUnit' },
                 { label: `Width`, key: 'width', placeholder: 'Width', unitKey: 'widthUnit' },
@@ -312,7 +324,6 @@ const BulkProductCreate = () => {
                 </div>
               ))}
 
-             {/* HSN & Tax */}
              <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block ml-1">HSN CODE</label>
                 <input value={formData.hsnCode} onChange={(e) => setFormData({...formData, hsnCode: e.target.value})} placeholder="CODE" className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-3 outline-none focus:ring-2 focus:ring-[#7A578D]/10 focus:border-[#7A578D] text-xs font-black uppercase shadow-sm transition-all" />
@@ -325,7 +336,6 @@ const BulkProductCreate = () => {
           </div>
         </section>
 
-        {/* Variant Configurations */}
         <section className="space-y-1 pt-4">
           <div className="flex justify-between items-center px-1">
             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-widest border-l-4 border-[#7A578D] pl-3">Color Variants</h2>
@@ -337,7 +347,6 @@ const BulkProductCreate = () => {
           {variants.map((variant, variantIndex) => (
             <div key={variantIndex} className="bg-white rounded-sm border border-gray-100 shadow-sm p-2 relative overflow-hidden group/var ring-1 ring-[#7A578D]/5 animate-in slide-in-from-bottom-2 duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
-            {/* Left: Metadata & Sizes */}
             <div className="lg:col-span-8 space-y-1">
               <div className="flex items-center gap-2 bg-gray-50/80 p-3 rounded-sm border border-gray-100">
                 <div className="w-8 h-8 bg-[#7A578D] text-white rounded-sm flex items-center justify-center text-xs font-bold shadow-sm">{variantIndex + 1}</div>
@@ -358,19 +367,21 @@ const BulkProductCreate = () => {
                 </div>
               </div>
 
-              {/* Sizes Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                 {variant.sizes.map((sizeObj, sizeIndex) => (
                   <div key={sizeIndex} className="group/size bg-gray-50/50 rounded-sm border border-gray-100 p-3 space-y-2.5 transition-all hover:bg-white hover:shadow-md hover:border-[#7A578D]/30 shadow-sm relative overflow-hidden">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dimension {sizeIndex + 1}</span>
-                      <button type="button" onClick={() => { const v = [...variants]; v[variantIndex].sizes = v[variantIndex].sizes.filter((_, i) => i !== sizeIndex); setVariants(v); }} className="text-gray-300 hover:text-red-500 transition-colors bg-white rounded-full p-1"><Trash2 size={12} /></button>
+                      <button type="button" onClick={() => handleRemoveSize(variantIndex, sizeIndex)} className="text-gray-300 hover:text-red-500 transition-colors bg-white rounded-full p-1"><Trash2 size={12} /></button>
                     </div>
                     <div className="space-y-2">
                       <input placeholder="Size (e.g. XL, 42)" value={sizeObj.size} onChange={(e) => { const v = [...variants]; v[variantIndex].sizes[sizeIndex].size = e.target.value; setVariants(v); }} className="w-full bg-white border border-gray-200 rounded-sm py-1.5 px-3 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] transition-all" />
                       <div className="flex gap-2">
                         <input type="number" placeholder="Qty" value={sizeObj.stock} onChange={(e) => { const v = [...variants]; v[variantIndex].sizes[sizeIndex].stock = e.target.value; setVariants(v); }} className="w-20 bg-white border border-gray-200 rounded-sm py-1.5 px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] transition-all" />
-                        <input placeholder="SKU" value={sizeObj.sku} onChange={(e) => { const v = [...variants]; v[variantIndex].sizes[sizeIndex].sku = e.target.value; setVariants(v); }} className="flex-1 bg-white border border-gray-200 rounded-sm py-1.5 px-3 text-xs font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] transition-all" />
+                        <div className="flex-1 relative">
+                          <input placeholder="SKU" value={sizeObj.sku} onChange={(e) => { const v = [...variants]; v[variantIndex].sizes[sizeIndex].sku = e.target.value; setVariants(v); }} className="w-full bg-white border border-gray-200 rounded-sm py-1.5 px-3 pr-8 text-xs font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] transition-all" />
+                          <button type="button" onClick={() => { const v = [...variants]; v[variantIndex].sizes[sizeIndex].sku = generateSKU(formData.name || variant.color); setVariants(v); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-[#7A578D] transition-colors"><RefreshCw size={12} /></button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -382,7 +393,6 @@ const BulkProductCreate = () => {
               </div>
             </div>
 
-            {/* Right: Images Upload */}
             <div className="lg:col-span-4 space-y-1">
               <label className="text-xs font-bold uppercase tracking-widest text-[#7A578D] block border-b border-gray-100 pb-2">Media Assets</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-hidden">
@@ -392,7 +402,6 @@ const BulkProductCreate = () => {
                   <span className="text-[10px] font-bold text-gray-500 uppercase relative z-10 tracking-widest group-hover/upload:text-[#7A578D]">Upload</span>
                   <div className="absolute inset-0 bg-[#7A578D]/5 opacity-0 group-hover/upload:opacity-100 transition-opacity" />
                 </label>
-                {/* Existing Images */}
                 {variant.existingImages?.map((img) => (
                   <div key={img.id} className="aspect-square rounded-sm overflow-hidden relative group/img border border-gray-100 shadow-sm">
                     <img src={img.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="" />
@@ -402,12 +411,11 @@ const BulkProductCreate = () => {
                     <div className="absolute top-2 left-2 bg-[#7A578D]/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">Live</div>
                   </div>
                 ))}
-                {/* New Preview Images */}
                 {variant.previewUrls.map((url, i) => (
                   <div key={i} className="aspect-square rounded-sm overflow-hidden relative group/img border-2 border-blue-200 border-dashed shadow-sm">
                     <img src={url} className="w-full h-full object-cover opacity-80" alt="" />
                     <div className="absolute inset-0 bg-white/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity backdrop-blur-[1px]">
-                      <button type="button" onClick={() => { const v = [...variants]; v[variantIndex].previewUrls = v[variantIndex].previewUrls.filter((_, idx) => idx !== i); v[variantIndex].images = v[variantIndex].images.filter((_, idx) => idx !== i); setVariants(v); }} className="text-red-500 bg-white shadow-lg p-2 rounded-sm hover:scale-110 transition-transform"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => handleRemoveImage(variantIndex, i)} className="text-red-500 bg-white shadow-lg p-2 rounded-sm hover:scale-110 transition-transform"><Trash2 size={16} /></button>
                     </div>
                     <div className="absolute top-2 left-2 bg-blue-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">New</div>
                   </div>
@@ -420,7 +428,7 @@ const BulkProductCreate = () => {
         </section>
 
         <div className="pt-6 border-t border-gray-100 mt-8 mb-4">
-            <button type="submit" disabled={isSubmitting} className="w-full bg-black h-6 rounded-sm text-xs font-bold uppercase tracking-widest text-white hover:bg-[#7A578D] transition-all shadow-xl shadow-black/5 flex items-center justify-center gap-2 group active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none">
+            <button type="submit" disabled={isSubmitting} className="w-full bg-black h-12 rounded-sm text-xs font-bold uppercase tracking-widest text-white hover:bg-[#7A578D] transition-all shadow-xl shadow-black/5 flex items-center justify-center gap-2 group active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none">
                 {isSubmitting ? <RefreshCw className="animate-spin" size={18} /> : <Plus className="group-hover:rotate-90 transition-transform" size={18} />}
                 {isSubmitting ? 'Syncing Framework...' : (id ? 'Confirm Modification' : 'Execute Bulk Creation')}
             </button>

@@ -12,11 +12,12 @@ import {
   auth, googleProvider,
   RecaptchaVerifier, signInWithPopup,
   signInWithPhoneNumber,
+  sendPasswordResetEmail,
 } from '../../config/firebase';
 import type { ConfirmationResult } from 'firebase/auth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AuthMode = 'login' | 'register' | 'phone' | 'email_otp';
+type AuthMode = 'login' | 'register' | 'phone' | 'email_otp' | 'forgot';
 type PhoneStep = 'input' | 'otp';
 
 // ─── Google SVG Icon ──────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ const AuthModal = () => {
     
     setLoginErrors(errors);
     if (Object.keys(errors).length > 0) return;
-
+ 
     setLoadingMsg('Signing in…');
     try {
       const { data } = await api.post('/auth/login', loginData);
@@ -118,6 +119,24 @@ const AuthModal = () => {
       closeAuthModal();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed');
+    } finally {
+      setLoadingMsg('');
+    }
+  };
+ 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginData.email) {
+      toast.error('Enter your registered email address');
+      return;
+    }
+    setLoadingMsg('Sending reset link…');
+    try {
+      await sendPasswordResetEmail(auth, loginData.email);
+      toast.success('Password reset link sent to your email');
+      setMode('login');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send reset link');
     } finally {
       setLoadingMsg('');
     }
@@ -427,7 +446,7 @@ const AuthModal = () => {
                     }`}
                   >
                     {m === 'login' ? 'Login' : 'Signup'}
-                    {mode === m && (
+                    {(mode === m || (mode === 'forgot' && m === 'login')) && (
                       <motion.div layoutId="activeTab" className="absolute -bottom-3 left-0 right-0 h-0.5 bg-[#7A578D]" />
                     )}
                   </button>
@@ -453,18 +472,29 @@ const AuthModal = () => {
                         value={loginData.email}
                         error={loginErrors.email}
                         onChange={v => { setLoginData({ ...loginData, email: v }); if(loginErrors.email) setLoginErrors({...loginErrors, email: ''}); }} />
-                      <InputGroup icon={<Lock size={13} />} label="Password"
-                        placeholder="••••••••••" type="password"
-                        value={loginData.password}
-                        error={loginErrors.password}
-                        onChange={v => { setLoginData({ ...loginData, password: v }); if(loginErrors.password) setLoginErrors({...loginErrors, password: ''}); }} />
-                      <button type="submit" disabled={loading}
-                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group mt-1">
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">
-                          {loading ? 'Signing in...' : 'Login Now'}
-                        </span>
-                        <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                      </button>
+                       <InputGroup icon={<Lock size={13} />} label="Password"
+                         placeholder="••••••••••" type="password"
+                         value={loginData.password}
+                         error={loginErrors.password}
+                         onChange={v => { setLoginData({ ...loginData, password: v }); if(loginErrors.password) setLoginErrors({...loginErrors, password: ''}); }} />
+                       
+                       <div className="flex justify-end">
+                         <button 
+                           type="button" 
+                           onClick={() => setMode('forgot')}
+                           className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
+                         >
+                           Forgot Password?
+                         </button>
+                       </div>
+ 
+                       <button type="submit" disabled={loading}
+                         className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2 group">
+                         <span className="text-[9px] font-black uppercase tracking-[0.3em]">
+                           {loading ? 'Signing in...' : 'Login Now'}
+                         </span>
+                         <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                       </button>
                     </form>
                     <Divider />
                     <div className="space-y-2">
@@ -645,6 +675,43 @@ const AuthModal = () => {
                   </motion.div>
                 )}
 
+                {/* ── FORGOT PASSWORD ───────────────────────────────────────────── */}
+                {mode === 'forgot' && (
+                  <motion.div
+                    key="forgot"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="space-y-5"
+                  >
+                    <button
+                      onClick={() => setMode('login')}
+                      className="flex items-center space-x-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-[#7A578D] transition-colors"
+                    >
+                      <ChevronRight size={10} className="rotate-180" />
+                      <span>Back to Login</span>
+                    </button>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Reset Password</h3>
+                      <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest leading-relaxed">
+                        Enter your registered email and we will send you a reset link.
+                      </p>
+                    </div>
+                    <form onSubmit={handleResetPassword} className="space-y-4">
+                      <InputGroup icon={<Mail size={13} />} label="Registered Email"
+                        placeholder="email@example.com" type="email"
+                        value={loginData.email}
+                        onChange={v => setLoginData({ ...loginData, email: v })} />
+                      
+                      <button type="submit" disabled={loading}
+                        className="luxury-button w-full rounded-xl py-2.5 flex items-center justify-center space-x-2">
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">{loading ? 'Processing...' : 'Send Link'}</span>
+                      </button>
+                    </form>
+                  </motion.div>
+                )}
+
               </AnimatePresence>
               {/* ── End Animated Panels ── */}
               <div className="mt-auto pt-4 border-t border-gray-50 dark:border-white/5 text-center">
@@ -730,6 +797,5 @@ const InputGroup = ({ icon, label, placeholder, type = 'text', value, error, onC
     )}
   </div>
 );
-
 
 export default AuthModal;

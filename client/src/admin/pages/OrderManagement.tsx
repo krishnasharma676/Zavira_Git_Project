@@ -32,8 +32,9 @@ const OrderManagement = () => {
         delivered: 0,
         total: 0
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeTab, setActiveTab] = useState('ALL');
+     const [isSubmitting, setIsSubmitting] = useState(false);
+     const [isLabelLoading, setIsLabelLoading] = useState(false);
+     const [activeTab, setActiveTab] = useState('ALL');
 
   const tabs = [
     { label: 'All Orders', value: 'ALL' },
@@ -100,7 +101,6 @@ const OrderManagement = () => {
       toast.error(error.response?.data?.message || 'Refund failed');
     }
   };
-
   const handleNoteUpdate = async (id: string, notes: string) => {
     try {
       await api.patch(`/orders/admin/${id}/notes`, { adminNotes: notes });
@@ -146,6 +146,56 @@ const OrderManagement = () => {
        toast.error('Failed to sync');
     } finally {
        // Done
+    }
+  };
+
+  const handleGenerateLabel = async (id: string) => {
+    if (isLabelLoading) return;
+    try {
+      setIsLabelLoading(true);
+      const { data } = await api.post(`/orders/admin/${id}/generate-label`);
+      if (data.data.labelUrl) {
+        window.open(data.data.labelUrl, '_blank');
+        toast.success('Label generated in new tab');
+      } else {
+        toast.error('Label URL not found');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to generate label');
+    } finally {
+      setIsLabelLoading(false);
+    }
+  };
+
+  const handleForceDeliver = async (id: string) => {
+    try {
+      if (!window.confirm("FORCE DELIVER: This will simulate a webhook to mark the order as delivered. Continue?")) return;
+      await api.patch(`/orders/admin/${id}/status`, { status: 'DELIVERED' });
+      toast.success('Simulation: Order marked as Delivered');
+      fetchOrders();
+      if (selectedOrder?.id === id) {
+        // Refresh detail view
+        const { data } = await api.get(`/orders/${id}`);
+        setSelectedOrder(data.data);
+      }
+    } catch (error: any) {
+      toast.error('Simulation failed');
+    }
+  };
+
+  const handleResetReship = async (id: string) => {
+    try {
+      if (!window.confirm("This will clear the old tracking data and allow you to click 'SHIP NOW' again for a replacement. Proceed?")) return;
+      await api.post(`/orders/admin/${id}/reset-reship`);
+      toast.success('Order status reset. You can now re-ship it.');
+      fetchOrders();
+      if (selectedOrder?.id === id) {
+        // Refresh detail view
+        const { data } = await api.get(`/orders/${id}`);
+        setSelectedOrder(data.data);
+      }
+    } catch (error: any) {
+      toast.error('Failed to reset order');
     }
   };
 
@@ -242,8 +292,13 @@ const OrderManagement = () => {
       options: {
         customBodyRender: (val: any) => (
           <div className="flex flex-col leading-tight min-w-[200px]">
-            <span className="text-[8px] font-bold text-gray-600 uppercase tracking-tighter truncate max-w-[200px]">{val?.street || 'N/A'}</span>
-            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest">{val?.city}, {val?.state} - {val?.pincode}</span>
+            <span className="text-[9px] font-bold text-gray-700 uppercase tracking-tight truncate max-w-[250px]">
+               {val?.street}{val?.area ? `, ${val.area}` : ''}
+            </span>
+            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest mt-0.5">
+               {val?.city}, {val?.state} - {val?.pincode}
+               {val?.landmark && <span className="text-[#7A578D]/60 italic ml-1">({val.landmark})</span>}
+            </span>
           </div>
         )
       }
@@ -287,6 +342,13 @@ const OrderManagement = () => {
                             <span className="text-[7px] font-black text-gray-500 bg-gray-50 px-1 rounded uppercase tracking-tighter">
                                Col: {item.variant.color}
                             </span>
+                         )}
+                         {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                            <div 
+                               className="w-3 h-3 rounded-full border border-gray-200 shadow-sm"
+                               style={{ backgroundColor: item.variant.colorCode || item.variant.colorRel.hexCode }}
+                               title={item.variant.color}
+                            />
                          )}
                       </div>
                    </div>
@@ -392,6 +454,15 @@ const OrderManagement = () => {
                    APPROVE
                 </button>
               )}
+
+              {order.status === 'RETURNED' && (
+                <button 
+                   onClick={() => handleResetReship(id)}
+                   className="px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-green-100 shadow-sm"
+                >
+                   RE-SHIP
+                </button>
+              )}
             </div>
           );
         }
@@ -419,54 +490,86 @@ const OrderManagement = () => {
       return (
         <tr style={{ backgroundColor: '#fff' }}>
           <td colSpan={columns.length + 1} style={{ padding: '0', borderBottom: '1px solid #eee' }}>
-            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', fontFamily: '"Times New Roman", Times, serif', fontSize: '13px', color: '#333' }}>
+            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontFamily: 'inherit', fontSize: '12px', color: '#333' }}>
                <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Internal Order ID:</strong>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Internal ID:</strong>
                 <span>{order.id}</span>
                </div>
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Placed On:</strong>
-                <span>{new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} at {new Date(order.createdAt).toLocaleTimeString()}</span>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Ordered On:</strong>
+                <span>{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</span>
               </div>
 
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Amount Payable:</strong>
-                <span style={{ fontWeight: 'black', fontSize: '14px' }}>₹{order.payableAmount?.toLocaleString()}</span>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Amount:</strong>
+                <span style={{ fontWeight: '800', fontSize: '13px' }}>₹{order.payableAmount?.toLocaleString()}</span>
               </div>
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Payment Method & Status:</strong>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Payment Info:</strong>
                 <span className="uppercase">{order.paymentMethod} - {order.payment?.status || 'PENDING'}</span>
               </div>
               
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Payment Trans ID:</strong>
-                <span>{order.payment?.transactionId || 'N/A (COD/Pending)'}</span>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Transaction ID:</strong>
+                <span>{order.payment?.transactionId || 'N/A'}</span>
               </div>
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Tracking / AWB Number:</strong>
-                <span>{order.awbNumber || 'Awaiting Shipment Trigger'}</span>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Tracking / AWB:</strong>
+                <span>{order.awbNumber || 'Not shipped yet'}</span>
               </div>
 
-              <div style={{ gridColumn: 'span 2', padding: '12px', background: '#f9f9f9', border: '1px solid #eee' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Full Delivery Address (Customer Dossier):</strong>
-                <span className="uppercase" style={{ lineHeight: '1.6' }}>
+              <div style={{ gridColumn: 'span 2', padding: '10px', background: '#f9f9f9', border: '1px solid #eee', borderRadius: '4px' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Shipping Address:</strong>
+                <span className="uppercase" style={{ lineHeight: '1.4' }}>
                   {order.address?.street}, {order.address?.area}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}
+                  {order.address?.landmark && <div style={{ fontSize: '9px', color: '#7A578D', marginTop: '2px', fontStyle: 'italic', fontWeight: 'bold' }}>LANDMARK: {order.address.landmark}</div>}
                 </span>
               </div>
 
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Customer Email:</strong>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Customer Email:</strong>
                 <span className="lowercase">{order.user?.email || 'N/A'}</span>
               </div>
               <div style={{ gridColumn: 'span 1' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Courier Partner:</strong>
-                <span className="uppercase">{order.courierName || 'Pending Assignment'}</span>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Courier Partner:</strong>
+                <span className="uppercase">{order.courierName || 'In Processing'}</span>
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontSize: '11px', color: '#7A578D' }}>Admin Operational Notes:</strong>
-                <p style={{ margin: 0, fontStyle: order.adminNotes ? 'normal' : 'italic', color: order.adminNotes ? '#333' : '#999', lineHeight: '1.5' }}>
-                   {order.adminNotes || 'No internal notes found for this order dossier.'}
+                <strong style={{ display: 'block', marginBottom: '8px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D', borderBottom: '1px solid #7A578D/10', paddingBottom: '4px' }}>Ordered Items:</strong>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                   {order.items?.map((item: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fcfcfc', padding: '8px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
+                         <img 
+                            src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} 
+                            style={{ width: '40px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
+                         />
+                         <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', color: '#111' }}>{item.product?.name}</div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
+                               <span style={{ fontSize: '9px', fontWeight: '700', color: '#7A578D', background: '#7A578D/5', padding: '2px 6px', borderRadius: '4px' }}>SIZE: {item.selectedSize || 'N/A'}</span>
+                               {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                     <span style={{ fontSize: '9px', fontWeight: '700', color: '#666' }}>COLOR:</span>
+                                     <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: item.variant.colorCode || item.variant.colorRel.hexCode, border: '1px solid #ddd' }} />
+                                  </div>
+                               )}
+                               <span style={{ fontSize: '9px', fontWeight: '700', color: '#0066FF', background: '#0066FF/5', padding: '2px 6px', borderRadius: '4px' }}>SKU: {item.sku || 'N/A'}</span>
+                            </div>
+                         </div>
+                         <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: '800', fontSize: '12px' }}>₹{item.price.toLocaleString()}</div>
+                            <div style={{ fontSize: '9px', color: '#999', fontWeight: 'bold' }}>Qty: {item.quantity}</div>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Admin Notes:</strong>
+                <p style={{ margin: 0, fontStyle: order.adminNotes ? 'normal' : 'italic', color: order.adminNotes ? '#333' : '#999', lineHeight: '1.4', fontSize: '11px' }}>
+                   {order.adminNotes || 'No notes added.'}
                 </p>
               </div>
             </div>
@@ -565,7 +668,7 @@ const OrderManagement = () => {
           { label: 'Unfulfilled Orders', value: stats.pending, color: 'text-orange-600', bg: 'bg-orange-50', icon: Clock },
           { label: 'In Transit', value: stats.shipped, color: 'text-blue-600', bg: 'bg-blue-50', icon: Package },
           { label: 'Successfully Delivered', value: stats.delivered, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle },
-          { label: 'Total Volume', value: stats.total, color: 'text-[#7A578D]', bg: 'bg-[#7A578D]/5', icon: Activity },
+          { label: 'Total Orders', value: stats.total, color: 'text-[#7A578D]', bg: 'bg-[#7A578D]/5', icon: Activity },
         ].map((chip) => (
           <div key={chip.label} className="bg-white border border-gray-100 p-2 rounded-sm flex items-center space-x-4 shadow-sm group hover:border-[#7A578D]/30 transition-all">
             <div className={`w-6 h-6 rounded-sm ${chip.bg} flex items-center justify-center ${chip.color} group-hover:scale-110 transition-transform`}>
@@ -596,9 +699,9 @@ const OrderManagement = () => {
         title={`Order: ${selectedOrder?.orderNumber.split('-')[2] || selectedOrder?.orderNumber}`}
       >
         {isDetailsLoading && !selectedOrder && (
-           <div className="flex flex-col items-center justify-center py-1 gap-2">
+           <div className="flex flex-col items-center justify-center py-4 gap-2">
               <RefreshCw className="w-8 h-8 text-[#7A578D] animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Retrieving Secure Dossier...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Loading data...</p>
            </div>
         )}
         {selectedOrder && (
@@ -624,16 +727,43 @@ const OrderManagement = () => {
                  </div>
 
                  <div className="flex flex-wrap gap-2 items-center">
-                    {!selectedOrder.shipmentId && !['CANCELLED', 'REFUNDED', 'SHIPPED', 'DELIVERED'].includes(selectedOrder.status) && (
-                       <button 
-                          onClick={() => handleTriggerShipment(selectedOrder.id)}
-                          className="flex items-center gap-2 text-xs font-bold bg-black text-white px-3 py-1.5 rounded-sm hover:bg-[#7A578D] transition-all shadow-lg shadow-gray-200"
-                       >
-                          <Package size={16} /> SHIP ORDER (Shiprocket)
-                       </button>
-                    )}
+                     {selectedOrder.status === 'RETURNED' && (
+                        <button 
+                           onClick={() => handleResetReship(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-green-200"
+                        >
+                           <Package size={16} /> RE-SHIP / REPLACE
+                        </button>
+                     )}
 
+                     {!selectedOrder.shipmentId && !['CANCELLED', 'REFUNDED', 'SHIPPED', 'DELIVERED', 'RETURNED'].includes(selectedOrder.status) && (
+                        <button 
+                           onClick={() => handleTriggerShipment(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-black text-white px-3 py-1.5 rounded-sm hover:bg-[#7A578D] transition-all shadow-lg shadow-gray-200"
+                        >
+                           <Package size={16} /> SHIP ORDER (Shiprocket)
+                        </button>
+                     )}
 
+                     {selectedOrder.shipmentId && (
+                        <button 
+                           onClick={() => handleGenerateLabel(selectedOrder.id)}
+                           disabled={isLabelLoading}
+                           className="flex items-center gap-2 text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+                        >
+                           {isLabelLoading ? <RefreshCw size={16} className="animate-spin" /> : <Printer size={16} />} 
+                           GENERATE LABEL
+                        </button>
+                     )}
+
+                     {settings.shiprocket_test_mode === 'true' && selectedOrder.status === 'SHIPPED' && (
+                        <button 
+                           onClick={() => handleForceDeliver(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-orange-500 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-orange-200"
+                        >
+                           <CheckCircle size={16} /> FORCE DELIVER (TEST)
+                        </button>
+                     )}
 
                     <button 
                         onClick={() => setIsInvoiceOpen(true)}
@@ -666,25 +796,33 @@ const OrderManagement = () => {
               <div className="grid grid-cols-12 gap-2">
                  
                  <div className="col-span-12 lg:col-span-8 space-y-1">
-                                        <div className="bg-white rounded-sm border border-gray-100 overflow-hidden shadow-sm">
+                    <div className="bg-white rounded-sm border border-gray-100 overflow-hidden shadow-sm">
                        <div className="bg-gray-50 px-2 py-1 border-b border-gray-100 flex justify-between items-center">
                           <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
-                             <ShoppingBag size={14} /> Items Ledger
+                             <ShoppingBag size={14} /> Order Items
                           </h3>
                        </div>
                        <div className="p-2 space-y-1">
                           {selectedOrder.items?.map((item: any) => (
-                              <div key={item.id} className="flex items-center gap-2 bg-gray-50/50 p-3 rounded-sm border border-transparent hover:border-gray-200 hover:bg-white transition-all">
+                              <div key={item.id} className="flex items-center gap-2 bg-gray-50/50 p-2 rounded-sm border border-transparent hover:border-gray-200 hover:bg-white transition-all">
                                  <img src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} 
-                                    className="w-6 h-16 object-cover rounded-sm bg-gray-100 shadow-sm" />
+                                    className="w-5 h-12 object-cover rounded-sm bg-gray-100 shadow-sm" />
                                  <div className="flex-1">
-                                    <h4 className="text-xs font-black uppercase text-gray-900 truncate max-w-[300px]">{item.product?.name}</h4>
-                                    <div className="flex flex-wrap gap-2 mt-1">
-                                       <span className="text-[10px] font-bold text-gray-500">QTY: {item.quantity}</span>
+                                    <h4 className="text-[10px] font-black uppercase text-gray-900 truncate max-w-[280px]">{item.product?.name}</h4>
+                                    <div className="flex flex-wrap gap-2 mt-0.5">
+                                       <span className="text-[9px] font-bold text-gray-500">QTY: {item.quantity}</span>
                                        {item.selectedSize && <span className="text-[10px] font-black text-[#7A578D] bg-[#7A578D]/5 px-2 py-0.5 rounded uppercase">SIZE: {item.selectedSize}</span>}
-                                       {item.variant?.color && <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-0.5 rounded uppercase">COLOR: {item.variant.color}</span>}
-                                       <span className="text-[10px] font-black text-blue-600 uppercase ml-auto">
+                                       {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                                          <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-0.5 rounded">
+                                             <div 
+                                                style={{ backgroundColor: item.variant.colorCode || item.variant?.colorRel?.hexCode }} 
+                                                className="w-3 h-3 rounded-full border border-gray-200" 
+                                             />
+                                          </div>
+                                       )}
+                                       <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 rounded uppercase tracking-tighter">
                                           SKU: {
+                                            item.sku || 
                                             item.variant?.sizes?.find((s: any) => s.size === item.selectedSize)?.sku || 
                                             item.variant?.sku || 
                                             item.product?.inventory?.sku || 
@@ -730,9 +868,11 @@ const OrderManagement = () => {
                               <p className="text-xs font-black text-gray-900 uppercase">{selectedOrder.address?.name}</p>
                               <p className="text-xs font-medium text-gray-500 lowercase">{selectedOrder.user?.email}</p>
                               <div className="text-xs font-bold text-gray-700 uppercase leading-relaxed mt-2 pt-2 border-t border-gray-100">
-                                 <p className="mb-1 text-gray-500 font-medium normal-case">{selectedOrder.address?.street}</p>
-                                 <p>{selectedOrder.address?.city}, {selectedOrder.address?.pincode}</p>
-                                 <p className="text-[#7A578D] font-black mt-2">{selectedOrder.address?.phone}</p>
+                                 <p className="mb-1 text-gray-900 font-black">{selectedOrder.address?.street}</p>
+                                 <p className="mb-1 text-gray-500 font-bold">{selectedOrder.address?.area}</p>
+                                 <p>{selectedOrder.address?.city}, {selectedOrder.address?.state} - {selectedOrder.address?.pincode}</p>
+                                 {selectedOrder.address?.landmark && <p className="text-[10px] text-[#7A578D] font-black mt-2 italic shadow-sm bg-[#7A578D]/5 px-2 py-1 rounded inline-block">LANDMARK: {selectedOrder.address.landmark}</p>}
+                                 <p className="text-emerald-700 font-black mt-3 flex items-center gap-2"><Truck size={14}/> {selectedOrder.address?.phone}</p>
                               </div>
                            </div>
                         </div>
@@ -755,17 +895,17 @@ const OrderManagement = () => {
                  </div>
                  <div className="col-span-12 lg:col-span-4 space-y-1">
                     <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
-                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-4">
-                          <CreditCard size={14} /> Settlement
+                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                          <CreditCard size={14} /> Payment Info
                        </h3>
                        <div className="space-y-1">
-                           <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-sm border border-gray-100">
-                               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mode</span>
-                               <span className="text-xs font-black text-gray-900 uppercase">{selectedOrder.payment?.paymentMethod || 'COD'}</span>
+                           <div className="flex justify-between items-center bg-gray-50 p-2 rounded-sm border border-gray-100">
+                               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Mode</span>
+                               <span className="text-[10px] font-black text-gray-900 uppercase">{selectedOrder.payment?.paymentMethod || 'COD'}</span>
                            </div>
-                           <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-sm border border-gray-100">
-                               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Merchant</span>
-                               <span className="text-xs font-black text-[#7A578D] uppercase">{selectedOrder.payment?.paymentMethod === 'COD' ? 'CASH' : 'RAZORPAY'}</span>
+                           <div className="flex justify-between items-center bg-gray-50 p-2 rounded-sm border border-gray-100">
+                               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Type</span>
+                               <span className="text-[10px] font-black text-[#7A578D] uppercase">{selectedOrder.payment?.paymentMethod === 'COD' ? 'CASH' : 'RAZORPAY'}</span>
                            </div>
                            {selectedOrder.payment?.transactionId && (
                                <div className="space-y-1 mt-2">
@@ -779,13 +919,13 @@ const OrderManagement = () => {
                     </div>
 
                     <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
-                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-4">
-                          <Truck size={14} /> Shipping Hub
+                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                          <Truck size={14} /> Shipping Info
                        </h3>
                        <div className="space-y-1">
-                           <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest">
+                           <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
                                <span className="text-gray-400">Carrier</span>
-                               <span className="text-gray-900 uppercase text-right">{selectedOrder.courierName || 'Pending Assignment'}</span>
+                               <span className="text-gray-900 uppercase text-right">{selectedOrder.courierName || 'In Processing'}</span>
                            </div>
                            <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest py-1 border-y border-gray-50">
                                <span className="text-gray-400">Status</span>

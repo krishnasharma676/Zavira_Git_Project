@@ -15,11 +15,14 @@ import {
   ShoppingCart,
   Truck,
   Palette,
-  Plus
+  Plus,
+  Search,
+  Database
 } from 'lucide-react';
 
 export const ADMIN_MODULES = [
   { label: 'Inventory', icon: Package, path: '/admin/inventory' },
+  { label: 'SKU Lookup', icon: Search, path: '/admin/sku-lookup' },
   { label: 'Banners', icon: ImageIcon, path: '/admin/banners' },
   { label: 'Categories', icon: Layers, path: '/admin/categories' },
   { label: 'Bulk Create', icon: Plus, path: '/admin/bulk-create' },
@@ -33,4 +36,5 @@ export const ADMIN_MODULES = [
   { label: 'Announcements', icon: Bell, path: '/admin/announcements' },
   { label: 'Colors', icon: Palette, path: '/admin/colors' },
   { label: 'Settings', icon: Settings, path: '/admin/settings' },
+  { label: 'Demo Data', icon: Database, path: '/admin/demo-data' },
 ];

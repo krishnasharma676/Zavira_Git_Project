@@ -72,6 +72,10 @@ export const V = {
       ? ''
       : 'Invalid GSTIN — format: 07AABCU9603R1ZX',
 
+  /** Min 3 chars for landmark */
+  landmark: (v: string) =>
+    v.trim().length >= 3 ? '' : 'Landmark must be at least 3 characters',
+
   /** Any required field — just not empty */
   required: (v: string, label = 'This field') =>
     v.trim().length > 0 ? '' : `${label} is required`,
@@ -109,7 +113,7 @@ export function validateAll(
 // ── Input className helper (red border on error, purple on focus) ─────────────
 export const inputCls = (
   error: string | undefined,
-  base = 'w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all'
+  base = 'w-full border rounded-none px-4 py-3 text-xs font-bold focus:outline-none transition-all'
 ) =>
   `${base} ${
     error

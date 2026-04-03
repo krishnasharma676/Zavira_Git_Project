@@ -8,6 +8,7 @@ interface CatalogStore {
   testimonials: any[];
   loading: boolean;
   isInitialLoaded: boolean;
+  settings: any;
   loadCatalog: () => Promise<void>;
   getProductBySlug: (slug: string) => any;
 }
@@ -17,6 +18,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   categories: [],
   banners: [],
   testimonials: [],
+  settings: {},
   loading: false,
   isInitialLoaded: false,
   
@@ -34,6 +36,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         categories: homeData.categories || [],
         banners: homeData.banners || [],
         testimonials: homeData.testimonials || [],
+        settings: homeData.settings || {},
         isInitialLoaded: true
       });
     } catch (e) {

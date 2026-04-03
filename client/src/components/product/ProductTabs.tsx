@@ -1,6 +1,4 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Truck, ShieldCheck, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ReviewList from './ReviewList';
 import ReviewForm from './ReviewForm';
 
@@ -20,8 +18,6 @@ interface ProductTabsProps {
 
 const ProductTabs = ({
   product,
-  activeTab,
-  setActiveTab,
   rating,
   setRating,
   comment,
@@ -32,60 +28,90 @@ const ProductTabs = ({
   handleReviewSubmit
 }: ProductTabsProps) => {
 
+  const navigate = useNavigate();
+  const attributes = product.attributes || {};
+  
+  // Helper to check if an attribute exists (case insensitive)
+  const getAttr = (name: string) => {
+    const key = Object.keys(attributes).find(k => k.toLowerCase() === name.toLowerCase());
+    return key ? attributes[key] : null;
+  };
+
+  const sizeAndFit = getAttr('sizeAndFit') || getAttr('size and fit');
+  const material = getAttr('material');
+  const care = getAttr('careInstructions') || getAttr('care');
+
+  // Filter out the "main" attributes from the list to avoid duplication
+  const technicalKeys = ['isvariantproduct', '_id', '__v', 'id', 'productid', 'material', 'careinstructions', 'care', 'sizeandfit', 'size and fit'];
+  const specificationEntries = Object.entries(attributes).filter(
+    ([key]) => !technicalKeys.includes(key.toLowerCase())
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end space-x-8 border-b border-gray-100 dark:border-white/5">
-        {['details', 'shipping', 'reviews'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-3 text-[9px] uppercase tracking-[0.2em] font-black transition-all relative ${
-              activeTab === tab ? 'text-[#7A578D]' : 'text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            {tab}
-            {activeTab === tab && (
-              <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#7A578D]" />
-            )}
-          </button>
-        ))}
+    <div className="space-y-4 mt-2">
+      
+      {/* RENAME SPECIFICATIONS TO PRODUCT DETAILS & REMOVE OLD DESCRIPTION */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3 mb-6">
+          <h3 className="text-[16px] font-bold uppercase tracking-widest text-gray-900 dark:text-white">Product Details</h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-900 dark:text-white mb-1">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+
+        {/* 1 ROW 1 COLUMN LIST (STACKED) */}
+        <div className="space-y-6 max-w-4xl">
+            {specificationEntries.length > 0 && specificationEntries.map(([key, value]: [string, any]) => (
+              <div key={key} className="flex flex-col border-b border-gray-100 dark:border-white/5 pb-2">
+                <span className="text-[11px] text-gray-400 mb-1 font-semibold uppercase tracking-wide">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </span>
+                <span className="text-[14px] text-gray-900 dark:text-white font-bold">{String(value)}</span>
+              </div>
+            ))}
+        </div>
       </div>
 
-      <div className="py-4">
-        {activeTab === 'details' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-             <div className="grid grid-cols-1 gap-1">
-                {product.attributes && Object.entries(product.attributes)
-                   .filter(([key]) => !['isVariantProduct', '_id', '__v', 'id', 'productId'].includes(key.toLowerCase()))
-                   .map(([key, value]: [string, any]) => (
-                   <div key={key} className="flex justify-between py-1.5 text-[11px]">
-                     <span className="text-gray-400 uppercase font-black tracking-widest">{key}</span>
-                     <span className="text-gray-900 dark:text-white font-bold uppercase">{String(value)}</span>
-                   </div>
-                 ))}
+      {/* Size & Fit - ONLY IF EXISTS */}
+      {sizeAndFit && (
+        <div className="pt-4 mb-6">
+          <h4 className="text-[15px] font-bold text-gray-900 dark:text-white mb-2 underline decoration-[#7A578D]/30 underline-offset-4">Size & Fit</h4>
+          <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{sizeAndFit}</p>
+        </div>
+      )}
 
-                
-                <div className="flex justify-between py-1.5 text-[11px]">
-                  <span className="text-gray-400 uppercase font-black tracking-widest">Category</span>
-                  <span className="text-gray-900 dark:text-white font-bold uppercase">{product.category?.name || 'Jewelry'}</span>
-                </div>
+      {/* Material & Care - ONLY IF EXISTS */}
+      {(material || care) && (
+        <div className="pt-4 mb-6">
+          <h4 className="text-[15px] font-bold text-gray-900 dark:text-white mb-2 underline decoration-[#7A578D]/30 underline-offset-4">Material & Care</h4>
+          {material && <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{material}</p>}
+          {care && <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{care}</p>}
+        </div>
+      )}
 
+      <hr className="my-6 border-gray-200 dark:border-white/10" />
 
-                {product.sku && (
-                  <div className="flex justify-between py-1.5 text-[11px]">
-                    <span className="text-gray-400 uppercase font-black tracking-widest">SKU</span>
-                    <span className="text-gray-900 dark:text-white font-bold uppercase">{product.sku}</span>
-                  </div>
-                )}
+      {/* Reviews Section - DYNAMIC 3 REVIEWS */}
+      <div className="pt-2 pb-10">
+        <h4 className="text-[16px] font-bold text-gray-900 dark:text-white mb-8 uppercase tracking-[0.15em]">Customer Feedback</h4>
+        <div className="max-w-4xl">
+          <ReviewList reviews={product.reviews?.slice(0, 3) || []} />
+          
+          {product.reviews?.length > 3 && (
+            <button 
+              onClick={() => navigate(`/product/${product.slug}/reviews`)}
+              className="text-[#7A578D] font-bold text-[14px] uppercase tracking-wider mt-6 hover:underline flex items-center gap-2"
+            >
+              View All {product.reviews.length} Reviews
+            </button>
+          )}
 
-             </div>
-          </motion.div>
-        )}
-
-
-        {activeTab === 'reviews' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-            <ReviewList reviews={product.reviews} />
+          <div className="mt-12 pt-8 border-t border-gray-100 dark:border-white/5">
+            <h5 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-6">Write a Review</h5>
             <ReviewForm 
               rating={rating} 
               setRating={setRating} 
@@ -96,35 +122,11 @@ const ProductTabs = ({
               isSubmitting={isSubmitting} 
               handleReviewSubmit={handleReviewSubmit} 
             />
-
-          </motion.div>
-        )}
-        
-        {activeTab === 'shipping' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-gray-500 font-medium text-xs leading-relaxed italic">
-            <p className="mb-4">Complimentary express shipping on all orders domestically. Each Zavira masterpiece arrives in our signature vault packaging, insured and requiring a signature upon delivery.</p>
-            <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/5">
-              <ul className="space-y-3">
-                <li className="flex items-center space-x-3">
-                  <Truck size={14} className="text-[#7A578D]" />
-                  <span>Domestic: 3-5 business days</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <ShieldCheck size={14} className="text-[#7A578D]" />
-                  <span>Insured Delivery with Signature</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <RotateCcw size={14} className="text-[#7A578D]" />
-                  <span>14-Day Boutique Exchange</span>
-                </li>
-              </ul>
-            </div>
-          </motion.div>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default ProductTabs;
-

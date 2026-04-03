@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ChevronDown, 
@@ -10,99 +9,29 @@ import {
   ChevronRight,
   ShieldCheck
 } from 'lucide-react';
-import { useCart } from '../store/useCart';
-import { useAuth } from '../store/useAuth';
-import { useUIStore } from '../store/useUIStore';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/format';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCheckout } from '../hooks/useCheckout';
 
 const CheckoutPage = () => {
-  const { items, clearCart, addItem } = useCart();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const openAuthModal = useUIStore((s) => s.openAuthModal);
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Form State
-  const [formData, setFormData] = useState({
-    pincode: '',
-    firstName: '',
-    lastName: '',
-    address: '',
-    area: '',
-    city: '',
-    state: '',
-    email: user?.email || '',
-    type: 'Home'
-  });
-
-  const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 0), 0);
-  const savings = subtotal * 0.15; // Mock savings
-  const total = subtotal + (subtotal * 0.03) + (subtotal >= 1000 ? 0 : 49) - savings;
-
-  useEffect(() => {
-    if (!user) {
-      navigate('/');
-      openAuthModal('login');
-      return;
-    }
-    // Fetch suggestions for recommendations
-    api.get('/products', { params: { limit: 4 } })
-      .then(res => setSuggestions(res.data.data.products))
-      .catch(() => {});
-  }, [user]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleCompleteOrder = async () => {
-    if (isSubmitting) return;
-    if (!formData.pincode || !formData.address || !formData.firstName) {
-      toast.error('Please fill in required shipping fields');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      
-      // Logic for saving address and then creating order
-      const { data: addressRes } = await api.post('/addresses', {
-        name: `${formData.firstName} ${formData.lastName}`,
-        type: formData.type.toUpperCase(),
-        street: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-        phone: 'Not provided', // Placeholder
-        isDefault: true
-      });
-
-      const response = await api.post('/orders/checkout', {
-        addressId: addressRes.data.id,
-        paymentMethod: 'COD',
-        items: items.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          variantId: item.variantId,
-          selectedSize: item.selectedSize
-        }))
-      });
-      
-      toast.success('Order placed successfully!');
-      clearCart();
-      navigate(`/order-success/${response.data.data.id}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    items,
+    user,
+    logout,
+    navigate,
+    addItem,
+    isSummaryOpen,
+    setIsSummaryOpen,
+    suggestions,
+    isAccountOpen,
+    setIsAccountOpen,
+    isSubmitting,
+    formData,
+    handleInputChange,
+    handleCompleteOrder,
+    total,
+    savings
+  } = useCheckout();
 
   if (items.length === 0) {
     return (
@@ -165,9 +94,13 @@ const CheckoutPage = () => {
                       </div>
                       <div className="flex-grow pt-1">
                         <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-1">{item.name}</h4>
-                        <div className="flex gap-2 mt-1">
+                        <div className="flex gap-2 mt-1 items-center">
                           {item.selectedSize && <span className="text-[7px] font-black bg-gray-100 px-1 rounded uppercase">Size: {item.selectedSize}</span>}
-                          {item.variantId && <span className="text-[7px] font-black bg-[#7A578D]/10 text-[#7A578D] px-1 rounded uppercase">Selected Variant</span>}
+                          {item.colorCode && (
+                            <div className="flex items-center gap-1 bg-gray-100 px-1 rounded h-[14px]">
+                               <div style={{ backgroundColor: item.colorCode }} className="w-1.5 h-1.5 rounded-full border border-gray-200" />
+                            </div>
+                          )}
                         </div>
                         <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
                         <p className="text-[11px] font-black text-[#7A578D] mt-1">{formatCurrency(item.price)}</p>

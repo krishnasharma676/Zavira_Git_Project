@@ -16,6 +16,7 @@ const CheckoutModal = lazy(() => import('./components/checkout/CheckoutModal'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const ProductReviewsPage = lazy(() => import('./pages/ProductReviewsPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage'));
@@ -24,7 +25,6 @@ const AboutPage = lazy(() => import('./pages/AboutPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const PolicyPage = lazy(() => import('./pages/PolicyPage'));
-const ReturnsExchangePage = lazy(() => import('./pages/ReturnsExchangePage'));
 const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -47,6 +47,8 @@ const TestimonialManagement = lazy(() => import('./admin/pages/TestimonialManage
 const MessageManagement = lazy(() => import('./admin/pages/MessageManagement'));
 const StoreSettings = lazy(() => import('./admin/pages/StoreSettings'));
 const ShippingManagement = lazy(() => import('./admin/pages/ShippingManagement'));
+const SkuLookup = lazy(() => import('./admin/pages/SkuLookup'));
+const DemoData = lazy(() => import('./admin/pages/DemoData'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -72,9 +74,11 @@ const AppContent = () => {
   }, [isAuthenticated, isAdminPath, loadCatalog]);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-zavira-blackDeep transition-colors duration-300">
       {!hideLayout && <Navbar />}
-      <main className="flex-grow">
+      
+      <main className="flex-grow flex flex-col relative overflow-hidden">
+        {/* Removed complex skeleton from here, back to null for lazy bundles */}
         <Suspense fallback={null}>
           <Routes>
             {/* Customer Routes */}
@@ -82,6 +86,7 @@ const AppContent = () => {
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/hot-deals" element={<ShopPage />} />
             <Route path="/product/:slug" element={<ProductDetailPage />} />
+            <Route path="/product/:slug/reviews" element={<ProductReviewsPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/collections" element={<CollectionsPage />} />
@@ -92,7 +97,6 @@ const AppContent = () => {
             <Route path="/faqs" element={<PolicyPage />} />
             <Route path="/size-guide" element={<PolicyPage />} />
             <Route path="/privacy" element={<PolicyPage />} />
-            <Route path="/returns" element={<ReturnsExchangePage />} />
             <Route path="/track-order" element={<TrackOrderPage />} />
             <Route path="/terms" element={<PolicyPage />} />
             <Route path="/order-success/:id" element={<OrderSuccessPage />} />
@@ -117,6 +121,8 @@ const AppContent = () => {
                 <Route path="messages" element={<MessageManagement />} />
                 <Route path="settings" element={<StoreSettings />} />
                 <Route path="shipping" element={<ShippingManagement />} />
+                <Route path="sku-lookup" element={<SkuLookup />} />
+                <Route path="demo-data" element={<DemoData />} />
                 <Route index element={<InventoryManagement />} />
               </Route>
             </Route>
@@ -126,12 +132,15 @@ const AppContent = () => {
           </Routes>
         </Suspense>
       </main>
+
       {!hideLayout && <Footer />}
       {!hideLayout && <StickyFooter />}
+      
       <Suspense fallback={null}>
         {!hideLayout && <CartDrawer />}
         {!hideLayout && <CheckoutModal />}
       </Suspense>
+      
       <Toaster position="bottom-right" toastOptions={{ style: { marginBottom: '80px' } }} />
     </div>
   );
