@@ -22,7 +22,11 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
   return (
     <div>
       <div className="mb-6">
-        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">{product.name}</p>
+        {/* Brand / Category & Name */}
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
+          {product.category?.name || 'ZAVIRAA'}
+        </h1>
+        <p className="text-[18px] text-gray-500 mb-3">{product.name}</p>
         
         {/* Rating Badge - DYNAMIC */}
         <div className="inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 px-3 py-1.5 mb-4 rounded-[3px] text-sm font-bold text-gray-800 dark:text-gray-200 hover:border-black transition-colors cursor-pointer">
@@ -96,6 +100,18 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
         {(selectedVariant?.sizes?.length > 0 || product.sizes) && (
           <div className="mb-8">
             <div className="flex items-center gap-6 mb-4">
+              <div className="flex items-center gap-2">
+                <h4 className="text-[14px] font-bold uppercase tracking-wide text-gray-900 dark:text-white">SELECT SIZE</h4>
+                {selectedVariant?.colorCode && (
+                   <div 
+                      className="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm"
+                      style={{ backgroundColor: selectedVariant.colorCode }}
+                   />
+                )}
+              </div>
+              <span className="text-[#7A578D] text-[13px] font-bold cursor-pointer uppercase tracking-wide flex items-center">
+                SIZE CHART <span className="ml-1 text-[10px] opacity-70"> &gt;</span>
+              </span>
             </div>
             <div className="flex flex-wrap gap-3">
               {(selectedVariant?.sizes && selectedVariant.sizes.length > 0) ? (

@@ -1,138 +1,186 @@
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Palette, RefreshCw, Layers } from 'lucide-react';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
-import { Palette, RefreshCw, Layers, Activity, ShieldCheck, Zap, Info, ChevronRight, Droplets, Grid } from 'lucide-react';
+interface Color {
+  id: string;
+  name: string;
+  hexCode: string;
+}
 
-// Components
-import ColorForm from '../components/color/ColorForm';
-import ColorCard from '../components/color/ColorCard';
+import { useAdminStore } from '../../store/useAdminStore';
 
-// Hooks
-import { useColors } from '../hooks/useColors';
+interface Color {
+  id: string;
+  name: string;
+  hexCode: string;
+}
 
 const ColorManagement = () => {
-  const {
-    colors,
-    loading,
-    isSubmitting,
-    newColor,
-    setNewColor,
-    refreshColors,
-    handleCreate,
-    handleDelete,
-  } = useColors();
+  const { colors, fetchColors, refreshColors } = useAdminStore();
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newColor, setNewColor] = useState({ name: '', hexCode: '#000000' });
+
+  const handleFetchColors = async () => {
+    setLoading(true);
+    try {
+      await fetchColors();
+    } catch (error) {
+      toast.error('Failed to fetch colors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleFetchColors();
+  }, [fetchColors]);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColor.name || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.post('/colors', newColor);
+      toast.success('Color saved to repository');
+      setNewColor({ name: '', hexCode: '#000000' });
+      await refreshColors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to save color');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure? This will only succeed if the color is not in use.')) return;
+    try {
+      await api.delete(`/colors/${id}`);
+      toast.success('Color removed');
+      await refreshColors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete color');
+    }
+  };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-[1600px] pb-24">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-8 gap-4">
+    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
         <div>
-           <h1 className="text-2xl font-black uppercase tracking-tighter text-gray-900 leading-none">Chromatic_Nexus_Hub</h1>
-           <div className="flex items-center gap-3 mt-3">
-              <div className="flex items-center gap-2 bg-[#7A578D]/5 px-2 py-1 rounded-sm border border-[#7A578D]/10 shadow-xl shadow-[#7A578D]/5">
-                 <span className="w-1.5 h-1.5 rounded-full bg-[#7A578D] animate-pulse shadow-lg shadow-[#7A578D]/50"></span>
-                 <span className="text-[10px] font-black uppercase tracking-widest text-[#7A578D] opacity-70 italic">Global Color Palette Protocol Active</span>
-              </div>
-              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{colors.length} REGISTERED_CHROMA_Nexus</span>
-           </div>
+          <h1 className="text-lg font-bold text-gray-900 tracking-tight uppercase">Product Colors</h1>
+          <p className="text-gray-500 text-xs mt-1 font-medium">Add and manage colors for your product variations.</p>
         </div>
-        <button
-          onClick={refreshColors}
-          className="w-12 h-12 bg-white border border-gray-200 rounded-sm text-gray-300 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-700 shadow-sm flex items-center justify-center group"
-          title="Synchronize Palette"
-        >
-          <RefreshCw size={24} className={loading ? 'animate-spin' : ''} />
+        <button onClick={refreshColors} className="p-3 bg-white border border-gray-200 rounded-sm text-gray-500 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-500 shadow-sm flex items-center justify-center">
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
         {/* Editor */}
-        <section className="lg:col-span-4 lg:sticky lg:top-8 animate-in slide-in-from-left-8 duration-700">
-           <div className="bg-white border border-gray-100 rounded-sm shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                 <Droplets size={160} />
+        <section className="lg:col-span-4 bg-white p-2 rounded-sm border border-gray-100 shadow-sm space-y-2">
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+            <div className="w-6 h-6 bg-[#7A578D]/5 rounded-sm flex items-center justify-center text-[#7A578D]">
+              <Palette size={24} />
+            </div>
+            <div>
+               <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider">New Color</h2>
+               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-0.5">Define a new tone</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreate} className="space-y-2">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Color Name</label>
+              <input 
+                required 
+                value={newColor.name} 
+                onChange={(e) => setNewColor({...newColor, name: e.target.value})}
+                placeholder="e.g. Crimson Red"
+                className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1.5 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-medium transition-all" 
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Hex Code</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-gray-200 shadow-sm overflow-hidden ring-2 ring-white z-10">
+                  <input 
+                    type="color" 
+                    value={newColor.hexCode} 
+                    onChange={(e) => setNewColor({...newColor, hexCode: e.target.value})}
+                    className="absolute inset-0 w-full h-full scale-150 cursor-pointer border-0 p-0" 
+                  />
+                </div>
+                <input 
+                  required 
+                  value={newColor.hexCode} 
+                  onChange={(e) => setNewColor({...newColor, hexCode: e.target.value})}
+                  className="w-full bg-white border border-gray-200 rounded-sm py-1.5 pl-14 pr-4 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-mono uppercase font-bold tracking-wider transition-all shadow-sm" 
+                  placeholder="#000000" 
+                />
               </div>
-              <div className="p-8 relative z-10">
-                 <header className="flex items-center gap-4 mb-10 border-b border-gray-50 pb-6">
-                    <div className="p-3 bg-black rounded-sm text-white shadow-xl">
-                       <Palette size={18} />
-                    </div>
-                    <div>
-                       <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-gray-900">Chroma Commission</h4>
-                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest italic mt-1 block">Registering NEW_TONAL_Nexus</span>
-                    </div>
-                 </header>
-                 <ColorForm
-                   newColor={newColor}
-                   setNewColor={setNewColor}
-                   handleCreate={handleCreate}
-                   isSubmitting={isSubmitting}
-                 />
-              </div>
-           </div>
+            </div>
+            <button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold uppercase tracking-wider hover:bg-[#7A578D] transition-all shadow-md active:scale-95 disabled:opacity-50 mt-4"
+            >
+              {isSubmitting ? 'WORKING...' : 'REGISTER NEW COLOR'}
+            </button>
+          </form>
         </section>
 
         {/* Display */}
-        <section className="lg:col-span-8 space-y-8 animate-in slide-in-from-right-8 duration-700 delay-200">
-          <div className="flex items-center justify-between bg-white px-8 py-6 rounded-sm border border-gray-100 shadow-xl group/ledger">
-             <div className="flex items-center gap-4">
-                <div className="p-3 bg-[#7A578D]/5 text-[#7A578D] rounded-sm shadow-inner group-hover/ledger:scale-110 transition-transform">
-                   <Grid size={20} />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-[12px] font-black text-gray-900 uppercase tracking-[0.4em]">
-                    Active_Palette_Ledger
-                  </h3>
-                  <span className="text-[10px] font-black text-[#7A578D] uppercase tracking-widest mt-1 italic">
-                    {colors.length} Tonal Fragments Synchronized
-                  </span>
-                </div>
-             </div>
-             <div className="flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-sm border border-emerald-100 text-emerald-700 shadow-xl shadow-emerald-500/5">
-                <ShieldCheck size={14} className="animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest">MASTER_SYNC_VALID</span>
-             </div>
+        <section className="lg:col-span-8 space-y-2">
+          <div className="flex items-center gap-2 mb-4 ml-1">
+             <Layers size={20} className="text-[#7A578D]" />
+             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] bg-gray-100 px-3 py-1 rounded-sm">Saved Palette ({colors.length})</h3>
           </div>
-
-          {(loading && colors.length === 0) ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          {loading && colors.length === 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-48 bg-gray-50/50 rounded-sm animate-pulse border border-gray-100 shadow-inner" />
+                <div key={i} className="h-32 bg-gray-50 rounded-sm animate-pulse border border-gray-100" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-              {colors.map((color) => (
-                <ColorCard key={color.id} color={color} handleDelete={handleDelete} />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {colors.map(color => (
+                <div key={color.id} className="group bg-white p-2 rounded-sm border border-gray-100 hover:border-[#7A578D]/30 hover:shadow-md transition-all animate-in zoom-in-95 cursor-default relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  <div className="w-full h-20 rounded-sm border border-gray-200 shadow-inner group-hover:scale-105 transition-transform duration-500 z-10 relative" style={{ backgroundColor: color.hexCode }} />
+                  <div className="mt-4 flex flex-col gap-1 px-1 z-10 relative">
+                    <div className="flex items-start justify-between gap-2">
+                       <div className="min-w-0">
+                         <p className="text-xs font-bold text-gray-900 uppercase tracking-wider truncate" title={color.name}>{color.name}</p>
+                         <p className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest mt-0.5">{color.hexCode}</p>
+                       </div>
+                       <button 
+                         onClick={() => handleDelete(color.id)} 
+                         className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-sm transition-all border border-transparent hover:border-red-100 shrink-0"
+                         title="Delete Color"
+                       >
+                         <Trash2 size={16} />
+                       </button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
-
           {colors.length === 0 && !loading && (
-            <div className="bg-white rounded-sm py-40 text-center border-2 border-dashed border-gray-100 shadow-sm flex flex-col items-center justify-center animate-in zoom-in-95 duration-1000 group">
-               <Palette size={64} className="text-gray-100 mb-8 animate-pulse group-hover:text-[#7A578D]/20 transition-colors" />
-               <div className="space-y-4">
-                  <h6 className="text-[13px] font-black uppercase tracking-[0.5em] text-gray-400">Registry_Nexus_VOID</h6>
-                  <p className="text-[10px] font-black text-[#7A578D] uppercase tracking-widest italic max-w-[280px] mx-auto leading-relaxed">
-                    No chromatic artifacts detected in global archive. Utilize the commission portal to register fragments.
-                  </p>
+            <div className="bg-white rounded-sm p-24 text-center border-2 border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Palette size={40} className="text-gray-300" />
                </div>
+               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No colors defined</p>
+               <p className="text-xs text-gray-400 font-medium mt-2">Use the form to add your first color preset.</p>
             </div>
           )}
         </section>
       </div>
-      
-      <footer className="pt-20 border-t border-gray-100 flex items-center justify-center gap-12 opacity-30">
-         <div className="flex items-center gap-3">
-            <ShieldCheck size={18} className="text-gray-400"/>
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Palette integrity confirmed</span>
-         </div>
-         <div className="flex items-center gap-3">
-            <Zap size={18} className="text-gray-400 animate-pulse"/>
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Live Chroma sync active</span>
-         </div>
-         <div className="flex items-center gap-3">
-            <Info size={18} className="text-gray-400"/>
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Authoritative audit mapping 100% Correct</span>
-         </div>
-      </footer>
     </div>
   );
 };

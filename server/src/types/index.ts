@@ -51,6 +51,7 @@ export interface CreateProductInput {
   basePrice: string | number;
   discountedPrice?: string | number | null;
   categoryId: string;
+  subCategoryId?: string;
   stock: string | number;
   sku?: string;
   featured?: boolean | string;

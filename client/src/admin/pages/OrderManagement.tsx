@@ -1,366 +1,975 @@
 
-import { useState } from 'react';
-import { Download, RefreshCw, Printer, ArrowLeft, Package, Truck, User, CreditCard, Activity, Layers, Activity as Pulse, Zap, ShieldCheck, Box, ChevronRight, Info } from 'lucide-react';
-import MUIDataTable from 'mui-datatables';
+import { useState, useEffect } from 'react';
+import { Eye, Download, RefreshCw, Clock, Package, CheckCircle, Activity, ExternalLink, Printer, ShoppingBag, User, CreditCard, Truck, FileText, Calendar, ArrowLeft, RotateCcw } from 'lucide-react';
+import api from '../../api/axios';
+import ManagementModal from '../components/ManagementModal';
+import toast from 'react-hot-toast';
+import MUIDataTable from "mui-datatables";
 import { ThemeProvider } from '@mui/material/styles';
 import { getMuiTheme } from '../utils/muiTableTheme';
-
-// Hooks
-import { useOrders } from '../hooks/useOrders';
-import { useSettings } from '../../store/useSettings';
-
-// Components
-import ManagementModal from '../components/ManagementModal';
 import OrderInvoice from '../components/OrderInvoice';
-import OrderDetailsExpanded from '../components/order/OrderDetailsExpanded';
-import OrderDetailsModal from '../components/order/OrderDetailsModal';
-import OrderStats from '../components/order/OrderStats';
-import OrderTabs from '../components/order/OrderTabs';
+import { useUIStore } from '../../store/useUIStore';
+import { useSettings } from '../../store/useSettings';
+import { useNavigate } from 'react-router-dom';
 
 const OrderManagement = () => {
-    const { settings } = useSettings();
-    const [activeTab, setActiveTab] = useState('ALL');
+    const navigate = useNavigate();
+    const { settings, fetchSettings: fetchGlobalSettings } = useSettings();
+    
+    // Pagination state
+    const [page, setPage] = useState(0);
+    const [totalOrders, setTotalOrders] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(20);
 
-    const {
-        page, setPage,
-        totalOrders,
-        rowsPerPage, setRowsPerPage,
-        isModalOpen, setIsModalOpen,
-        isInvoiceOpen, setIsInvoiceOpen,
-        selectedOrder, setSelectedOrder,
-        isDetailsLoading,
-        orders,
-        stats,
-        isSubmitting,
-        isLabelLoading,
-        fetchOrders,
-        viewOrder,
-        handleRefund,
-        handleNoteUpdate,
-        handleTriggerShipment,
-        handleGenerateAWB,
-        handleCancelShipment,
-        handleApproveReturn,
-        handleSyncSingleOrder,
-        handleGenerateLabel,
-        handleForceDeliver,
-        handleResetReship,
-        syncShiprocketStatus,
-    } = useOrders(activeTab);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        pending: 0,
+        shipped: 0,
+        delivered: 0,
+        total: 0
+    });
+     const [isSubmitting, setIsSubmitting] = useState(false);
+     const [isLabelLoading, setIsLabelLoading] = useState(false);
+     const [activeTab, setActiveTab] = useState('ALL');
 
-    const columns = [
-        {
-            name: 'orderNumber',
-            label: 'Order_Nexus',
-            options: {
-                customBodyRender: (val: string, meta: any) => {
-                    const orderId = orders[meta.rowIndex]?.publicId?.toUpperCase();
-                    return (
-                        <div className="flex flex-col text-left group">
-                            <span className="text-[11px] font-black uppercase tracking-tighter text-gray-900 leading-none mb-1 group-hover:text-[#7A578D] transition-colors">{val}</span>
-                            <span className="text-[8px] text-gray-400 font-mono font-black tracking-widest opacity-60 leading-none">ID: {orderId}</span>
-                        </div>
-                    );
-                }
-            }
-        },
-        {
-            name: 'address',
-            label: 'Registrant Archetype',
-            options: {
-                customBodyRender: (val: any, meta: any) => {
-                    const user = orders[meta.rowIndex]?.user;
-                    return (
-                        <div className="flex items-center gap-3 text-left">
-                           <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-black group-hover:text-white transition-all shadow-inner">
-                              <User size={14} />
-                           </div>
-                           <div className="flex flex-col">
-                              <span className="text-[10px] font-black uppercase text-gray-800 tracking-widest truncate block max-w-[140px] leading-none mb-1">{val?.name || user?.name || 'Nexus_NULL'}</span>
-                              <span className="text-[9px] font-black text-gray-400 lowercase truncate block max-w-[150px] opacity-60 leading-none">{user?.email || 'Archive_EMPTY'}</span>
-                           </div>
-                        </div>
-                    );
-                }
-            }
-        },
-        {
-            name: 'address',
-            label: 'Logistics Pivot',
-            options: {
-                customBodyRender: (val: any) => (
-                    <div className="flex items-start gap-3 text-left">
-                        <div className="p-2 bg-[#7A578D]/5 text-[#7A578D] rounded-sm transition-all shadow-sm">
-                           <Truck size={14} />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-gray-900 leading-none mb-1">{val?.phone || 'NULL_SIGNAL'}</span>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">{val?.city || 'ZONE_NULL'}</span>
-                        </div>
-                    </div>
-                )
-            }
-        },
-        {
-            name: 'items',
-            label: 'Manifest Registry',
-            options: {
-                customBodyRender: (items: any[]) => (
-                    <div className="flex flex-col gap-3 py-2 min-w-[200px] text-left">
-                        {items?.slice(0, 2).map((item, i) => (
-                            <div key={i} className="flex items-center gap-3 group/item">
-                                <div className="relative">
-                                    <div className="w-10 h-14 bg-white border border-gray-100 rounded-sm overflow-hidden shadow-2xl transition-all group-hover/item:scale-110">
-                                       <img 
-                                           src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100?text=NP'} 
-                                           className="w-full h-full object-cover grayscale opacity-80 group-hover/item:grayscale-0 group-hover/item:opacity-100 transition-all duration-700" 
-                                       />
-                                    </div>
-                                    <span className="absolute -top-2 -right-2 bg-black text-white text-[8px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-xl animate-in zoom-in-50">
-                                        {item.quantity}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black text-gray-900 uppercase truncate max-w-[140px] tracking-tighter leading-none mb-1.5" title={item.product?.name}>
-                                        {item.product?.name}
-                                    </span>
-                                    <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-sm uppercase tracking-widest w-fit border border-blue-100 shadow-sm">
-                                       <Box size={10} />
-                                       <span className="text-[8px] font-black">SKU: {item.sku || item.variant?.sku || 'NULL'}</span>
-                                    </div>
-                                </div>
+  const tabs = [
+    { label: 'All Orders', value: 'ALL' },
+    { label: 'Unfulfilled', value: 'PENDING' },
+    { label: 'In Transit', value: 'SHIPPED' },
+    { label: 'Delivered', value: 'DELIVERED' },
+    { label: 'Returns', value: 'RETURNS' },
+  ];
+
+  const fetchOrders = async (targetPage = page, targetLimit = rowsPerPage) => {
+    try {
+      const { data } = await api.get('/orders/admin/all', { 
+        params: { 
+          page: targetPage + 1, 
+          limit: targetLimit,
+          status: activeTab === 'ALL' ? undefined : (activeTab === 'RETURNS' ? 'RETURN_REQUESTED' : activeTab)
+        } 
+      });
+      
+      const { orders: fetchedOrders, total, stats: fetchedStats } = data.data;
+      setOrders(fetchedOrders);
+      setTotalOrders(total);
+      
+      // Update stats from server-side aggregation
+      setStats({
+        total: total,
+        pending: fetchedStats.pending + (fetchedStats.confirmed || 0),
+        shipped: fetchedStats.shipped,
+        delivered: fetchedStats.delivered
+      });
+    } catch (error) {
+      toast.error('Failed to load orders');
+    } finally {
+      // Done
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders(page, rowsPerPage);
+    fetchGlobalSettings(); // Only fetches once per session thanks to store logic
+  }, [page, rowsPerPage, activeTab]);
+
+  const viewOrder = (id: string) => {
+    const order = orders.find(o => o.id === id);
+    if (order) {
+      setSelectedOrder(order);
+      setIsModalOpen(true);
+    }
+  };
+
+
+  const handleRefund = async (id: string) => {
+    const reason = window.prompt('Enter reason for refund:');
+    if (reason === null) return;
+    
+    try {
+      await api.post(`/orders/admin/${id}/refund`, { notes: reason });
+      toast.success('Refund processed successfully');
+      fetchOrders();
+      if (selectedOrder?.id === id) {
+        viewOrder(id);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Refund failed');
+    }
+  };
+  const handleNoteUpdate = async (id: string, notes: string) => {
+    try {
+      await api.patch(`/orders/admin/${id}/notes`, { adminNotes: notes });
+      toast.success('Notes updated');
+      fetchOrders();
+    } catch (error) {
+      toast.error('Failed to update notes');
+    }
+  };
+
+  const handleTriggerShipment = async (id: string) => {
+    if (isSubmitting) return;
+    try {
+      if (!window.confirm("Are you sure you want to trigger Shiprocket for this order?")) return;
+      setIsSubmitting(true);
+      await api.post(`/orders/admin/${id}/trigger-shipment`);
+      toast.success('Shipment triggered successfully');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to trigger shipment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleApproveReturn = async (id: string) => {
+    try {
+      if (!window.confirm("Approve this return request?")) return;
+      await api.post(`/orders/admin/${id}/approve-return`);
+      toast.success('Return Approved');
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to approve return');
+    }
+  };
+
+  const handleSyncSingleOrder = async (id: string) => {
+    try {
+      await api.get(`/orders/${id}`); // Refresh single order info
+      toast.success('Refreshed');
+      await fetchOrders();
+    } catch (error) {
+       toast.error('Failed to sync');
+    } finally {
+       // Done
+    }
+  };
+
+  const handleGenerateLabel = async (id: string) => {
+    if (isLabelLoading) return;
+    try {
+      setIsLabelLoading(true);
+      const { data } = await api.post(`/orders/admin/${id}/generate-label`);
+      if (data.data.labelUrl) {
+        window.open(data.data.labelUrl, '_blank');
+        toast.success('Label generated in new tab');
+      } else {
+        toast.error('Label URL not found');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to generate label');
+    } finally {
+      setIsLabelLoading(false);
+    }
+  };
+
+  const handleForceDeliver = async (id: string) => {
+    try {
+      if (!window.confirm("FORCE DELIVER: This will simulate a webhook to mark the order as delivered. Continue?")) return;
+      await api.patch(`/orders/admin/${id}/status`, { status: 'DELIVERED' });
+      toast.success('Simulation: Order marked as Delivered');
+      fetchOrders();
+      if (selectedOrder?.id === id) {
+        // Refresh detail view
+        const { data } = await api.get(`/orders/${id}`);
+        setSelectedOrder(data.data);
+      }
+    } catch (error: any) {
+      toast.error('Simulation failed');
+    }
+  };
+
+  const handleResetReship = async (id: string) => {
+    try {
+      if (!window.confirm("This will clear the old tracking data and allow you to click 'SHIP NOW' again for a replacement. Proceed?")) return;
+      await api.post(`/orders/admin/${id}/reset-reship`);
+      toast.success('Order status reset. You can now re-ship it.');
+      fetchOrders();
+      if (selectedOrder?.id === id) {
+        // Refresh detail view
+        const { data } = await api.get(`/orders/${id}`);
+        setSelectedOrder(data.data);
+      }
+    } catch (error: any) {
+      toast.error('Failed to reset order');
+    }
+  };
+
+  const syncShiprocketStatus = async () => {
+    try {
+      await api.post('/orders/admin/sync-shiprocket');
+      toast.success('Wait for 5-10 sec all status will be sync');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error('Sync failed');
+    } finally {
+      // Done
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'ALL') return true;
+    if (activeTab === 'RETURNS') return order.status === 'RETURN_REQUESTED' || order.status === 'RETURNED';
+    return order.status === activeTab;
+  });
+
+  const getTimelineEvents = (order: any) => {
+    const events = [];
+    events.push({ label: 'Order Created', time: order.createdAt, done: true });
+    
+    const isPaymentDone = order.payment?.status === 'COMPLETED';
+    events.push({ label: 'Payment Successful', time: isPaymentDone ? order.payment?.updatedAt : null, done: isPaymentDone });
+    
+    events.push({ label: 'Shipment Created', time: order.shipmentId ? order.updatedAt : null, done: !!order.shipmentId });
+    
+    const shipped = ['SHIPPED', 'DELIVERED'].includes(order.status);
+    events.push({ label: 'Shipped', time: shipped ? order.updatedAt : null, done: shipped });
+    
+    const delivered = order.status === 'DELIVERED';
+    events.push({ label: 'Delivered', time: delivered ? order.updatedAt : null, done: delivered });
+    
+    if (order.status === 'CANCELLED') {
+      events.push({ label: 'Cancelled', time: order.updatedAt, done: true });
+    }
+    
+    return events;
+  };
+
+  const columns = [
+    {
+      name: "orderNumber",
+      label: "Order#",
+      options: {
+        customBodyRender: (val: string, meta: any) => {
+          const orderId = orders[meta.rowIndex]?.publicId?.toUpperCase();
+          return (
+            <div className="flex flex-col">
+               <span className="text-[10px] font-black">#{val}</span>
+               <span className="text-[7px] text-gray-400 font-mono tracking-tighter">ID: {orderId}</span>
+            </div>
+          )
+
+        }
+      }
+    },
+    {
+      name: "address",
+      label: "Customer",
+      options: {
+        customBodyRender: (val: any, meta: any) => {
+          const user = orders[meta.rowIndex]?.user;
+          return (
+             <div className="flex flex-col leading-tight">
+                <span className="text-[10px] font-black uppercase text-gray-900 truncate block max-w-[100px]">{val?.name || user?.name || 'N/A'}</span>
+                <span className="text-[8px] font-bold text-gray-400 lowercase truncate block max-w-[120px]">{user?.email || 'N/A'}</span>
+             </div>
+          )
+        }
+      }
+    },
+    {
+      name: "address",
+      label: "Contact",
+      options: {
+        customBodyRender: (val: any, meta: any) => {
+          const user = orders[meta.rowIndex]?.user;
+          return (
+            <div className="flex flex-col leading-tight min-w-[100px]">
+               <span className="text-[9px] font-black text-[#7A578D]">{val?.phone || user?.phoneNumber || 'N/A'}</span>
+               <span className="text-[8px] font-bold text-gray-500 uppercase">{val?.city || 'N/A'}</span>
+            </div>
+          )
+        }
+      }
+    },
+    {
+      name: "address",
+      label: "Full Address",
+      options: {
+        customBodyRender: (val: any) => (
+          <div className="flex flex-col leading-tight min-w-[200px]">
+            <span className="text-[9px] font-bold text-gray-700 uppercase tracking-tight truncate max-w-[250px]">
+               {val?.street}{val?.area ? `, ${val.area}` : ''}
+            </span>
+            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest mt-0.5">
+               {val?.city}, {val?.state} - {val?.pincode}
+               {val?.landmark && <span className="text-[#7A578D]/60 italic ml-1">({val.landmark})</span>}
+            </span>
+          </div>
+        )
+      }
+    },
+    {
+      name: "items",
+      label: "Product Details",
+      options: {
+        customBodyRender: (items: any[]) => (
+          <div className="flex flex-col gap-1 py-1 min-w-[180px]">
+             {items?.map((item, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                   <div className="relative">
+                      <img 
+                        src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/50?text=NP'} 
+                        className="w-7 h-9 object-cover rounded shadow-sm border border-gray-100 group-hover:scale-105 transition-transform" 
+                      />
+                      <span className="absolute -top-1 -right-1 bg-[#7A578D] text-white text-[6px] font-black w-3 h-3 flex items-center justify-center rounded-full border border-white">
+                        {item.quantity}
+                      </span>
+                   </div>
+                   <div className="flex flex-col leading-tight pt-0.5">
+                      <span className="text-[9px] font-black text-gray-800 uppercase truncate max-w-[140px] block" title={item.product?.name}>
+                        {item.product?.name}
+                      </span>
+                      <div className="flex flex-wrap gap-1 items-center mt-1">
+                         <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 rounded uppercase tracking-tighter">
+                            SKU: {
+                              item.variant?.sizes?.find((s: any) => s.size === item.selectedSize)?.sku || 
+                              item.variant?.sku || 
+                              item.product?.inventory?.sku || 
+                              'N/A'
+                            }
+                         </span>
+                         {item.selectedSize && (
+                            <span className="text-[7px] font-black text-[#7A578D] bg-[#7A578D]/5 px-1 rounded uppercase tracking-tighter">
+                               Size: {item.selectedSize}
+                            </span>
+                         )}
+                         {item.variant?.color && (
+                            <span className="text-[7px] font-black text-gray-500 bg-gray-50 px-1 rounded uppercase tracking-tighter">
+                               Col: {item.variant.color}
+                            </span>
+                         )}
+                         {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                            <div 
+                               className="w-3 h-3 rounded-full border border-gray-200 shadow-sm"
+                               style={{ backgroundColor: item.variant.colorCode || item.variant.colorRel.hexCode }}
+                               title={item.variant.color}
+                            />
+                         )}
+                      </div>
+                   </div>
+                </div>
+             )).slice(0, 2)}
+             {items?.length > 2 && (
+                <span className="text-[7px] font-black text-[#7A578D] ml-9 border-t border-dashed border-[#7A578D]/20 pt-0.5">
+                   +{items.length - 2} more items in this order
+                </span>
+             )}
+          </div>
+        )
+      }
+    },
+    {
+      name: "payableAmount",
+      label: "Amount",
+      options: {
+        customBodyRender: (val: number, meta: any) => {
+          const method = orders[meta.rowIndex]?.paymentMethod;
+          return (
+            <div className="flex flex-col">
+               <span className="text-[11px] font-black text-gray-900">₹{val.toLocaleString()}</span>
+               <span className={`text-[7px] font-black uppercase tracking-widest ${method === 'ONLINE' ? 'text-blue-500' : 'text-orange-500'}`}>{method}</span>
+            </div>
+          )
+        }
+      }
+    },
+    {
+      name: "status",
+      label: "Delivery",
+      options: {
+        customBodyRender: (val: string) => (
+          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+            val === 'DELIVERED' ? 'bg-green-50 text-green-600' :
+            val === 'SHIPPED' ? 'bg-blue-50 text-blue-600' :
+            val === 'CANCELLED' ? 'bg-red-50 text-red-600' :
+            'bg-orange-50 text-orange-600'
+          }`}>{val}</span>
+        )
+      }
+    },
+    {
+      name: "createdAt",
+      label: "Time",
+      options: {
+        customBodyRender: (val: string) => (
+          <div className="flex flex-col">
+             <span className="text-[9px] font-black text-gray-700">{new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</span>
+             <span className="text-[7px] font-bold text-gray-400">{new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        )
+      }
+    },
+    {
+      name: "id",
+      label: "Actions",
+      options: {
+        customBodyRender: (id: string, meta: any) => {
+          const order = orders[meta.rowIndex];
+          if (!order) return null;
+          
+          return (
+            <div className="flex items-center gap-1">
+              <button 
+                 onClick={() => viewOrder(id)} 
+                 className="px-2 py-1 bg-[#7A578D]/5 hover:bg-[#7A578D]/10 text-[#7A578D] text-[8px] font-black uppercase tracking-widest rounded transition-all border border-[#7A578D]/10"
+              >
+                 VIEW
+              </button>
+              
+              <button 
+                 onClick={() => { setSelectedOrder(order); setIsInvoiceOpen(true); }}
+                 className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-gray-100"
+              >
+                 BILL
+              </button>
+
+              {['PENDING', 'CONFIRMED'].includes(order.status) && !order.shipmentId && (
+                <button 
+                   onClick={() => handleTriggerShipment(id)}
+                   className="px-2 py-1 bg-green-500 text-white hover:bg-black text-[8px] font-black uppercase tracking-widest rounded transition-all border border-green-500 shadow-lg shadow-green-200"
+                >
+                   SHIP NOW
+                </button>
+              )}
+
+              {order.shipmentId && order.status !== 'DELIVERED' && (
+                 <button 
+                    onClick={() => handleSyncSingleOrder(id)}
+                    className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-blue-100"
+                 >
+                    SYNC
+                 </button>
+              )}
+
+              {order.status === 'RETURN_REQUESTED' && (
+                <button 
+                   onClick={() => handleApproveReturn(id)}
+                   className="px-2 py-1 bg-orange-50 text-orange-600 hover:bg-orange-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-orange-100"
+                >
+                   APPROVE
+                </button>
+              )}
+
+              {order.status === 'RETURNED' && (
+                <button 
+                   onClick={() => handleResetReship(id)}
+                   className="px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-[8px] font-black uppercase tracking-widest rounded transition-all border border-green-100 shadow-sm"
+                >
+                   RE-SHIP
+                </button>
+              )}
+            </div>
+          );
+        }
+      }
+    }
+  ];
+
+  const options = {
+    serverSide: true,
+    count: totalOrders,
+    page: page,
+    rowsPerPage: rowsPerPage,
+    selectableRows: 'none' as const,
+    elevation: 0,
+    responsive: 'standard' as const,
+    download: true,
+    print: false,
+    filter: true,
+    search: true,
+    expandableRows: true,
+    expandableRowsOnClick: true,
+    renderExpandableRow: (rowData: any, rowMeta: any) => {
+      const order = filteredOrders[rowMeta.rowIndex];
+      if (!order) return null;
+      return (
+        <tr style={{ backgroundColor: '#fff' }}>
+          <td colSpan={columns.length + 1} style={{ padding: '0', borderBottom: '1px solid #eee' }}>
+            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontFamily: 'inherit', fontSize: '12px', color: '#333' }}>
+               <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Internal ID:</strong>
+                <span>{order.id}</span>
+               </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Ordered On:</strong>
+                <span>{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</span>
+              </div>
+
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Amount:</strong>
+                <span style={{ fontWeight: '800', fontSize: '13px' }}>₹{order.payableAmount?.toLocaleString()}</span>
+              </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Payment Info:</strong>
+                <span className="uppercase">{order.paymentMethod} - {order.payment?.status || 'PENDING'}</span>
+              </div>
+              
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Transaction ID:</strong>
+                <span>{order.payment?.transactionId || 'N/A'}</span>
+              </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Tracking / AWB:</strong>
+                <span>{order.awbNumber || 'Not shipped yet'}</span>
+              </div>
+
+              <div style={{ gridColumn: 'span 2', padding: '10px', background: '#f9f9f9', border: '1px solid #eee', borderRadius: '4px' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Shipping Address:</strong>
+                <span className="uppercase" style={{ lineHeight: '1.4' }}>
+                  {order.address?.street}, {order.address?.area}, {order.address?.city}, {order.address?.state} - {order.address?.pincode}
+                  {order.address?.landmark && <div style={{ fontSize: '9px', color: '#7A578D', marginTop: '2px', fontStyle: 'italic', fontWeight: 'bold' }}>LANDMARK: {order.address.landmark}</div>}
+                </span>
+              </div>
+
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Customer Email:</strong>
+                <span className="lowercase">{order.user?.email || 'N/A'}</span>
+              </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Courier Partner:</strong>
+                <span className="uppercase">{order.courierName || 'In Processing'}</span>
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <strong style={{ display: 'block', marginBottom: '8px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D', borderBottom: '1px solid #7A578D/10', paddingBottom: '4px' }}>Ordered Items:</strong>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                   {order.items?.map((item: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fcfcfc', padding: '8px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
+                         <img 
+                            src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} 
+                            style={{ width: '40px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
+                         />
+                         <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', color: '#111' }}>{item.product?.name}</div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
+                               <span style={{ fontSize: '9px', fontWeight: '700', color: '#7A578D', background: '#7A578D/5', padding: '2px 6px', borderRadius: '4px' }}>SIZE: {item.selectedSize || 'N/A'}</span>
+                               {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                     <span style={{ fontSize: '9px', fontWeight: '700', color: '#666' }}>COLOR:</span>
+                                     <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: item.variant.colorCode || item.variant.colorRel.hexCode, border: '1px solid #ddd' }} />
+                                  </div>
+                               )}
+                               <span style={{ fontSize: '9px', fontWeight: '700', color: '#0066FF', background: '#0066FF/5', padding: '2px 6px', borderRadius: '4px' }}>SKU: {item.sku || 'N/A'}</span>
                             </div>
-                        ))}
-                        {items?.length > 2 && (
-                            <div className="flex items-center gap-3 ml-12 border-t border-dashed border-gray-100 pt-2 group cursor-pointer hover:opacity-100 transition-opacity opacity-40">
-                               <Layers size={12} className="text-[#7A578D]"/>
-                               <span className="text-[9px] font-black text-[#7A578D] uppercase tracking-widest leading-none">
-                                   Archive: +{items.length - 2} Artifacts
-                               </span>
-                            </div>
-                        )}
-                    </div>
-                )
-            }
-        },
-        {
-            name: 'payableAmount',
-            label: 'Fiscal Liability',
-            options: {
-                customBodyRender: (val: number, meta: any) => {
-                    const method = orders[meta.rowIndex]?.paymentMethod;
-                    return (
-                        <div className="flex flex-col text-left bg-gray-50/50 p-3 rounded-sm border border-gray-100 shadow-inner group">
-                            <span className="text-[13px] font-black text-gray-900 tracking-tighter leading-none mb-2">₹{val.toLocaleString()}</span>
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-sm border w-fit shadow-xl ${method === 'ONLINE' ? 'bg-black text-white border-black' : 'bg-white text-orange-600 border-orange-100'}`}>
-                                <CreditCard size={10} className={method === 'ONLINE' ? 'text-emerald-400' : 'text-orange-400'}/>
-                                <span className="text-[8px] font-black uppercase tracking-widest">{method}</span>
-                            </div>
-                        </div>
-                    );
-                }
-            }
-        },
-        {
-            name: 'status',
-            label: 'Nexus State',
-            options: {
-                customBodyRender: (val: string) => (
-                    <div className="flex items-center text-left">
-                       <span className={`px-4 py-2 rounded-sm text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl border w-full text-center transition-all group-hover:scale-105 ${
-                         val === 'DELIVERED' ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/20' :
-                         val === 'SHIPPED' ? 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20' :
-                         val === 'CANCELLED' ? 'bg-red-500 border-red-400 text-white shadow-red-500/20 opacity-40' :
-                         'bg-orange-500 border-orange-400 text-white shadow-orange-500/20'
+                         </div>
+                         <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: '800', fontSize: '12px' }}>₹{item.price.toLocaleString()}</div>
+                            <div style={{ fontSize: '9px', color: '#999', fontWeight: 'bold' }}>Qty: {item.quantity}</div>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <strong style={{ display: 'block', marginBottom: '2px', textTransform: 'uppercase', fontSize: '10px', color: '#7A578D' }}>Admin Notes:</strong>
+                <p style={{ margin: 0, fontStyle: order.adminNotes ? 'normal' : 'italic', color: order.adminNotes ? '#333' : '#999', lineHeight: '1.4', fontSize: '11px' }}>
+                   {order.adminNotes || 'No notes added.'}
+                </p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    onTableChange: (action: string, tableState: any) => {
+      switch (action) {
+        case 'changePage':
+          setPage(tableState.page);
+          break;
+        case 'changeRowsPerPage':
+          setRowsPerPage(tableState.rowsPerPage);
+          setPage(0);
+          break;
+      }
+    }
+  };
+
+
+  if (isInvoiceOpen && selectedOrder) {
+     return (
+        <div className="fixed inset-0 z-[200] bg-white overflow-auto no-scrollbar p-0 md:p-2 animate-in fade-in duration-300">
+           {/* Controls overlay (hidden on print) */}
+           <div className="print:hidden sticky top-2 mb-4 flex justify-center gap-2">
+              <button 
+                 onClick={() => setIsInvoiceOpen(false)}
+                 className="bg-black text-white px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2"
+              >
+                 <ArrowLeft size={14}/> BACK TO HUB
+              </button>
+              <button 
+                 onClick={() => window.print()}
+                 className="bg-[#7A578D] text-white px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2"
+              >
+                 <Printer size={14}/> PRINT INVOICE
+              </button>
+           </div>
+           
+           {/* The actual invoice */}
+           <OrderInvoice order={selectedOrder} settings={settings} />
+           
+           {/* Print instructions for user */}
+           <div className="print:hidden mt-8 text-center text-gray-400 max-w-md mx-auto">
+              <p className="text-[10px] font-black uppercase tracking-widest">Printer Settings</p>
+              <p className="text-[8px] font-bold mt-1 uppercase">For best results, enable 'Background Graphics' and set 'Margins' to Default in your browser's print dialog.</p>
+           </div>
+        </div>
+     );
+  }
+
+  return (
+    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
+        <div>
+           <h1 className="text-lg font-bold text-gray-900 tracking-tight">Order Management</h1>
+           <div className="flex items-center gap-2 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-xs font-medium text-gray-500">Live synchronization active</span>
+           </div>
+        </div>
+        <div className="flex items-center space-x-3">
+           <button onClick={syncShiprocketStatus} disabled={isSubmitting} className="px-2 py-1 bg-blue-50 border border-blue-100 rounded-sm text-blue-600 hover:bg-blue-100 transition-all shadow-sm flex items-center gap-2 font-bold text-xs disabled:opacity-50">
+              <RefreshCw size={16} className={isSubmitting ? 'animate-spin' : ''} />
+              <span>SYNC STATUS</span>
+           </button>
+           <button onClick={() => fetchOrders()} className="p-2.5 bg-white border border-gray-200 rounded-sm text-gray-500 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-500 shadow-sm flex items-center gap-2">
+              <RefreshCw size={18} />
+           </button>
+           <button className="bg-black text-white px-2 py-1 rounded-sm text-xs font-bold flex items-center gap-2 hover:bg-[#7A578D] transition-all shadow-md active:scale-95">
+              <Download size={16} />
+              <span>EXPORT</span>
+           </button>
+        </div>
+      </header>
+
+      <div className="flex items-center gap-2 p-1.5 bg-gray-50/80 rounded-sm overflow-x-auto no-scrollbar w-fit border border-gray-100">
+         {tabs.map((tab) => (
+            <button
+               key={tab.value}
+               onClick={() => setActiveTab(tab.value)}
+               className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                  activeTab === tab.value 
+                  ? 'bg-white text-[#7A578D] shadow-sm border border-gray-200' 
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'
+               }`}
+            >
+               {tab.label}
+            </button>
+         ))}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {[
+          { label: 'Unfulfilled Orders', value: stats.pending, color: 'text-orange-600', bg: 'bg-orange-50', icon: Clock },
+          { label: 'In Transit', value: stats.shipped, color: 'text-blue-600', bg: 'bg-blue-50', icon: Package },
+          { label: 'Successfully Delivered', value: stats.delivered, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle },
+          { label: 'Total Orders', value: stats.total, color: 'text-[#7A578D]', bg: 'bg-[#7A578D]/5', icon: Activity },
+        ].map((chip) => (
+          <div key={chip.label} className="bg-white border border-gray-100 p-2 rounded-sm flex items-center space-x-4 shadow-sm group hover:border-[#7A578D]/30 transition-all">
+            <div className={`w-6 h-6 rounded-sm ${chip.bg} flex items-center justify-center ${chip.color} group-hover:scale-110 transition-transform`}>
+               <chip.icon size={24} />
+            </div>
+            <div className="flex flex-col">
+               <span className="text-lg font-bold text-gray-900 leading-none mb-1">{chip.value}</span>
+               <span className="text-gray-500 text-xs font-medium">{chip.label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[200px]">
+        {isDetailsLoading && !selectedOrder && (
+           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <div className="w-6 h-6 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
+           </div>
+        )}
+        <ThemeProvider theme={getMuiTheme()}>
+          <MUIDataTable title="" data={filteredOrders} columns={columns} options={options} />
+        </ThemeProvider>
+      </div>
+
+      <ManagementModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={`Order: ${selectedOrder?.orderNumber.split('-')[2] || selectedOrder?.orderNumber}`}
+      >
+        {isDetailsLoading && !selectedOrder && (
+           <div className="flex flex-col items-center justify-center py-4 gap-2">
+              <RefreshCw className="w-8 h-8 text-[#7A578D] animate-spin" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#7A578D]">Loading data...</p>
+           </div>
+        )}
+        {selectedOrder && (
+           <div className={`space-y-2 animate-in fade-in duration-300`}>
+              
+              {/* Order Header / Action Bar */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 p-2 rounded-sm border border-gray-100 gap-2">
+                 <div>
+                    <div className="flex items-center gap-2">
+                       <h2 className="text-lg font-black text-gray-900">
+                          ORDER #{selectedOrder.orderNumber.split('-')[2] || selectedOrder.orderNumber}
+                       </h2>
+                       <span className={`px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-widest ${
+                          selectedOrder.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                          selectedOrder.status === 'SHIPPED' ? 'bg-blue-100 text-blue-700' :
+                          selectedOrder.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          'bg-orange-100 text-orange-700'
                        }`}>
-                          {val === 'PENDING' ? 'INITIALIZING' : val}
+                          {selectedOrder.status}
                        </span>
                     </div>
-                )
-            }
-        },
-        {
-            name: 'id',
-            label: 'Executive Command',
-            options: {
-                customBodyRender: (id: string, meta: any) => {
-                    const order = orders[meta.rowIndex];
-                    if (!order) return null;
-                    return (
-                        <div className="flex items-center justify-around gap-2 text-left" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                                onClick={() => viewOrder(id)} 
-                                className="px-4 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm transition-all hover:bg-[#7A578D] shadow-2xl shadow-black/10 active:scale-95 border-b-2 border-black/20 group"
-                            >
-                                AUDIT
-                            </button>
-                            <button 
-                                onClick={() => { setSelectedOrder(order); setIsInvoiceOpen(true); }}
-                                className="px-4 py-2 bg-white text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-sm transition-all hover:text-[#7A578D] hover:border-[#7A578D] border border-gray-100 shadow-sm active:scale-95"
-                            >
-                                BILL
-                            </button>
+                    <p className="text-xs font-medium text-gray-500 mt-1">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                 </div>
+
+                 <div className="flex flex-wrap gap-2 items-center">
+                     {selectedOrder.status === 'RETURNED' && (
+                        <button 
+                           onClick={() => handleResetReship(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-green-200"
+                        >
+                           <Package size={16} /> RE-SHIP / REPLACE
+                        </button>
+                     )}
+
+                     {!selectedOrder.shipmentId && !['CANCELLED', 'REFUNDED', 'SHIPPED', 'DELIVERED', 'RETURNED'].includes(selectedOrder.status) && (
+                        <button 
+                           onClick={() => handleTriggerShipment(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-black text-white px-3 py-1.5 rounded-sm hover:bg-[#7A578D] transition-all shadow-lg shadow-gray-200"
+                        >
+                           <Package size={16} /> SHIP ORDER (Shiprocket)
+                        </button>
+                     )}
+
+                     {selectedOrder.shipmentId && (
+                        <button 
+                           onClick={() => handleGenerateLabel(selectedOrder.id)}
+                           disabled={isLabelLoading}
+                           className="flex items-center gap-2 text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+                        >
+                           {isLabelLoading ? <RefreshCw size={16} className="animate-spin" /> : <Printer size={16} />} 
+                           GENERATE LABEL
+                        </button>
+                     )}
+
+                     {settings.shiprocket_test_mode === 'true' && selectedOrder.status === 'SHIPPED' && (
+                        <button 
+                           onClick={() => handleForceDeliver(selectedOrder.id)}
+                           className="flex items-center gap-2 text-xs font-bold bg-orange-500 text-white px-3 py-1.5 rounded-sm hover:bg-black transition-all shadow-lg shadow-orange-200"
+                        >
+                           <CheckCircle size={16} /> FORCE DELIVER (TEST)
+                        </button>
+                     )}
+
+                    <button 
+                        onClick={() => setIsInvoiceOpen(true)}
+                        className="flex items-center gap-2 text-xs font-bold bg-white border border-gray-200 text-gray-700 px-2 py-1 rounded-sm hover:bg-gray-50 transition-all"
+                    >
+                        <Printer size={16} /> PRINT INVOICE
+                    </button>
+                 </div>
+              </div>
+
+              {/* Status Management (Simplified) */}
+              <div className="bg-white p-2 rounded-sm border border-gray-100 flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                    <div className="p-2 bg-blue-50 rounded-sm text-blue-600">
+                       <Activity size={20} />
+                    </div>
+                    <div>
+                       <p className="text-xs font-bold text-gray-900 uppercase tracking-widest">Tracking Status</p>
+                       <p className="text-xs font-medium text-gray-500">{selectedOrder.shippingStatus || 'Awaiting Logistics Initialization'}</p>
+                    </div>
+                 </div>
+                 {selectedOrder.awbNumber && (
+                    <div className="text-right">
+                       <p className="text-[10px] font-black text-gray-400 uppercase">AWB ID</p>
+                       <p className="text-xs font-mono font-bold text-[#7A578D]">{selectedOrder.awbNumber}</p>
+                    </div>
+                 )}
+              </div>
+
+              <div className="grid grid-cols-12 gap-2">
+                 
+                 <div className="col-span-12 lg:col-span-8 space-y-1">
+                    <div className="bg-white rounded-sm border border-gray-100 overflow-hidden shadow-sm">
+                       <div className="bg-gray-50 px-2 py-1 border-b border-gray-100 flex justify-between items-center">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                             <ShoppingBag size={14} /> Order Items
+                          </h3>
+                       </div>
+                       <div className="p-2 space-y-1">
+                          {selectedOrder.items?.map((item: any) => (
+                              <div key={item.id} className="flex items-center gap-2 bg-gray-50/50 p-2 rounded-sm border border-transparent hover:border-gray-200 hover:bg-white transition-all">
+                                 <img src={item.variant?.images?.[0]?.imageUrl || item.product?.images?.[0]?.imageUrl || 'https://via.placeholder.com/100'} 
+                                    className="w-5 h-12 object-cover rounded-sm bg-gray-100 shadow-sm" />
+                                 <div className="flex-1">
+                                    <h4 className="text-[10px] font-black uppercase text-gray-900 truncate max-w-[280px]">{item.product?.name}</h4>
+                                    <div className="flex flex-wrap gap-2 mt-0.5">
+                                       <span className="text-[9px] font-bold text-gray-500">QTY: {item.quantity}</span>
+                                       {item.selectedSize && <span className="text-[10px] font-black text-[#7A578D] bg-[#7A578D]/5 px-2 py-0.5 rounded uppercase">SIZE: {item.selectedSize}</span>}
+                                       {(item.variant?.colorCode || item.variant?.colorRel?.hexCode) && (
+                                          <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-0.5 rounded">
+                                             <div 
+                                                style={{ backgroundColor: item.variant.colorCode || item.variant?.colorRel?.hexCode }} 
+                                                className="w-3 h-3 rounded-full border border-gray-200" 
+                                             />
+                                          </div>
+                                       )}
+                                       <span className="text-[7px] font-black text-blue-600 bg-blue-50 px-1 rounded uppercase tracking-tighter">
+                                          SKU: {
+                                            item.sku || 
+                                            item.variant?.sizes?.find((s: any) => s.size === item.selectedSize)?.sku || 
+                                            item.variant?.sku || 
+                                            item.product?.inventory?.sku || 
+                                            'N/A'
+                                          }
+                                       </span>
+                                    </div>
+                                 </div>
+                                 <div className="text-right">
+                                    <span className="text-xs font-black text-gray-900 block leading-none">₹{(item.price * item.quantity).toLocaleString()}</span>
+                                    <span className="text-[10px] font-bold text-gray-400">@ ₹{item.price.toLocaleString()}</span>
+                                 </div>
+                              </div>
+                          ))}
+                       </div>
+                       
+                       <div className="bg-gray-50 p-2 flex justify-end border-t border-gray-100">
+                           <div className="w-64 space-y-2">
+                              <div className="flex justify-between text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                 <span>Sub-Total</span><span>₹{selectedOrder.totalAmount?.toLocaleString()}</span>
+                              </div>
+                              {selectedOrder.discountAmount > 0 && (
+                                  <div className="flex justify-between text-xs font-bold text-green-600 uppercase tracking-widest">
+                                     <span>Voucher</span><span>-₹{selectedOrder.discountAmount?.toLocaleString()}</span>
+                                  </div>
+                              )}
+                              <div className="flex justify-between text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                 <span>Shipping</span><span>₹{selectedOrder.shippingCharges?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between font-black pt-2 text-base border-t border-gray-200">
+                                 <span className="text-gray-900">Total</span><span className="text-[#7A578D]">₹{selectedOrder.payableAmount?.toLocaleString()}</span>
+                              </div>
+                           </div>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
+                           <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                              <User size={14} /> Customer Info
+                           </h3>
+                           <div className="space-y-2">
+                              <p className="text-xs font-black text-gray-900 uppercase">{selectedOrder.address?.name}</p>
+                              <p className="text-xs font-medium text-gray-500 lowercase">{selectedOrder.user?.email}</p>
+                              <div className="text-xs font-bold text-gray-700 uppercase leading-relaxed mt-2 pt-2 border-t border-gray-100">
+                                 <p className="mb-1 text-gray-900 font-black">{selectedOrder.address?.street}</p>
+                                 <p className="mb-1 text-gray-500 font-bold">{selectedOrder.address?.area}</p>
+                                 <p>{selectedOrder.address?.city}, {selectedOrder.address?.state} - {selectedOrder.address?.pincode}</p>
+                                 {selectedOrder.address?.landmark && <p className="text-[10px] text-[#7A578D] font-black mt-2 italic shadow-sm bg-[#7A578D]/5 px-2 py-1 rounded inline-block">LANDMARK: {selectedOrder.address.landmark}</p>}
+                                 <p className="text-emerald-700 font-black mt-3 flex items-center gap-2"><Truck size={14}/> {selectedOrder.address?.phone}</p>
+                              </div>
+                           </div>
                         </div>
-                    );
-                }
-            }
-        }
-    ];
 
-    const options = {
-        serverSide: true,
-        count: totalOrders,
-        page: page,
-        rowsPerPage: rowsPerPage,
-        rowsPerPageOptions: [10, 20, 50, 100],
-        selectableRows: 'none' as const,
-        elevation: 0,
-        responsive: 'standard' as const,
-        download: true,
-        print: false,
-        filter: true,
-        search: true,
-        expandableRows: true,
-        expandableRowsOnClick: true,
-        renderExpandableRow: (rowData: any, rowMeta: any) => {
-            const order = orders[rowMeta.rowIndex];
-            return <OrderDetailsExpanded order={order} columnsLength={columns.length} />;
-        },
-        onTableChange: (action: string, tableState: any) => {
-            switch (action) {
-                case 'changePage':
-                    setPage(tableState.page);
-                    break;
-                case 'changeRowsPerPage':
-                    setRowsPerPage(tableState.rowsPerPage);
-                    setPage(0);
-                    break;
-            }
-        },
-        textLabels: { body: { noMatch: isDetailsLoading ? 'Synchronizing Transaction Architecture...' : 'No transaction artifacts detected in global archive' } }
-    };
-
-    if (isInvoiceOpen && selectedOrder) {
-        return (
-            <div className="fixed inset-0 z-[200] bg-white overflow-auto no-scrollbar p-0 md:p-8 animate-in fade-in duration-700">
-                <div className="print:hidden sticky top-8 mb-12 flex justify-center gap-6">
-                    <button 
-                        onClick={() => setIsInvoiceOpen(false)}
-                        className="bg-black text-white h-12 px-8 rounded-sm text-[11px] font-black uppercase tracking-[0.4em] shadow-2xl shadow-black/20 flex items-center gap-4 transition-all hover:bg-[#7A578D] active:scale-95 border-b-4 border-black/30 group"
-                    >
-                        <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform"/> BACK_TO_Nexus
-                    </button>
-                    <button 
-                        onClick={() => window.print()}
-                        className="bg-[#7A578D] text-white h-12 px-8 rounded-sm text-[11px] font-black uppercase tracking-[0.4em] shadow-2xl shadow-[#7A578D]/20 flex items-center gap-4 transition-all hover:bg-black active:scale-95 border-b-4 border-[#7A578D]/30 group"
-                    >
-                        <Printer size={22} className="group-hover:scale-110 transition-transform"/> PRINT_Nexus_ARTIFACT
-                    </button>
-                </div>
-                <div className="max-w-5xl mx-auto bg-white shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] border border-gray-50 rounded-sm">
-                   <OrderInvoice order={selectedOrder} settings={settings} />
-                </div>
-                <div className="print:hidden mt-20 text-center text-gray-300 max-w-xl mx-auto border-t border-dashed border-gray-100 pt-12 mb-20 relative">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 p-3 bg-white border border-gray-50 text-gray-400">
-                       <Info size={24} />
-                    </div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.5em] mb-4 text-gray-400">Authoritative Printer Protocol</p>
-                    <div className="flex flex-col gap-2">
-                       <p className="text-[9px] font-black uppercase tracking-widest leading-relaxed opacity-60">Enable "Background Graphics" in browser print manifest</p>
-                       <p className="text-[9px] font-black uppercase tracking-widest leading-relaxed opacity-60">Margins: "Default" | Orientation: "Portrait"</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-[1600px] pb-24">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-8 gap-4">
-                <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter text-gray-900 leading-none">Order_Nexus_Auditor</h1>
-                    <div className="flex items-center gap-3 mt-3">
-                        <div className="flex items-center gap-2 bg-emerald-50 px-2 py-1 rounded-sm border border-emerald-100 shadow-xl shadow-emerald-500/5">
-                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50"></span>
-                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Transactional Integrity Link Active</span>
+                        <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
+                           <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                              <Clock size={14} /> Order Timeline
+                           </h3>
+                           <div className="relative border-l-2 border-gray-100 ml-2 space-y-1 py-1">
+                               {getTimelineEvents(selectedOrder).slice(-3).map((event, i) => (
+                                  <div key={i} className={`pl-4 relative ${event.done ? 'opacity-100' : 'opacity-30'}`}>
+                                     <div className={`absolute w-2 h-2 rounded-full -left-[5px] top-1 border-2 border-white ${event.done ? 'bg-[#7A578D]' : 'bg-gray-300'}`} />
+                                     <p className="text-xs font-bold uppercase tracking-widest text-gray-900 leading-none">{event.label}</p>
+                                     {event.time && <p className="text-[10px] font-medium text-gray-400 mt-1">{new Date(event.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>}
+                                  </div>
+                               ))}
+                           </div>
                         </div>
-                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{totalOrders} REGISTERED_Nexus_EVENTS</span>
                     </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button 
-                      onClick={syncShiprocketStatus} 
-                      disabled={isSubmitting} 
-                      className="h-12 px-6 bg-blue-600 text-white rounded-sm transition-all shadow-2xl shadow-blue-500/20 flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] disabled:opacity-50 active:scale-95 border-b-4 border-black/30 group"
-                    >
-                        <Pulse size={22} className={isSubmitting ? 'animate-spin' : 'group-hover:scale-110 transition-transform'} />
-                        <span>SYNC_Nexus_LOGISTICS</span>
-                    </button>
-                    <button 
-                      onClick={() => fetchOrders()} 
-                      className="w-12 h-12 bg-white border border-gray-200 rounded-sm text-gray-300 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-700 shadow-sm flex items-center justify-center group"
-                    >
-                        <RefreshCw size={24} className={isDetailsLoading ? 'animate-spin' : ''} />
-                    </button>
-                    <button className="bg-black text-white h-12 px-8 rounded-sm text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-4 hover:bg-[#7A578D] transition-all shadow-2xl shadow-black/10 active:scale-95 border-b-4 border-black/30 group">
-                        <Download size={22} className="group-hover:translate-y-0.5 transition-transform" />
-                        <span>EXPORT_Nexus</span>
-                    </button>
-                </div>
-            </header>
-
-            <OrderTabs activeTab={activeTab} setActiveTab={setActiveTab} setPage={setPage} />
-
-            <div className="animate-in slide-in-from-top-4 duration-700">
-               <OrderStats stats={stats} />
-            </div>
-
-            <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[500px]">
-                {(isDetailsLoading && !selectedOrder) && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-30 flex items-center justify-center">
-                        <div className="w-12 h-12 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin shadow-2xl shadow-[#7A578D]/20" />
+                 </div>
+                 <div className="col-span-12 lg:col-span-4 space-y-1">
+                    <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
+                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                          <CreditCard size={14} /> Payment Info
+                       </h3>
+                       <div className="space-y-1">
+                           <div className="flex justify-between items-center bg-gray-50 p-2 rounded-sm border border-gray-100">
+                               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Mode</span>
+                               <span className="text-[10px] font-black text-gray-900 uppercase">{selectedOrder.payment?.paymentMethod || 'COD'}</span>
+                           </div>
+                           <div className="flex justify-between items-center bg-gray-50 p-2 rounded-sm border border-gray-100">
+                               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Type</span>
+                               <span className="text-[10px] font-black text-[#7A578D] uppercase">{selectedOrder.payment?.paymentMethod === 'COD' ? 'CASH' : 'RAZORPAY'}</span>
+                           </div>
+                           {selectedOrder.payment?.transactionId && (
+                               <div className="space-y-1 mt-2">
+                                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Reference ID</span>
+                                   <span className="text-xs font-mono font-bold text-gray-900 break-all bg-gray-50 p-2.5 rounded-sm block border border-gray-100 leading-tight">
+                                      {selectedOrder.payment.transactionId}
+                                   </span>
+                               </div>
+                           )}
+                       </div>
                     </div>
-                )}
-                <ThemeProvider theme={getMuiTheme()}>
-                    <MUIDataTable title="" data={orders} columns={columns} options={options} />
-                </ThemeProvider>
-            </div>
 
-            <ManagementModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-                title={`ARTIFACT_AUDIT: [${selectedOrder?.orderNumber.split('-')[2] || selectedOrder?.orderNumber}]`}
-            >
-                <div className="p-2">
-                   <OrderDetailsModal 
-                     selectedOrder={selectedOrder}
-                     isDetailsLoading={isDetailsLoading}
-                     isLabelLoading={isLabelLoading}
-                     settings={settings}
-                     handleTriggerShipment={handleTriggerShipment}
-                     handleGenerateAWB={handleGenerateAWB}
-                     handleCancelShipment={handleCancelShipment}
-                     handleForceDeliver={handleForceDeliver}
-                     handleResetReship={handleResetReship}
-                     handleGenerateLabel={handleGenerateLabel}
-                     setIsInvoiceOpen={setIsInvoiceOpen}
-                     handleNoteUpdate={handleNoteUpdate}
-                   />
-                </div>
-            </ManagementModal>
-            
-            <footer className="pt-20 border-t border-gray-100 flex items-center justify-center gap-12 opacity-30">
-               <div className="flex items-center gap-3">
-                  <ShieldCheck size={18} className="text-gray-400"/>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Temporal Transaction integrity confirmed</span>
-               </div>
-               <div className="flex items-center gap-3">
-                  <Zap size={18} className="text-gray-400 animate-pulse"/>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Live API stream active</span>
-               </div>
-            </footer>
-        </div>
-    );
+                    <div className="bg-white p-2 rounded-sm border border-gray-100 shadow-sm">
+                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                          <Truck size={14} /> Shipping Info
+                       </h3>
+                       <div className="space-y-1">
+                           <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                               <span className="text-gray-400">Carrier</span>
+                               <span className="text-gray-900 uppercase text-right">{selectedOrder.courierName || 'In Processing'}</span>
+                           </div>
+                           <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest py-1 border-y border-gray-50">
+                               <span className="text-gray-400">Status</span>
+                               <span className="text-emerald-600 font-black text-right uppercase">{selectedOrder.shippingStatus || 'Unfulfilled'}</span>
+                           </div>
+                           <div className="pt-1">
+                               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Tracking Number</span>
+                               <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-sm border border-gray-100">
+                                  <span className="text-xs font-mono font-black text-[#7A578D]">
+                                     {selectedOrder.awbNumber || 'WAITING FOR PACKUP'}
+                                  </span>
+                                  {selectedOrder.trackingUrl && (
+                                     <a href={selectedOrder.trackingUrl} target="_blank" rel="noreferrer" className="text-[#7A578D] hover:text-black">
+                                        <ExternalLink size={14}/>
+                                     </a>
+                                  )}
+                               </div>
+                           </div>
+                       </div>
+                    </div>
+
+                    <div className="bg-[#7A578D]/5 p-2 rounded-sm border border-[#7A578D]/10">
+                       <h3 className="text-xs font-black uppercase tracking-widest text-[#7A578D] flex items-center gap-2 mb-3">
+                          <FileText size={14} /> Internal Dossier
+                       </h3>
+                       <textarea 
+                          className="w-full bg-white border border-[#7A578D]/20 rounded-sm p-3 text-xs font-medium text-gray-700 outline-none focus:border-[#7A578D] resize-none shadow-sm placeholder:text-gray-300"
+                          rows={3}
+                          placeholder="Internal notes for operations..."
+                          defaultValue={selectedOrder.adminNotes || ''}
+                          onBlur={(e) => {
+                            if (e.target.value !== selectedOrder.adminNotes) {
+                              handleNoteUpdate(selectedOrder.id, e.target.value);
+                            }
+                          }}
+                       />
+                    </div>
+                 </div>
+              </div>
+           </div>
+        )}
+      </ManagementModal>
+    </div>
+  );
 };
 
 export default OrderManagement;

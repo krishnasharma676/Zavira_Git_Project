@@ -169,9 +169,8 @@ const CheckoutModal = () => {
       const { data: addressRes } = await api.post('/addresses', {
         name: `${formData.firstName} ${formData.lastName}`,
         type: formData.type.toUpperCase(),
-        street: formData.address,
+        street: `${formData.address}${formData.landmark ? `, Landmark: ${formData.landmark}` : ''}`,
         area: formData.area,
-        landmark: formData.landmark || null,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
@@ -411,11 +410,11 @@ const CheckoutModal = () => {
                           <img src={item.image} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div className="flex-grow py-1 flex flex-col justify-between">
-                           <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-2 leading-relaxed">{item.name}</h4>
-                           <div className="flex justify-between items-center">
-                              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
-                              <span className="text-[11px] font-black text-gray-900">{formatCurrency(item.price)}</span>
-                           </div>
+                          <h4 className="text-[10px] font-black uppercase tracking-tight text-gray-900 line-clamp-2 leading-relaxed">{item.name}</h4>
+                          <div className="flex justify-between items-center">
+                             <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
+                             <span className="text-[11px] font-black text-gray-900">{formatCurrency(item.price)}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -446,9 +445,10 @@ const CheckoutModal = () => {
                   {step < 3 && (
                     <button 
                       onClick={step === 1 ? handleNextStep : handleCompleteOrder}
-                      className="w-full mt-8 bg-[#7A578D] text-white py-5 rounded-none text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:bg-black flex items-center justify-center gap-3 border border-[#7A578D] hover:border-black"
+                      disabled={loading}
+                      className="w-full mt-8 bg-[#7A578D] text-white py-5 rounded-none text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:bg-black disabled:opacity-50 flex items-center justify-center gap-3 border border-[#7A578D] hover:border-black"
                     >
-                      <span>{step === 1 ? 'Next: Shipping' : 'Confirm & Pay'}</span>
+                      {loading ? <Loader2 className="animate-spin" size={16} /> : <span>{step === 1 ? 'Next: Shipping' : 'Confirm & Pay'}</span>}
                     </button>
                   )}
                 </div>
@@ -476,127 +476,70 @@ const CheckoutModal = () => {
           
           <AnimatePresence>
             {isSuccess && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="fixed inset-0 bg-[#0A0A0A] z-[300] flex flex-col items-center justify-center text-center overflow-hidden font-sans"
-              >
-                {/* Immersive Cinematic Background */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <motion.div 
-                    animate={{ 
-                      scale: [1, 1.2, 1],
-                      opacity: [0.3, 0.5, 0.3],
-                      rotate: [0, 90, 0]
-                    }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-[#7A578D]/20 rounded-full blur-[150px]"
-                  />
-                  <motion.div 
-                    animate={{ 
-                      scale: [1.2, 1, 1.2],
-                      opacity: [0.2, 0.4, 0.2],
-                      rotate: [0, -90, 0]
-                    }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[70%] bg-purple-900/20 rounded-full blur-[150px]"
-                  />
-                  {/* Grain Texture Overlay */}
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-[#FDFBF9] z-[300] flex flex-col items-center justify-center text-center p-6">
+                {/* Background Pattern / Decoration */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                  <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#7A578D] rounded-full mix-blend-multiply filter blur-[120px] opacity-40"></div>
+                  <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-[120px] opacity-30"></div>
+                  <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#7A578D] rounded-full mix-blend-multiply filter blur-[120px] opacity-40"></div>
                 </div>
- 
+
                 <motion.div 
-                  initial={{ opacity: 0, y: 40, scale: 0.95 }} 
-                  animate={{ opacity: 1, y: 0, scale: 1 }} 
-                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative z-10 w-full max-w-4xl px-8 flex flex-col items-center"
+                  initial={{ scale: 0.85, opacity: 0, y: 30 }} 
+                  animate={{ scale: 1, opacity: 1, y: 0 }} 
+                  transition={{ type: 'spring', damping: 20, stiffness: 100, duration: 0.8 }}
+                  className="bg-white/80 backdrop-blur-xl p-10 md:p-14 rounded-[2.5rem] shadow-2xl shadow-[#7A578D]/15 max-w-lg w-full flex flex-col items-center relative z-10 border border-white/60"
                 >
-                  {/* Minimal Prestige Logo */}
-                  <motion.div 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 1 }}
-                    className="mb-16"
-                  >
-                    <img src="/zavira-logo.png" alt="Zaviraa" className="h-10 md:h-12 w-auto object-contain brightness-0 invert opacity-80" />
-                  </motion.div>
- 
-                  {/* Verified Icon with Animated Ring */}
-                  <div className="relative mb-12">
+                  <img src="/zavira-logo.png" alt="Zaviraa Logo" className="h-10 mb-10 object-contain drop-shadow-sm mix-blend-multiply" />
+                  
+                  <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-8 border-[6px] border-white shadow-[0_0_0_1px_rgba(34,197,94,0.1)] relative">
                     <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.3, type: "spring", damping: 12 }}
-                      className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-[#7A578D] shadow-[0_0_60px_rgba(122,87,141,0.4)]"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: 'spring', damping: 10 }}
                     >
-                      <CheckCircle2 size={48} strokeWidth={1.5} />
+                      <CheckCircle2 size={48} className="fill-green-100" strokeWidth={1.5} />
                     </motion.div>
-                    <motion.div 
-                      animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 rounded-full border-2 border-white/50"
+                    
+                    {/* Ripple animation */}
+                    <motion.div
+                      initial={{ opacity: 0.7, scale: 1 }} animate={{ opacity: 0, scale: 1.6 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                      className="absolute inset-0 rounded-full border-2 border-green-400"
                     />
                   </div>
                   
-                  {/* Monumental Typography */}
-                  <div className="space-y-4 mb-20">
-                    <motion.h2 
-                      initial={{ opacity: 0, filter: "blur(10px)" }}
-                      animate={{ opacity: 1, filter: "blur(0px)" }}
-                      transition={{ delay: 0.6, duration: 1 }}
-                      className="text-5xl md:text-8xl font-black tracking-tighter text-white uppercase leading-none"
-                    >
-                      ORDER<br/>CONFIRMED
-                    </motion.h2>
-                    <motion.p 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.6 }}
-                      transition={{ delay: 1, duration: 1 }}
-                      className="text-[12px] md:text-[14px] font-black uppercase tracking-[0.6em] text-[#C9A0C8]"
-                    >
-                      {orderInfo?.orderNumber 
-                        ? `Reference: ZV-${orderInfo.orderNumber.split('-').pop()}` 
-                        : "Your luxury acquisition is secured"}
-                    </motion.p>
+                  <h2 className="text-3xl font-serif font-black tracking-tight mb-3 text-gray-900 drop-shadow-sm">Order Confirmed</h2>
+                  <p className="text-gray-500 text-sm font-medium leading-relaxed mb-6">
+                    {orderInfo?.orderNumber ? (
+                      <>Your luxury order <span className="font-black text-gray-900 border-b border-gray-300 pb-0.5">#{orderInfo.orderNumber}</span> is securely placed.</>
+                    ) : (
+                      'Your luxury order has been securely placed.'
+                    )}
+                  </p>
+                  
+                  <div className="inline-flex items-center gap-2 text-[#7A578D] text-[10px] font-black uppercase tracking-[0.2em] mb-12 py-2 px-5 bg-[#7A578D]/5 rounded-full border border-[#7A578D]/10">
+                    <ShieldCheck size={14} /> Thank you for choosing Zaviraa
                   </div>
- 
-                  {/* Sophisticated Progress / CTA Area */}
-                  <div className="w-full max-w-sm space-y-8">
-                    <div className="space-y-4">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-[0.4em] text-white/40">
-                         <span>Allocating Inventory</span>
-                         <span className="text-[#C9A0C8] animate-pulse">Processing...</span>
-                      </div>
-                      <div className="h-0.5 w-full bg-white/10 overflow-hidden rounded-full">
-                         <motion.div 
-                            initial={{ width: 0 }} animate={{ width: "100%" }} 
-                            transition={{ duration: 3.5, ease: "linear" }} 
-                            className="h-full bg-white" 
-                         />
-                      </div>
+
+                  <div className="w-full relative">
+                    <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
+                       <span>Redirecting to details</span>
+                       <span className="text-[#7A578D]">Hold tight...</span>
                     </div>
-                    
-                    <motion.div 
-                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
-                       className="flex items-center justify-center gap-3 py-4 px-8 border border-white/10 rounded-full bg-white/5 backdrop-blur-md"
-                    >
-                       <ShieldCheck size={16} className="text-[#C9A0C8]" />
-                       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Secured with 256-bit protocols</span>
-                    </motion.div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                       <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 3.5, ease: 'linear' }} className="h-full bg-gradient-to-r from-gray-300 via-[#7A578D] to-[#513661] rounded-full" />
+                    </div>
                   </div>
                 </motion.div>
- 
-                {/* Branding Footer Details */}
-                <div className="absolute bottom-12 left-0 right-0 px-12 flex justify-between items-center text-[9px] font-black uppercase tracking-[0.5em] text-white/20">
-                   <span>© {new Date().getFullYear()} ZAVIRAA HERITAGE</span>
-                   <span>HANDCRAFTED IN BHARAT</span>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           <AnimatePresence>
-            {/* Removed local Processing loader - handled by GlobalLoader */}
+            {loading && !isSuccess && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-white/90 backdrop-blur-sm z-[250] flex flex-col items-center justify-center">
+                <Loader2 size={32} className="text-[#7A578D] animate-spin mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#7A578D]">Securely Processing...</p>
+              </motion.div>
+            )}
           </AnimatePresence>
           
           </motion.div>

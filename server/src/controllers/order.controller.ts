@@ -135,17 +135,3 @@ export const syncShiprocketStatuses = asyncHandler(async (req: Request, res: Res
   const result = await orderService.syncShiprocketStatuses();
   return res.status(200).json(new ApiResponse(200, result, "Shiprocket statuses synced successfully"));
 });
-
-export const generateAWB = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  if (typeof id !== 'string') throw new ApiError(400, "Invalid order ID");
-  const result = await orderService.generateAWB(id);
-  return res.status(200).json(new ApiResponse(200, result, "AWB generated successfully"));
-});
-
-export const cancelShipment = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  if (typeof id !== 'string') throw new ApiError(400, "Invalid order ID");
-  const result = await orderService.cancelShipment(id);
-  return res.status(200).json(new ApiResponse(200, result, "Shipment cancelled successfully"));
-});

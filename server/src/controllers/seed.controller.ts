@@ -65,8 +65,7 @@ export const seedData = async (req: Request, res: Response) => {
           productName = `[BULK] ${productName}`;
         }
         
-        const randSuffix = `${c}${p}${Math.random().toString(36).slice(2,6)}`;
-        const productSlug = `${productName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${randSuffix}`;
+        const productSlug = productName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const price = Math.floor(Math.random() * 25000) + 2500;
         
         const mainImg = productImages[Math.floor(Math.random() * productImages.length)];
@@ -92,7 +91,7 @@ export const seedData = async (req: Request, res: Response) => {
             inventory: {
               create: {
                 stock: isBulk ? 150 : 75,
-                sku: `ZAV-${c+1}-${p}-${Math.random().toString(36).slice(2,6).toUpperCase()}`
+                sku: `ZAV-${c+1}-${p}-${Date.now().toString().slice(-4)}`
               }
             },
             
@@ -108,20 +107,18 @@ export const seedData = async (req: Request, res: Response) => {
                 create: colors.map((col, cIdx) => ({
                   color: col.name,
                   colorCode: col.code,
-                  sku: `VAR-${c+1}-${p}-C${cIdx}-${col.name.substring(0,3).toUpperCase()}`,
+                  sku: `VAR-${c+1}-${p}-${col.name.substring(0,3).toUpperCase()}`,
                   stock: 50,
                   sizes: {
                     create: [
-                      { size: "L", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-1` },
-                      { size: "M", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-2` },
-                      { size: "3.2", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-3` },
-                      { size: "4.2", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-4` }
+                      { size: "One Size", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-1` },
+                      { size: "Adjustable", stock: 25, sku: `SZ-${c+1}-${p}-${cIdx}-2` }
                     ]
                   },
                   images: {
                     create: [
-                      { imageUrl: productImages[(p + cIdx) % productImages.length], cloudinaryPublicId: `v_img_1_c${c+1}_p${p}_v${cIdx}`, isPrimary: true },
-                      { imageUrl: productImages[(p + cIdx + 1) % productImages.length], cloudinaryPublicId: `v_img_2_c${c+1}_p${p}_v${cIdx}`, isPrimary: false }
+                      { imageUrl: productImages[(p + cIdx) % productImages.length], cloudinaryPublicId: `v_img_1_${c+1}_${p}`, isPrimary: true },
+                      { imageUrl: productImages[(p + cIdx + 1) % productImages.length], cloudinaryPublicId: `v_img_2_${c+1}_${p}`, isPrimary: false }
                     ]
                   }
                 }))
