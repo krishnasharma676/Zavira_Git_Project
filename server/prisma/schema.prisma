@@ -26,7 +26,6 @@ model User {
   updatedAt       DateTime      @updatedAt
   isDeleted       Boolean       @default(false)
   addresses       Address[]
-  adminLogs       AdminLog[]
   cart            Cart?
   reviews         Review[]
   sessions        Session[]
@@ -73,6 +72,8 @@ model Address {
   name      String
   phone     String
   street    String
+  area      String?
+  landmark  String?
   city      String
   state     String
   pincode   String
@@ -88,38 +89,22 @@ model Address {
 }
 
 model Category {
-  id            String        @id @default(uuid())
-  publicId      String        @unique @default(uuid())
-  name          String        @unique
-  slug          String        @unique
+  id            String   @id @default(uuid())
+  publicId      String   @unique @default(uuid())
+  name          String   @unique
+  slug          String   @unique
   description   String?
   imageUrl      String?
   imagePublicId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  isActive      Boolean       @default(true)
-  isDeleted     Boolean       @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isActive      Boolean  @default(true)
+  isDeleted     Boolean  @default(false)
   products      Product[]
-  subCategories SubCategory[]
 
   @@index([slug])
 }
 
-model SubCategory {
-  id         String    @id @default(uuid())
-  publicId   String    @unique @default(uuid())
-  name       String
-  slug       String    @unique
-  categoryId String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  isDeleted  Boolean   @default(false)
-  products   Product[]
-  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@index([slug])
-  @@index([categoryId])
-}
 
 model Product {
   id              String           @id @default(uuid())
@@ -130,7 +115,6 @@ model Product {
   basePrice       Float
   discountedPrice Float?
   categoryId      String
-  subCategoryId   String?
   featured        Boolean          @default(false)
   trending        Boolean          @default(false)
   hotDeals        Boolean          @default(false)
@@ -150,14 +134,13 @@ model Product {
   weightUnit      String?          @default("kg")
   dimensionUnit   String?          @default("cm")
   widthUnit       String?          @default("cm")
-  heightUnit       String?          @default("cm")
+  heightUnit      String?          @default("cm")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   isDeleted       Boolean          @default(false)
   cartItems       CartItem[]
   inventory       Inventory?
   category        Category         @relation(fields: [categoryId], references: [id])
-  subCategory     SubCategory?     @relation(fields: [subCategoryId], references: [id])
   images          ProductImage[]
   variants        ProductVariant[]
   reviews         Review[]
@@ -419,55 +402,13 @@ model Banner {
   isDeleted     Boolean  @default(false)
 }
 
-model Coupon {
-  id             String   @id @default(uuid())
-  code           String   @unique
-  discountType   String
-  discountValue  Float
-  minOrderAmount Float    @default(0)
-  maxDiscount    Float?
-  startDate      DateTime
-  endDate        DateTime
-  usageLimit     Int?
-  usedCount      Int      @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  isDeleted      Boolean  @default(false)
-}
 
-model CMSPage {
-  id        String   @id @default(uuid())
-  title     String
-  slug      String   @unique
-  content   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
-model AdminLog {
-  id        String   @id @default(uuid())
-  userId    String
-  action    String
-  target    String?
-  ipAddress String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-}
 
-model AnalyticsEvent {
-  id         String   @id @default(uuid())
-  type       String
-  userId     String?
-  guestId    String?
-  resourceId String?
-  metadata   Json?
-  createdAt  DateTime @default(now())
 
-  @@index([type])
-  @@index([createdAt])
-}
+
+
+
 
 model ContactMessage {
   id        String        @id @default(uuid())

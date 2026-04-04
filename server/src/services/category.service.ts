@@ -8,7 +8,6 @@ export class CategoryService {
     return await prisma.category.findMany({
       where: { isDeleted: false },
       include: {
-        subCategories: true,
         _count: {
           select: { products: true }
         }

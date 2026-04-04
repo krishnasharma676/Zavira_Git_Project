@@ -85,21 +85,30 @@ export class ShiprocketService {
     // Fetch pickup location from admin settings (set this in Admin → Settings)
     const pickupLocation = await settingService.getSetting('shiprocket_pickup_location') || process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
 
+    const address = order.address || {};
+    const nameParts = address.name ? address.name.split(' ') : ['User'];
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     const payload = {
       order_id: order.shippingStatus === 'Ready for Reshipment' ? `${order.orderNumber}-RE` : order.orderNumber,
       order_date: new Date(order.createdAt).toISOString().split('T')[0],
       pickup_location: pickupLocation,
-      billing_customer_name: order.address.name.split(' ')[0],
-      billing_last_name: order.address.name.split(' ').slice(1).join(' ') || "Customer",
-      billing_address: order.address.street,
-      billing_address_2: `${order.address.area}${order.address.landmark ? `, Landmark: ${order.address.landmark}` : ''}`,
-      billing_city: order.address.city,
-      billing_pincode: order.address.pincode,
-      billing_state: order.address.state,
-      billing_country: order.address.country,
-      billing_email: order.user?.email || "customer@example.com",
-      billing_phone: order.address.phone,
+      
+      // Billing details (MUST be accurate)
+      billing_customer_name: firstName,
+      billing_last_name: lastName,
+      billing_address: address.street,
+      billing_address_2: address.area || '',
+      billing_city: address.city,
+      billing_pincode: address.pincode,
+      billing_state: address.state,
+      billing_country: address.country || 'India',
+      billing_email: order.user?.email || '',
+      billing_phone: address.phone,
+      
       shipping_is_billing: true,
+
       order_items: shiprocketItems,
       payment_method: order.paymentMethod === 'COD' ? 'Postpaid' : 'Prepaid',
       sub_total: order.totalAmount,
@@ -125,8 +134,9 @@ export class ShiprocketService {
       const { order_id, shipment_id } = response.data;
       return { order_id, shipment_id };
     } catch (error: any) {
-      console.error("Shiprocket Order Create Error:", error.response?.data || error.message);
-      return null;
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      console.error("Shiprocket Order Create Error:", errMsg);
+      throw new Error(`Shiprocket Error: ${typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)} \n\nPayload: ${JSON.stringify(payload)}`);
     }
   }
 
@@ -142,7 +152,7 @@ export class ShiprocketService {
         }
       };
     }
-
+ 
     const token = await ShiprocketService.authenticate();
     try {
       const response = await axios.post(
@@ -152,8 +162,29 @@ export class ShiprocketService {
       );
       return response.data;
     } catch (error: any) {
-      console.error("Shiprocket AWB Assignment Error:", error.response?.data || error.message);
-      return null;
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      console.error("Shiprocket AWB Assignment Error:", errMsg);
+      throw new Error(`Shiprocket AWB Error: ${typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)}`);
+    }
+  }
+
+  async cancelShipment(shipmentId: string) {
+    if (ShiprocketService.isTestMode) {
+      return { success: true, message: "Mock cancellation successful" };
+    }
+
+    const token = await ShiprocketService.authenticate();
+    try {
+      const response = await axios.post(
+        "https://apiv2.shiprocket.in/v1/external/orders/cancel/shipment/external",
+        { shipment_id: [shipmentId] },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      console.error("Shiprocket Shipment Cancel Error:", errMsg);
+      throw new Error(`Shiprocket Cancel Error: ${typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)}`);
     }
   }
 

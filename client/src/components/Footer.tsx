@@ -24,7 +24,7 @@ const Footer = () => {
       <div className="container mx-auto px-6 lg:px-12 relative z-10">
         
         {/* Main Content Area */}
-        <div className="max-w-5xl space-y-8">
+        <div className="w-full space-y-8">
           
           {/* Logo */}
           <Link to="/" className="inline-block hover:opacity-80 transition-opacity">
@@ -33,7 +33,7 @@ const Footer = () => {
 
           {/* Simple Message */}
           <div className="space-y-6">
-            <p className="text-2xl md:text-3xl font-serif italic text-gray-400 leading-snug">
+            <p className="text-2xl md:text-3xl font-serif italic text-gray-400 leading-snug max-w-3xl">
               Beautiful <span className="text-zavira-purple font-black not-italic opacity-100">Jewelry for You</span>. High quality designs for your special moments.
             </p>
 
@@ -55,35 +55,37 @@ const Footer = () => {
                ))}
             </div>
 
-            {/* Combined Icons Row: Socials + Trusts (3 remaining) */}
-            <div className="flex flex-wrap items-center gap-8 pt-2">
+            {/* Combined Icons Row: Socials (Left) + Trusts (Right) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-4">
               
-              {/* Social Media Group */}
-              <div className="flex gap-4 border-r border-gray-100 dark:border-white/5 pr-8">
+              {/* Social Media Group (Left) */}
+              <div className="flex gap-4">
                 {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
                   <a key={i} href="#" className="w-9 h-9 rounded-full bg-gray-50 dark:bg-white/10 flex items-center justify-center text-gray-400 hover:text-zavira-purple hover:bg-zavira-purple/10 transition-all border border-gray-100 dark:border-white/5">
                     <Icon size={16} strokeWidth={1.5} />
                   </a>
                 ))}
               </div>
-
-              {/* Repositioned Trust Features (3 remaining boxes) */}
-              <div className="flex flex-wrap gap-8">
+ 
+              {/* Trust Features Group (Right Alignment) */}
+              <div className="flex flex-wrap items-center gap-8 md:gap-12 md:justify-end">
                  {[
                    { icon: Truck, title: 'Safe Delivery', desc: 'Secure Shipping' },
                    { icon: RefreshCw, title: 'Easy Returns', desc: '14 Day Exchange' },
                    { icon: CreditCard, title: 'Safe Payment', desc: 'Secure Checkout' }
                  ].map((feat, i) => (
                    <div key={i} className="flex items-center gap-3">
-                      <feat.icon size={18} className="text-zavira-purple opacity-70" />
+                      <div className="w-10 h-10 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center border border-gray-50 dark:border-white/10">
+                        <feat.icon size={18} className="text-zavira-purple opacity-70" />
+                      </div>
                       <div>
-                         <h6 className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{feat.title}</h6>
+                         <h6 className="text-[10px] font-black uppercase tracking-[0.2em] leading-none mb-1 text-gray-900 dark:text-white">{feat.title}</h6>
                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight leading-none opacity-60">{feat.desc}</p>
                       </div>
                    </div>
                  ))}
               </div>
-
+ 
             </div>
           </div>
         </div>

@@ -135,11 +135,6 @@ export class OrderService {
       return { ...order, razorpay_order_id: razorpayOrder.id };
     }
 
-    // For COD, do NOT trigger shipment immediately; let admin do it manually
-    // if (paymentMethod === "COD") {
-    //   this.triggerShipment(order.id);
-    // }
-
     await cartRepository.clearCart(userId);
     return order;
   }
@@ -170,9 +165,6 @@ export class OrderService {
       razorpay_signature
     });
 
-    // Do NOT trigger shipment after successful payment automatically; let admin pack it first
-    // this.triggerShipment(order.id);
-
     return order;
   }
 
@@ -180,28 +172,69 @@ export class OrderService {
     const order = await orderRepository.findById(orderId);
     if (!order) throw new ApiError(404, "Order not found");
     
-    const shipment = await shiprocketService.createShipment(order);
-    if (!shipment) {
-      // Save error note to order so admin sees it
+    let shipment: any;
+    try {
+      shipment = await shiprocketService.createShipment(order);
+    } catch (e: any) {
       await orderRepository.updateAdminNotes(
         orderId,
-        `[SHIPMENT ERROR ${new Date().toISOString()}]: Shiprocket API returned null. Check pickup_location name, Shiprocket credentials, and order data.`
+        `[SHIPMENT ERROR ${new Date().toISOString()}]: ${e.message}`
       );
-      throw new ApiError(500, "Shiprocket shipment creation failed. Check admin notes on this order.");
+      throw new ApiError(500, `Shiprocket Error: ${e.message}`);
     }
 
-    let awbDetails = null;
-    try {
-      awbDetails = await shiprocketService.generateAWB(shipment.shipment_id);
-    } catch (e) {}
+    if (!shipment || !shipment.shipment_id) {
+      throw new ApiError(500, "Shiprocket API failed to return a shipment ID.");
+    }
 
     return await orderRepository.updateShipmentDetails(orderId, {
       shipmentId: String(shipment.shipment_id),
-      awbNumber: awbDetails?.response?.data?.awb_code || null,
-      courierName: awbDetails?.response?.data?.courier_name || null,
-      shippingStatus: "AWB Generated",
-      trackingUrl: awbDetails?.response?.data?.tracking_url || null
+      shippingStatus: "Shipment Created",
     });
+  }
+
+  async generateAWB(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order || !order.shipmentId) throw new ApiError(400, "Shipment ID not found for this order");
+    
+    let awbDetails: any;
+    try {
+      awbDetails = await shiprocketService.generateAWB(order.shipmentId);
+    } catch (e: any) {
+      throw new ApiError(500, `AWB Generation Failed: ${e.message}`);
+    }
+
+    if (!awbDetails?.response?.data?.awb_code) {
+       throw new ApiError(500, "Shiprocket failed to provide AWB code. Check if courier was assigned.");
+    }
+
+    const data = awbDetails.response.data;
+    return await orderRepository.updateShipmentDetails(orderId, {
+      awbNumber: data.awb_code,
+      courierName: data.courier_name || null,
+      shippingStatus: "AWB Generated",
+      trackingUrl: data.tracking_url || null
+    });
+  }
+
+  async cancelShipment(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order || !order.shipmentId) throw new ApiError(400, "No active shipment found to cancel");
+    
+    try {
+      await shiprocketService.cancelShipment(order.shipmentId);
+      
+      // Update order status back to Confirmed and clear shipment details
+      return await orderRepository.updateShipmentDetails(orderId, {
+        shipmentId: null,
+        awbNumber: null,
+        courierName: null,
+        shippingStatus: "Shipment Cancelled",
+        trackingUrl: null
+      });
+    } catch (e: any) {
+      throw new ApiError(500, `Cancellation Failed: ${e.message}`);
+    }
   }
 
   async getShipmentLabel(orderId: string) {
@@ -216,30 +249,7 @@ export class OrderService {
     return { labelUrl: labelData.label_url };
   }
 
-  private async triggerShipment(orderId: string) {
-    try {
-      const order = await orderRepository.findById(orderId);
-      if (!order) return;
 
-      const shipment = await shiprocketService.createShipment(order);
-      if (shipment) {
-        let awbDetails = null;
-        try {
-          awbDetails = await shiprocketService.generateAWB(shipment.shipment_id);
-        } catch (e) {}
-
-        await orderRepository.updateShipmentDetails(orderId, {
-          shipmentId: String(shipment.shipment_id),
-          awbNumber: awbDetails?.response?.data?.awb_code || null,
-          courierName: awbDetails?.response?.data?.courier_name || null,
-          shippingStatus: "AWB Generated",
-          trackingUrl: awbDetails?.response?.data?.tracking_url || null
-        });
-      }
-    } catch (error) {
-      console.error("Async Shipment Trigger Failed:", error);
-    }
-  }
 
   async getMyOrders(userId: string) {
     return await orderRepository.findByUserId(userId);

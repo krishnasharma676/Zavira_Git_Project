@@ -3,22 +3,19 @@ import { prisma } from "../config/prisma";
 export class CategoryRepository {
   async findAll() {
     return await prisma.category.findMany({
-      where: { isDeleted: false },
-      include: { subCategories: true },
+      where: { isDeleted: false }
     });
   }
 
   async findById(id: string) {
     return await prisma.category.findFirst({
-      where: { id, isDeleted: false },
-      include: { subCategories: true },
+      where: { id, isDeleted: false }
     });
   }
 
   async findBySlug(slug: string) {
     return await prisma.category.findFirst({
-      where: { slug, isDeleted: false },
-      include: { subCategories: true },
+      where: { slug, isDeleted: false }
     });
   }
 

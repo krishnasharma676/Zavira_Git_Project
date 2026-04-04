@@ -2,13 +2,21 @@ import { prisma } from "../config/prisma";
 
 export class AddressRepository {
   async create(userId: string, data: any) {
-    // If this is the first address, make it default
     const count = await prisma.address.count({ where: { userId } });
     
-    return await prisma.address.create({
+    return await (prisma.address as any).create({
       data: {
-        ...data,
         userId,
+        name:      data.name,
+        phone:     data.phone,
+        type:      data.type     || 'HOME',
+        street:    data.street,
+        area:      data.area     || null,
+        landmark:  data.landmark || null,
+        city:      data.city,
+        state:     data.state,
+        pincode:   data.pincode,
+        country:   data.country  || 'India',
         isDefault: count === 0
       }
     });

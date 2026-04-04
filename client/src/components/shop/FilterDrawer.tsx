@@ -119,116 +119,170 @@ const FilterDrawer = ({
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 z-[200] backdrop-blur-[2px]"
+            className="fixed inset-0 bg-black/60 z-[200] backdrop-blur-sm"
           />
+
+          {/* Drawer */}
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-white dark:bg-[#121212] z-[201] shadow-2xl flex flex-col font-sans"
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 left-0 bottom-0 w-[90%] max-w-[340px] bg-white dark:bg-[#0A0A0A] z-[201] shadow-2xl flex flex-col font-sans border-r border-[#7A578D]/10"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 dark:border-white/5">
-              <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-gray-900 dark:text-white">Filters</h2>
-              <button onClick={onClose} className="text-gray-400 hover:text-zavira-purple transition-all">
-                <X size={18} />
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
+              <div className="flex items-center gap-3">
+                <h2 className="text-[12px] font-black uppercase tracking-[0.25em] text-gray-900 dark:text-white">
+                  Filters
+                </h2>
+                {(selectedCategories.length > 0 || selectedColors.length > 0 || selectedSize || priceRange < 100000) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#7A578D] animate-pulse" />
+                )}
+              </div>
+              <button onClick={onClose} className="p-1.5 bg-white dark:bg-[#1A1A1A] rounded-full text-gray-400 hover:text-black dark:hover:text-white hover:shadow-md transition-all">
+                <X size={14} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar uppercase">
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6 custom-scrollbar">
               
-              {/* Category */}
-              <div className="border-b border-gray-50 dark:border-white/5">
-                <button onClick={() => toggleSection('category')} className="w-full py-4 flex justify-between items-center">
-                  <h3 className="text-[10px] font-black tracking-widest text-gray-900 dark:text-white flex items-center gap-2">
-                    Category {selectedCategories.length > 0 && <span className="w-4 h-4 rounded-full bg-zavira-purple text-white text-[8px] flex items-center justify-center">{selectedCategories.length}</span>}
-                  </h3>
-                  {expandedSection === 'category' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-                <AnimatePresence>
-                  {expandedSection === 'category' && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pb-4 space-y-3 px-1">
-                      {categories.map((cat) => (
-                        <label key={cat.id} className="flex items-center space-x-3 cursor-pointer group" onClick={() => toggleCategory(cat.id)}>
-                          <div className={`w-3.5 h-3.5 border rounded-none flex items-center justify-center transition-all ${selectedCategories.includes(cat.id) ? 'bg-zavira-purple border-zavira-purple' : 'border-gray-200 dark:border-white/10'}`}>
-                            {selectedCategories.includes(cat.id) && <Check size={10} className="text-white" />}
-                          </div>
-                          <span className={`text-[10px] font-bold tracking-widest ${selectedCategories.includes(cat.id) ? 'text-zavira-purple' : 'text-gray-500'}`}>{cat.name}</span>
-                        </label>
-                      ))}
-                    </motion.div>
+              {/* CATEGORIES */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between pb-1">
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Collections</h3>
+                  {selectedCategories.length > 0 && (
+                    <span className="text-[8px] font-bold text-[#7A578D]">{selectedCategories.length} picked</span>
                   )}
-                </AnimatePresence>
-              </div>
-
-              {/* Colors */}
-              <div className="border-b border-gray-50 dark:border-white/5">
-                <button onClick={() => toggleSection('color')} className="w-full py-4 flex justify-between items-center group">
-                  <h3 className="text-[10px] font-black tracking-widest text-gray-900 dark:text-white flex items-center gap-2">
-                    Colors {selectedColors.length > 0 && <span className="w-4 h-4 rounded-full bg-zavira-purple text-white text-[8px] flex items-center justify-center">{selectedColors.length}</span>}
-                  </h3>
-                  {expandedSection === 'color' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-                <AnimatePresence>
-                  {expandedSection === 'color' && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pb-6 grid grid-cols-4 gap-4 px-2">
-                      {filterColors.length > 0 ? filterColors.map((color) => (
-                        <button key={color.id} onClick={() => toggleColor(color.id)} className="flex flex-col items-center gap-1.5 transition-all p-1.5 rounded-sm" title={color.name}>
-                          <div className={`w-6 h-6 rounded-full border-2 transition-all relative ${selectedColors.includes(color.id) ? 'border-zavira-purple scale-110 shadow-lg' : 'border-white dark:border-white/10'}`} style={{ backgroundColor: color.hexCode }}>
-                            {selectedColors.includes(color.id) && <div className="absolute inset-0 flex items-center justify-center"><Check size={10} className={color.hexCode?.toLowerCase() === '#ffffff' ? 'text-black' : 'text-white'} /></div>}
-                          </div>
-                          <span className={`text-[7px] font-black uppercase tracking-tighter truncate max-w-full ${selectedColors.includes(color.id) ? 'text-zavira-purple' : 'text-gray-400'}`}>{color.name}</span>
-                        </button>
-                      )) : <div className="col-span-4 text-[8px] text-gray-400 italic py-2">No colors</div>}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Price */}
-              <div className="pt-4 border-b border-gray-50 dark:border-white/5 pb-8 overflow-hidden px-1">
-                <h3 className="text-[10px] font-black tracking-widest text-gray-900 dark:text-white mb-6 uppercase">Price</h3>
-                <div className="space-y-6">
-                  <input type="range" min="0" max="100000" step="1000" value={priceRange} onChange={(e) => setPriceRange(parseInt(e.target.value))} className="w-full h-1 bg-gray-100 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-zavira-purple" />
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-3">
-                     <span className="text-[9px] font-bold text-gray-400 tracking-widest uppercase">Max Price</span>
-                     <span className="text-[10px] font-black text-zavira-purple tracking-widest">Rs. {priceRange.toLocaleString()}</span>
-                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {categories.map((cat) => {
+                    const isSelected = selectedCategories.includes(cat.id);
+                    return (
+                      <label key={cat.id} className="flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-all hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/10" onClick={() => toggleCategory(cat.id)}>
+                        <span className={`text-[10px] font-bold tracking-widest transition-colors ${isSelected ? 'text-[#7A578D] dark:text-[#9D7DAB]' : 'text-gray-600 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white'}`}>
+                          {cat.name}
+                        </span>
+                        <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#7A578D] border-[#7A578D]' : 'border-gray-200 dark:border-gray-700 group-hover:border-[#7A578D]/50'}`}>
+                          {isSelected && <Check size={10} className="text-white" />}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Sizes */}
-              {availableSizes.size > 0 && (
-                <div className="border-b border-gray-50 dark:border-white/5">
-                  <button onClick={() => toggleSection('size')} className="w-full py-4 flex justify-between items-center">
-                    <h3 className="text-[10px] font-black tracking-widest text-gray-900 dark:text-white">Sizes</h3>
-                    {expandedSection === 'size' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  <AnimatePresence>
-                    {expandedSection === 'size' && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pb-6 flex flex-wrap gap-2 px-2">
-                        {Array.from(availableSizes).sort().map((sz) => (
-                          <button key={sz} onClick={() => setSelectedSize(selectedSize === sz ? '' : sz)} className={`min-w-[40px] h-9 flex items-center justify-center border-2 text-[9px] font-black transition-all ${selectedSize === sz ? 'bg-zavira-purple border-zavira-purple text-white' : 'border-gray-50 dark:border-white/5 text-gray-500'}`}>{sz}</button>
-                        ))}
-                      </motion.div>
+              {/* PRICE SLIDER */}
+              <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Price Limit</h3>
+                  <span className="text-[9px] font-bold text-[#7A578D] bg-[#7A578D]/10 px-2 py-0.5 rounded-md">
+                    Up to Rs. {priceRange.toLocaleString()}
+                  </span>
+                </div>
+                <div className="px-1">
+                  <input 
+                    type="range" 
+                    min="1000" 
+                    max="100000" 
+                    step="500" 
+                    value={priceRange} 
+                    onChange={(e) => setPriceRange(parseInt(e.target.value))} 
+                    className="w-full h-1 bg-gray-200 dark:bg-gray-800 rounded-full appearance-none cursor-pointer accent-[#7A578D] hover:accent-[#5C3D6D] transition-all" 
+                  />
+                </div>
+              </div>
+
+              {/* COLORS */}
+              {filterColors.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Colors</h3>
+                    {selectedColors.length > 0 && (
+                      <button onClick={() => setSelectedColors([])} className="text-[8px] font-bold text-[#7A578D] hover:underline">Clear</button>
                     )}
-                  </AnimatePresence>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {filterColors.map((color) => {
+                      const isSelected = selectedColors.includes(color.id);
+                      return (
+                        <button 
+                          key={color.id} 
+                          onClick={() => toggleColor(color.id)} 
+                          className={`flex flex-col items-center gap-1.5 p-1.5 rounded-md border transition-all ${isSelected ? 'bg-gray-50 border-[#7A578D]/30 dark:bg-white/5 dark:border-[#7A578D]/50 shadow-sm' : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                          title={color.name}
+                        >
+                          <div 
+                            className={`w-5 h-5 rounded-full border transition-all relative shadow-inner ${isSelected ? 'border-[#7A578D] scale-110' : 'border-white dark:border-[#222]'}`} 
+                            style={{ backgroundColor: color.hexCode }}
+                          >
+                            {isSelected && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Check size={10} className={color.hexCode?.toLowerCase() === '#ffffff' ? 'text-black drop-shadow-md' : 'text-white drop-shadow-md'} />
+                              </div>
+                            )}
+                          </div>
+                          <span className={`text-[7px] font-black text-center uppercase tracking-tighter w-full truncate ${isSelected ? 'text-[#7A578D] dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {color.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="space-y-3 pt-4 pb-4">
-                <button onClick={applyFilters} className="w-full bg-zavira-purple text-white py-4 shadow-xl shadow-purple-500/10 text-[11px] font-black uppercase tracking-[0.2em] transition-all active:scale-95">Apply</button>
-                <button onClick={clearFilters} className="w-full text-gray-400 hover:text-gray-900 dark:hover:text-white text-[8px] font-black tracking-[0.3em] pt-1 uppercase">Clear All</button>
-              </div>
+              {/* SIZES */}
+              {availableSizes.size > 0 && (
+                <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Sizes</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Array.from(availableSizes).sort().map((sz) => {
+                      const isSelected = selectedSize === sz;
+                      return (
+                        <button 
+                          key={sz} 
+                          onClick={() => setSelectedSize(isSelected ? '' : sz)} 
+                          className={`px-3 py-1.5 flex items-center justify-center rounded border text-[9px] font-black tracking-widest transition-all ${
+                            isSelected 
+                              ? 'bg-[#7A578D] border-[#7A578D] text-white shadow-sm' 
+                              : 'bg-white dark:bg-[#121212] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:border-[#7A578D]/40'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
             </div>
+
+            {/* ACTION FOOTER */}
+            <div className="p-4 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0A0A0A] shadow-[0_-10px_40px_rgba(0,0,0,0.03)] flex gap-2">
+              <button 
+                onClick={clearFilters} 
+                className="flex-1 py-3 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 rounded text-[9px] font-black uppercase tracking-[0.2em] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Reset
+              </button>
+              <button 
+                onClick={applyFilters} 
+                className="flex-[2] bg-[#7A578D] text-white py-3 rounded shadow-md shadow-[#7A578D]/20 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all active:scale-[0.98]"
+              >
+                Show Results
+              </button>
+            </div>
+
           </motion.div>
         </>
       )}

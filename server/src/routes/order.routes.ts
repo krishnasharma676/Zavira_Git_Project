@@ -15,7 +15,9 @@ import {
   uploadReturnImages,
   resetForReshipment,
   getPublicTrackingDetails,
-  syncShiprocketStatuses
+  syncShiprocketStatuses,
+  generateAWB,
+  cancelShipment
 } from "../controllers/order.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { isAdmin } from "../middleware/admin.middleware";
@@ -48,5 +50,7 @@ router.post("/admin/:id/refund", isAdmin, refundOrder);
 router.post("/admin/:id/approve-return", isAdmin, approveReturn);
 router.post("/admin/:id/reset-reship", isAdmin, resetForReshipment);
 router.post("/admin/sync-shiprocket", isAdmin, syncShiprocketStatuses);
+router.post("/admin/:id/generate-awb", isAdmin, generateAWB);
+router.post("/admin/:id/cancel-shipment", isAdmin, cancelShipment);
 
 export default router;

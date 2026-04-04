@@ -1,188 +1,93 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, MousePointerClick, Search, RefreshCw, Layers, Layout } from 'lucide-react';
-import api from '../../api/axios';
-import ManagementModal from '../components/ManagementModal';
-import toast from 'react-hot-toast';
-import MUIDataTable from "mui-datatables";
+import { Search, RefreshCw, Plus, MousePointerClick, Edit2, Trash2, Layout, Activity, ShieldCheck, Zap, Info, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import MUIDataTable from 'mui-datatables';
 import { ThemeProvider } from '@mui/material/styles';
 import { getMuiTheme } from '../utils/muiTableTheme';
+import ManagementModal from '../components/ManagementModal';
 
+// Store
 import { useAdminStore } from '../../store/useAdminStore';
 
+// Hooks
+import { useBanners } from '../hooks/useBanners';
+
+// Components
+import BannerForm from '../components/banner/BannerForm';
+
 const BannerManagement = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [banners, setBanners] = useState<any[]>([]);
-  const [filteredBanners, setFilteredBanners] = useState<any[]>([]);
+  const {
+    filteredBanners,
+    loading,
+    isSubmitting,
+    search,
+    setSearch,
+    isModalOpen,
+    setIsModalOpen,
+    editingBanner,
+    formData,
+    setFormData,
+    previewUrl,
+    fetchData,
+    handleEdit,
+    handleDelete,
+    handleImageChange,
+    handleSubmit,
+    resetForm,
+  } = useBanners();
+
   const { categories } = useAdminStore();
-  const [editingBanner, setEditingBanner] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-
-  const [formData, setFormData] = useState({
-    type: 'HERO',
-    link: '',
-    imageUrl: '',
-    isActive: true
-  });
-  const [image, setImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get('/banners/all');
-      const heroBanners = data.data.filter((b: any) => b.type === 'HERO');
-      setBanners(heroBanners);
-      setFilteredBanners(heroBanners);
-    } catch (error) {
-      toast.error('Failed to load banners');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const term = search.toLowerCase();
-    const filtered = banners.filter(b => 
-      b.id?.toLowerCase().includes(term) ||
-      b.link?.toLowerCase().includes(term)
-    );
-    setFilteredBanners(filtered);
-  }, [search, banners]);
-
-  const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      fetchData();
-    }
-  }, []);
-
-  const handleEdit = (banner: any) => {
-    setEditingBanner(banner);
-    setFormData({
-      type: banner.type || 'HERO',
-      link: banner.link || '',
-      isActive: banner.isActive,
-      imageUrl: banner.imageUrl || ''
-    });
-    setPreviewUrl(banner.imageUrl);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this banner?')) return;
-    try {
-      await api.delete(`/banners/${id}`);
-      toast.success('Banner deleted');
-      fetchData();
-    } catch (error) {
-      toast.error('Deletion failed');
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {   
-      const file = e.target.files[0];
-      setImage(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    const data = new FormData();
-    Object.keys(formData).forEach(key => {
-      if (key === 'imageUrl') return;                              // preview only
-      if (key === 'link' && !(formData as any)[key]) return;     // skip empty link
-      data.append(key, (formData as any)[key]);
-    });
-    if (image) data.append('image', image);
-
-    try {
-      if (editingBanner) {
-        await api.patch(`/banners/${editingBanner.id}`, data);
-        toast.success('Banner updated');
-      } else {
-        await api.post('/banners', data);
-        toast.success('Banner created');
-      }
-      setIsModalOpen(false);
-      resetForm();
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Operation failed');
-    } finally { 
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setEditingBanner(null);
-    setFormData({
-      type: 'HERO',
-      link: '',
-      imageUrl: '',
-      isActive: true
-    });
-    setImage(null);
-    setPreviewUrl('');
-  };
-
-
 
   const columns = [
     {
       name: "imageUrl",
-      label: "Visuals",
+      label: "Asset Immersion",
       options: {
         customBodyRender: (val: string) => (
-          <div className="w-16 h-8 bg-gray-50 rounded border border-gray-100 overflow-hidden shadow-sm transition-transform hover:scale-105">
-            <img src={val || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" />
+          <div className="w-24 h-12 bg-white rounded-sm border border-gray-100 overflow-hidden shadow-2xl transition-all hover:scale-110 hover:shadow-[#7A578D]/20 text-left group">
+            <img src={val || 'https://via.placeholder.com/100'} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" alt="Promotional Artwork" />
+            <div className="absolute inset-0 bg-[#7A578D]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         )
       }
     },
     {
       name: "id",
-      label: "Identity",
+      label: "Nexus ID",
       options: {
         customBodyRender: (id: string) => (
-          <div className="flex items-center gap-1" title={id}>
-            <span className="text-[7px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-1.5 py-0.5 rounded border border-[#7A578D]/10">
-              {id?.toUpperCase() || "NEW_ENTRY"}
-            </span>
+          <div className="flex items-center gap-3 text-left group" title={id}>
+             <ImageIcon size={14} className="text-gray-300 group-hover:text-[#7A578D] transition-colors" />
+             <span className="text-[9px] font-mono font-black text-[#7A578D] bg-[#7A578D]/5 px-3 py-1.5 rounded-sm border border-[#7A578D]/10 uppercase tracking-widest leading-none shadow-inner">
+               #{id?.toUpperCase().slice(0, 8)}
+             </span>
           </div>
         )
       }
     },
     {
       name: "clickCount",
-      label: "Metrics",
+      label: "Interaction Registry",
       options: {
         customBodyRender: (value: number) => (
-          <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 max-w-fit">
-            <MousePointerClick size={10} className="text-[#7A578D]" />
-            <span className="text-[7px] font-black text-[#7A578D]">{value || 0}</span>
-            <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">Clicks</span>
+          <div className="flex items-center gap-3 bg-gray-50/50 px-4 py-2 rounded-sm border border-gray-100 max-w-fit text-left shadow-inner group">
+            <MousePointerClick size={16} className="text-[#7A578D] animate-pulse group-hover:scale-110 transition-transform" />
+            <div className="flex flex-col">
+               <span className="text-[11px] font-black text-gray-900 leading-none">{value || 0}</span>
+               <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Nexus_Clicks</span>
+            </div>
           </div>
         )
       }
     },
     {
       name: "link",
-      label: "Destination",
+      label: "Destination Nexus",
       options: {
         customBodyRender: (val: string) => (
-          <div className="max-w-[150px] flex items-center gap-1">
-             <span className="text-[8px] font-bold text-gray-500 truncate lowercase bg-gray-50/50 px-2 py-0.5 rounded border border-gray-100/50">
-               {val || 'NO LINK'}
+          <div className="max-w-[240px] flex items-center gap-3 text-left group">
+             <div className="w-1.5 h-6 bg-gray-100 group-hover:bg-[#7A578D] transition-colors rounded-full" />
+             <span className="text-[10px] font-black text-gray-400 truncate lowercase bg-white border border-gray-50 px-3 py-1 rounded-sm shadow-inner opacity-70 group-hover:opacity-100 group-hover:text-gray-900 transition-all">
+               {val || 'NULL_SIGNAL'}
              </span>
           </div>
         )
@@ -190,35 +95,36 @@ const BannerManagement = () => {
     },
     {
       name: "isActive",
-      label: "Status",
+      label: "Temporal State",
       options: {
         customBodyRender: (val: boolean) => (
-          <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 max-w-fit">
-             <div className={`w-1 h-1 rounded-full ${val ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-             <span className={`text-[12px] font-black uppercase tracking-widest ${val ? 'text-emerald-700' : 'text-red-500'}`}>{val ? 'ACTIVE' : 'HIDDEN'}</span>
+          <div className={`flex items-center gap-3 px-4 py-2 rounded-sm border shadow-2xl transition-all hover:scale-105 w-fit text-left ${val ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/20' : 'bg-red-500 border-red-400 text-white shadow-red-500/20 opacity-40'}`}>
+             <div className={`w-2 h-2 rounded-full bg-white ${val ? 'animate-pulse shadow-lg shadow-white/50' : 'opacity-50'}`} />
+             <span className="text-[9px] font-black uppercase tracking-[0.3em] font-black leading-none">{val ? 'ACTIVE_Nexus' : 'HELD_DRAFT'}</span>
           </div>
         )
       }
     },
     {
       name: "id",
-      label: "Control",
+      label: "Executive Command",
       options: {
         customBodyRender: (id: string, tableMeta: any) => {
           const banner = filteredBanners[tableMeta.rowIndex];
           return (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-around gap-2 text-left" onClick={(e) => e.stopPropagation()}>
               <button 
                 onClick={() => handleEdit(banner)} 
-                className="p-1.5 hover:bg-[#7A578D]/5 text-gray-400 hover:text-[#7A578D] rounded-sm transition-all"
+                className="px-4 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm transition-all hover:bg-[#7A578D] shadow-2xl shadow-black/10 active:scale-95 border-b-2 border-black/20"
               >
-                <Edit2 size={13} />
+                EDIT
               </button>
               <button 
                 onClick={() => handleDelete(id)} 
-                className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-sm transition-all"
+                className="w-10 h-10 bg-white border border-gray-100 text-gray-300 hover:text-red-500 hover:border-red-500 rounded-sm transition-all shadow-xl hover:scale-110 active:scale-95 flex items-center justify-center group"
+                title="Purge Promotional Artifact"
               >
-                <Trash2 size={13} />
+                <Trash2 size={18} />
               </button>
             </div>
           )
@@ -232,6 +138,7 @@ const BannerManagement = () => {
     elevation: 0,
     responsive: 'standard' as const,
     rowsPerPage: 10,
+    rowsPerPageOptions: [10, 20, 50],
     download: false,
     print: false,
     viewColumns: false,
@@ -240,50 +147,57 @@ const BannerManagement = () => {
     expandableRows: false,
     textLabels: {
       body: {
-        noMatch: loading ? "Synchronizing..." : "No items found in ledger",
+        noMatch: loading ? "Synchronizing Asset Matrix LEDGER..." : "No promotional artifacts detected in global archive",
       }
     }
   };
 
-
   return (
-    <div className="space-y-2 animate-in fade-in duration-500 max-w-[1600px]">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-2">
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-[1600px] pb-24">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-8 gap-4">
         <div>
-          <h1 className="text-lg font-bold text-gray-900 tracking-tight">Marketing Banners</h1>
-          <p className="text-gray-500 text-xs mt-1">Manage high-visibility promotional content across the site.</p>
+           <h1 className="text-2xl font-black uppercase tracking-tighter text-gray-900 leading-none">Marketing_Nexus_Hub</h1>
+           <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-2 bg-[#7A578D]/5 px-2 py-1 rounded-sm border border-[#7A578D]/10 shadow-xl shadow-[#7A578D]/5">
+                 <span className="w-1.5 h-1.5 rounded-full bg-[#7A578D] animate-pulse shadow-lg shadow-[#7A578D]/50"></span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-[#7A578D] opacity-70 italic">High-Visibility Asset Protocol Active</span>
+              </div>
+              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{filteredBanners.length} REGISTERED_COMMERCIALS</span>
+           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
            <div className="relative group">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#7A578D] transition-colors" />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#7A578D] transition-colors" />
               <input 
                 type="text" 
-                placeholder="Search banners..." 
+                placeholder="FILTER_ASSET_Nexus..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-sm py-1 pl-10 pr-4 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs md:w-[240px] transition-all" 
+                className="bg-gray-50/50 border border-gray-200 rounded-sm py-2.5 pl-12 pr-6 outline-none focus:ring-4 focus:ring-[#7A578D]/5 focus:border-[#7A578D]/40 text-[10px] font-black uppercase tracking-widest md:w-[320px] transition-all shadow-inner placeholder:italic group-hover:border-gray-300" 
               />
            </div>
-           <button onClick={fetchData} className="p-2.5 bg-white border border-gray-200 rounded-sm text-gray-500 hover:text-[#7A578D] hover:border-[#7A578D] transition-all">
-             <RefreshCw size={18} />
+           <button 
+             onClick={fetchData} 
+             className="w-12 h-12 bg-white border border-gray-200 rounded-sm text-gray-300 hover:text-[#7A578D] hover:border-[#7A578D] hover:rotate-180 transition-all duration-700 shadow-sm flex items-center justify-center group"
+             title="Synchronize Asset matrix"
+           >
+             <RefreshCw size={24} className={loading ? 'animate-spin' : ''} />
            </button>
            
            <button 
              onClick={() => { resetForm(); setIsModalOpen(true); }}
-             className="bg-black text-white px-2 py-1 rounded-sm text-xs font-bold flex items-center gap-2 hover:bg-[#7A578D] transition-all shadow-md active:scale-95"
+             className="bg-black text-white h-12 px-8 rounded-sm text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-4 hover:bg-[#7A578D] transition-all shadow-2xl shadow-black/10 active:scale-95 border-b-4 border-black/30 group"
            >
-             <Plus size={18} />
-             <span>Add New Banner</span>
+             <Plus size={22} className="group-hover:scale-110 transition-transform" />
+             <span>COMMISSION_Nexus</span>
            </button>
         </div>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[200px]">
+      <div className="bg-white border border-gray-100 rounded-sm overflow-hidden shadow-sm relative min-h-[500px]">
         {loading && (
-           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                 <div className="w-6 h-6 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin" />
-              </div>
+           <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+              <div className="w-12 h-12 border-4 border-[#7A578D] border-t-transparent rounded-full animate-spin shadow-2xl shadow-[#7A578D]/20" />
            </div>
         )}
         <ThemeProvider theme={getMuiTheme()}>
@@ -294,85 +208,36 @@ const BannerManagement = () => {
       <ManagementModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={editingBanner ? "Update Banner" : "New Marketing Banner"}
+        title={editingBanner ? "ARTIFACT_UPDATE_Nexus" : "COMMISSION_Nexus_PROMO"}
       >
-          <form onSubmit={handleSubmit} className="space-y-2">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-               <div className="space-y-2">
-                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Destination URL</label>
-                 <div className="space-y-1">
-                    <select value={formData.link} onChange={(e) => setFormData({...formData, link: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold appearance-none cursor-pointer">
-                      <option value="">Manual Entry / Custom Link</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={`/shop?category=${cat.slug}`}>{cat.name} Collection</option>
-                      ))}
-                    </select>
-                    <input value={formData.link} onChange={(e) => setFormData({...formData, link: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs" placeholder="e.g. /shop?category=rings" />
-                 </div>
-               </div>
-               <div className="space-y-1">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Banner Status</label>
-                    <select value={formData.isActive ? 'true' : 'false'} onChange={(e) => setFormData({...formData, isActive: e.target.value === 'true'})} className="w-full bg-gray-50 border border-gray-200 rounded-sm py-1 px-2 outline-none focus:ring-2 focus:ring-[#7A578D]/20 focus:border-[#7A578D] text-xs font-bold appearance-none cursor-pointer">
-                      <option value="true">PUBLISHED / ACTIVE</option>
-                      <option value="false">DRAFT / HIDDEN</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Placement Type</label>
-                    <div className="p-3 bg-[#7A578D]/5 border border-[#7A578D]/10 rounded-sm flex items-center gap-2">
-                       <div className="w-2 h-2 rounded-full bg-[#7A578D] animate-pulse" />
-                       <span className="text-xs font-bold text-[#7A578D] uppercase tracking-wider">{formData.type} SCREEN BANNER</span>
-                    </div>
-                  </div>
-               </div>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div className="space-y-2">
-                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Image Asset</label>
-                   <label className="w-full h-[180px] bg-gray-50 border-2 border-dashed border-gray-200 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-[#7A578D]/40 transition-all group relative overflow-hidden">
-                     <input type="file" className="hidden" onChange={handleImageChange} accept="image/*" />
-                     {previewUrl ? (
-                        <img src={previewUrl} className="w-full h-full object-cover" alt="Banner preview" />
-                     ) : (
-                        <div className="flex flex-col items-center gap-2 group-hover:scale-105 transition-transform">
-                           <Layout size={32} className="text-gray-400 group-hover:text-[#7A578D]" />
-                           <span className="text-[10px] font-bold uppercase text-gray-400 group-hover:text-[#7A578D]">Click to select banner image</span>
-                        </div>
-                     )}
-                     {previewUrl && (
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                           <span className="text-xs font-bold text-white uppercase tracking-widest px-2 py-1 bg-black/20 backdrop-blur-md rounded-full border border-white/20">Change Image</span>
-                        </div>
-                     )}
-                   </label>
-                </div>
-
-                <div className="space-y-2">
-                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Live Preview</label>
-                   <div className="w-full h-[180px] bg-gray-50 rounded-sm border border-gray-200 overflow-hidden shadow-inner flex items-center justify-center relative group">
-                      {previewUrl ? (
-                         <img src={previewUrl} className="w-full h-full object-cover" alt="Live preview" />
-                      ) : (
-                         <div className="flex flex-col items-center opacity-20">
-                            <Layers size={48} className="text-gray-400" />
-                            <span className="text-xs font-bold uppercase mt-3">No Active Preview</span>
-                         </div>
-                      )}
-                      <div className="absolute top-2 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-emerald-500/20">
-                         <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                         Live
-                      </div>
-                   </div>
-                </div>
-             </div>
-
-             <button type="submit" disabled={isSubmitting} className="w-full bg-black text-white py-1 rounded-sm text-xs font-bold hover:bg-[#7A578D] transition-all shadow-xl shadow-black/5 active:scale-95 disabled:opacity-50">
-                {isSubmitting ? 'WORKING...' : (editingBanner ? 'UPDATE BANNER ASSET' : 'PUBLISH BANNER')}
-             </button>
-          </form>
+        <div className="p-2">
+           <BannerForm 
+             formData={formData}
+             setFormData={setFormData}
+             categories={categories}
+             previewUrl={previewUrl}
+             handleImageChange={handleImageChange}
+             isSubmitting={isSubmitting}
+             editingBanner={editingBanner}
+             onSubmit={handleSubmit}
+           />
+        </div>
       </ManagementModal>
+      
+      <footer className="pt-20 border-t border-gray-100 flex items-center justify-center gap-12 opacity-30">
+         <div className="flex items-center gap-3">
+            <ShieldCheck size={18} className="text-gray-400"/>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Marketing integrity confirmed</span>
+         </div>
+         <div className="flex items-center gap-3">
+            <Zap size={18} className="text-gray-400 animate-pulse"/>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Live asset sync active</span>
+         </div>
+         <div className="flex items-center gap-3">
+            <Info size={18} className="text-gray-400"/>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Temporal audit mapping 100% Correct</span>
+         </div>
+      </footer>
     </div>
   );
 };
