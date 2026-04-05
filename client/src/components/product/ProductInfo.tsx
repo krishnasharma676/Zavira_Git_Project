@@ -27,19 +27,19 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
           {product.category?.name || 'ZAVIRAA'}
         </h1>
         <p className="text-[18px] text-gray-500 mb-3">{product.name}</p>
-        
+
         {/* Rating Badge - DYNAMIC */}
         <div className="inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 px-3 py-1.5 mb-4 rounded-[3px] text-sm font-bold text-gray-800 dark:text-gray-200 hover:border-black transition-colors cursor-pointer">
           <span className="flex items-center gap-1">
-            {product.reviews?.length > 0 
-              ? (product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / product.reviews.length).toFixed(1) 
+            {product.reviews?.length > 0
+              ? (product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / product.reviews.length).toFixed(1)
               : "0.0"}
             <Star size={14} className="text-[#7A578D] fill-[#7A578D] -mt-[0.5px]" />
           </span>
           <span className="text-gray-300 font-light mx-1">|</span>
           <span className="text-[#7A578D] font-normal">
-            {product.reviews?.length >= 1000 
-              ? `${(product.reviews.length / 1000).toFixed(1)}k` 
+            {product.reviews?.length >= 1000
+              ? `${(product.reviews.length / 1000).toFixed(1)}k`
               : (product.reviews?.length || 0)} Ratings
           </span>
         </div>
@@ -80,12 +80,11 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
                   className={`relative flex items-center justify-center transition-all duration-300 rounded-full group outline-none`}
                   title={variant.color}
                 >
-                  <div 
-                    className={`rounded-full p-0.5 transition-all duration-300 border ${
-                      selectedVariant?.id === variant.id ? 'border-[#7A578D] scale-110 shadow-sm' : 'border-transparent hover:border-gray-300'
-                    }`} 
+                  <div
+                    className={`rounded-full p-0.5 transition-all duration-300 border ${selectedVariant?.id === variant.id ? 'border-[#7A578D] scale-110 shadow-sm' : 'border-transparent hover:border-gray-300'
+                      }`}
                   >
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full border border-gray-100 shadow-inner transition-transform group-hover:scale-105"
                       style={{ backgroundColor: variant.colorCode || '#E5E7EB' }}
                     />
@@ -103,15 +102,12 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
               <div className="flex items-center gap-2">
                 <h4 className="text-[14px] font-bold uppercase tracking-wide text-gray-900 dark:text-white">SELECT SIZE</h4>
                 {selectedVariant?.colorCode && (
-                   <div 
-                      className="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm"
-                      style={{ backgroundColor: selectedVariant.colorCode }}
-                   />
+                  <div
+                    className="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm"
+                    style={{ backgroundColor: selectedVariant.colorCode }}
+                  />
                 )}
               </div>
-              <span className="text-[#7A578D] text-[13px] font-bold cursor-pointer uppercase tracking-wide flex items-center">
-                SIZE CHART <span className="ml-1 text-[10px] opacity-70"> &gt;</span>
-              </span>
             </div>
             <div className="flex flex-wrap gap-3">
               {(selectedVariant?.sizes && selectedVariant.sizes.length > 0) ? (
@@ -120,13 +116,12 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
                     key={sObj.id}
                     disabled={sObj.stock <= 0}
                     onClick={() => setSelectedSize && setSelectedSize(sObj.size)}
-                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${
-                      selectedSize === sObj.size 
-                        ? 'border-[#7A578D] text-[#7A578D] border-2' 
-                        : sObj.stock > 0 
+                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${selectedSize === sObj.size
+                        ? 'border-[#7A578D] text-[#7A578D] border-2'
+                        : sObj.stock > 0
                           ? 'border-gray-200 text-gray-700 hover:border-[#7A578D] dark:border-gray-700 dark:text-gray-300'
                           : 'border-gray-200 text-gray-300 cursor-not-allowed border-dashed bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <span>{sObj.size}</span>
                   </button>
@@ -136,11 +131,10 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
                   <button
                     key={size}
                     onClick={() => setSelectedSize && setSelectedSize(size)}
-                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${
-                      selectedSize === size 
-                        ? 'border-[#7A578D] text-[#7A578D] border-2' 
+                    className={`w-12 h-12 flex items-center justify-center border text-sm font-bold transition-all rounded-full ${selectedSize === size
+                        ? 'border-[#7A578D] text-[#7A578D] border-2'
                         : 'border-gray-200 text-gray-700 hover:border-[#7A578D] dark:border-gray-700 dark:text-gray-300'
-                    }`}
+                      }`}
                   >
                     {size}
                   </button>
@@ -150,15 +144,15 @@ const ProductInfo = ({ product, quantity, setQuantity, selectedVariant, setSelec
           </div>
         )}
 
-        <PurchaseActions 
-          product={product} 
-          quantity={quantity} 
-          setQuantity={setQuantity} 
-          handleAddToCart={handleAddToCart} 
-          toggleItem={toggleItem} 
-          isInWishlist={isInWishlist} 
-          primaryPrice={primaryPrice} 
-          toast={toast} 
+        <PurchaseActions
+          product={product}
+          quantity={quantity}
+          setQuantity={setQuantity}
+          handleAddToCart={handleAddToCart}
+          toggleItem={toggleItem}
+          isInWishlist={isInWishlist}
+          primaryPrice={primaryPrice}
+          toast={toast}
         />
       </div>
     </div>

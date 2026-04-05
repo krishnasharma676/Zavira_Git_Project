@@ -127,7 +127,7 @@ export class ProductService {
     }
 
     const [products, total] = await Promise.all([
-      (prisma as any).product.findMany({
+      prisma.product.findMany({
         where,
         skip,
         take: Number(limit),
@@ -150,7 +150,7 @@ export class ProductService {
           }
         }
       }),
-      (prisma as any).product.count({ where })
+      prisma.product.count({ where })
     ]);
 
     return {
@@ -443,7 +443,7 @@ export class ProductService {
     if (product) return { product, matchType: 'Main Product' };
 
     // 2. Check variant SKUs
-    const variant = await (prisma as any).productVariant.findFirst({
+    const variant = await prisma.productVariant.findFirst({
       where: { sku: sku, product: { isDeleted: false } },
       include: {
         product: {
@@ -457,10 +457,10 @@ export class ProductService {
       }
     });
 
-    if (variant) return { product: (variant as any).product, matchType: 'Variant Color', variantId: (variant as any).id };
+    if (variant) return { product: variant.product, matchType: 'Variant Color', variantId: variant.id };
 
     // 3. Check size SKUs
-    const size = await (prisma as any).productVariantSize.findFirst({
+    const size = await prisma.productVariantSize.findFirst({
       where: { sku: sku, variant: { product: { isDeleted: false } } },
       include: {
         variant: {
@@ -478,7 +478,7 @@ export class ProductService {
       }
     });
 
-    if (size) return { product: (size as any).variant.product, matchType: 'Specific Size', variantId: (size as any).variantId, size: (size as any).size };
+    if (size) return { product: size.variant.product, matchType: 'Specific Size', variantId: size.variantId, size: size.size };
 
     throw new ApiError(404, 'No product found with this SKU');
   }
